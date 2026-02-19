@@ -37,7 +37,7 @@ async function backfillCashierNames() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   backfillCashierNames().then(() => {
     console.log('Script completed');
-    (globalThis as any).process?.exit(0);
+    process.exit(0);
   });
 }
 
