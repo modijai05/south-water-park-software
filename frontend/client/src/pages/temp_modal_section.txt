@@ -1,0 +1,326 @@
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50"
+            >
+              {toast.message}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+      <AnimatePresence>
+        {viewing && (
+          <ViewEntryModal
+            entry={viewing}
+            onClose={() => setViewing(null)}
+          />
+        )}
+
+        {editing && (
+          <EditEntryModal
+            entry={editing}
+            onClose={() => setEditing(null)}
+            onSaved={(id) => {
+              setEditing(null);
+              fetchEntries();
+              setToast({ message: '✅ Entry updated successfully!', id });
+              setHighlightId(id);
+              setTimeout(() => setHighlightId(null), 3000);
+              setTimeout(() => setToast(null), 4000);
+            }}
+            setToast={(toast) => {
+              setToast(toast);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {toast && (
+        <SuccessToast message={toast.message} onClose={() => setToast(null)} />
+      )}
+    </div>
+    </Layout>
+  );
+}
+
+function EditEntryModal({ entry, onClose, onSaved, setToast }: { entry: EntryRecord; onClose: () => void; onSaved: (id: string) => void; setToast: (toast: { message: string; id: string } | null) => void }) {
+  const [name, setName] = useState(entry.name);
+  const [mobile, setMobile] = useState(entry.mobile);
+  const [ticketType, setTicketType] = useState(entry.ticketType as unknown as string);
+  const [adults, setAdults] = useState<number>(entry.adults ?? 0);
+  const [kids, setKids] = useState<number>(entry.kids ?? 0);
+  const [upgrades, setUpgrades] = useState(entry.upgrades ?? [] as any[]);
+  const [adultsFastFoodCoupon, setAdultsFastFoodCoupon] = useState((entry as any).adultsFastFoodCoupon ?? '');
+  const [kidsFastFoodCoupon, setKidsFastFoodCoupon] = useState((entry as any).kidsFastFoodCoupon ?? '');
+  const [adultsMainFoodCoupon, setAdultsMainFoodCoupon] = useState((entry as any).adultsMainFoodCoupon ?? '');
+  const [kidsMainFoodCoupon, setKidsMainFoodCoupon] = useState((entry as any).kidsMainFoodCoupon ?? '');
+  const [additionalDiscount, setAdditionalDiscount] = useState<number>(entry.additionalDiscount ?? 0);
+  const [finalAmountOverride, setFinalAmountOverride] = useState<number | null>(entry.finalAmount ?? null);
+  const [cashAmount, setCashAmount] = useState<number>(entry.cashAmount ?? 0);
+  const [upiAmount, setUpiAmount] = useState<number>(entry.upiAmount ?? 0);
+  const [otherAmount, setOtherAmount] = useState<number>(entry.otherAmount ?? 0);
+  const [notes, setNotes] = useState(entry.notes ?? '');
+  const [saving, setSaving] = useState(false);
+
+  // compute amounts using imported helper
+  const computed = computeAmounts(ticketType as any, adults, kids, upgrades, additionalDiscount);
+  const baseAmount = computed.baseAmount;
+  const kidDiscount = computed.kidDiscount;
+  const totalPeople = computed.totalPeople;
+  const computedFinal = computed.finalAmount;
+  const finalAmount = finalAmountOverride != null ? finalAmountOverride : computedFinal;
+
+  const addUpgrade = () => {
+    const prices = ['100','150','300','450','600'];
+    const idx = prices.indexOf(ticketType);
+    const next = prices[idx+1] ?? prices[prices.length-1];
+    setUpgrades([...upgrades, { ticketType: next, adults: 0, kids: 0 }]);
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setSaving(true);
+      const payload = {
+        name: name.trim(),
+        mobile: mobile.trim(),
+        ticketType,
+        adults,
+        kids,
+        upgrades,
+        adultsFastFoodCoupon: adultsFastFoodCoupon.trim() || undefined,
+        kidsFastFoodCoupon: kidsFastFoodCoupon.trim() || undefined,
+        adultsMainFoodCoupon: adultsMainFoodCoupon.trim() || undefined,
+        kidsMainFoodCoupon: kidsMainFoodCoupon.trim() || undefined,
+        totalPeople,
+        baseAmount,
+        kidDiscount,
+        additionalDiscount,
+        finalAmount,
+        cashAmount,
+        upiAmount,
+        otherAmount,
+        notes: notes.trim() || undefined,
+      };
+
+      console.log('🔧 EditEntryModal: Payload to send:', payload);
+      
+      const response = await entriesApi.update(entry._id, payload);
+      console.log('🔧 EditEntryModal: Update response:', response);
+      
+      // Show success feedback
+      setToast({ message: '✅ Entry updated successfully!', id: `update-${entry._id}` });
+      
+      setTimeout(() => {
+        const rowEl = document.getElementById(`entry-row-${entry._id}`);
+        if (rowEl) {
+          rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      
+      onSaved(entry._id);
+      
+      window.dispatchEvent(new CustomEvent('entry-updated', { 
+        detail: { 
+          entryId: entry._id, 
+          action: 'update',
+          timestamp: new Date().toISOString()
+        } 
+      }));
+      
+    } catch (e) {
+      console.error('❌ EditEntryModal: Failed to update entry:', e);
+      console.error('❌ EditEntryModal: Error details:', {
+        message: (e as Error).message,
+        stack: (e as Error).stack
+      });
+      setToast({ message: `❌ Failed to update entry: ${(e as Error).message}`, id: `error-${entry._id}` });
+    } finally {
+      setSaving(false);
+    }
+  };
+    console.log('🔧 EditEntryModal: Payload to send:', payload);
+    
+    const response = await entriesApi.update(entry._id, payload);
+    console.log('🔧 EditEntryModal: Update response:', response);
+    
+    // Show success feedback
+    setToast({ message: '✅ Entry updated successfully!', id: `update-${entry._id}` });
+    
+    setTimeout(() => {
+      const rowEl = document.getElementById(`entry-row-${entry._id}`);
+      if (rowEl) {
+        rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+    
+    onSaved(entry._id);
+    
+    window.dispatchEvent(new CustomEvent('entry-updated', { 
+      detail: { 
+        entryId: entry._id, 
+        action: 'update',
+        timestamp: new Date().toISOString()
+      } 
+    }));
+    
+  } catch (e) {
+    console.error('❌ EditEntryModal: Failed to update entry:', e);
+    console.error('❌ EditEntryModal: Error details:', {
+      message: (e as Error).message,
+      stack: (e as Error).stack
+    });
+    setToast({ message: `❌ Failed to update entry: ${(e as Error).message}`, id: `error-${entry._id}` });
+  } finally {
+    setSaving(false);
+  }
+};
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        onClick={(e) => e.stopPropagation()}
+        className="modern-card rounded-2xl p-6 max-w-2xl w-full overflow-auto max-h-[90vh]"
+      >
+        <h3 className="heading-lg text-blue-900 mb-4">👁 View Entry Details</h3>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">📅 Date & Time</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                {dayjs(entry.createdAt).format('DD/MM/YYYY HH:mm:ss')}
+              </div>
+            </div>
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">👤 Customer Name</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                {entry.name}
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">📱 Mobile</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                {entry.mobile}
+              </div>
+            </div>
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">🎫 Ticket Type</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                {getTicketLabel(entry.ticketType as TicketType)}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">👥 Adults</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                {entry.adults}
+              </div>
+            </div>
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">👦 Kids</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                {entry.kids}
+              </div>
+            </div>
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">👥 Total</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                {entry.totalPeople}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">💰 Base Amount</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                ₹{entry.baseAmount ?? 0}
+              </div>
+            </div>
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">🎯 Kid Discount</label>
+              <div className="py-2 px-3 rounded bg-green-50 text-green-900 font-bold">
+                -₹{entry.kidDiscount ?? 0}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">💸 Final Amount</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold text-xl">
+                ₹{entry.finalAmount ?? 0}
+              </div>
+            </div>
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">🎁 Additional Discount</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                -₹{entry.additionalDiscount ?? 0}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">💵 Cash</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                ₹{entry.cashAmount ?? 0}
+              </div>
+            </div>
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">💳 UPI</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                ₹{entry.upiAmount ?? 0}
+              </div>
+            </div>
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">💳 Other</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                ₹{entry.otherAmount ?? 0}
+              </div>
+            </div>
+          </div>
+
+          {(entry as any).notes && (
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">📝 Notes</label>
+              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
+                {(entry as any).notes}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 mt-6">
+            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-blue-900 font-bold">
+              Close
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function SuccessToast({ message, onClose }: { message: string; onClose: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -20, x: 20 }}
+      animate={{ opacity: 1, y: 0, x: 0 }}
+      exit={{ opacity: 0, y: -20, x: 20 }}
+      className="fixed top-6 right-6 z-50 px-6 py-4 rounded-xl bg-gradient-to-r from-green-500/90 to-emerald-500/90 border-2 border-green-400 text-white font-bold shadow-2xl"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <span>{message}</span>
+        <button onClick={onClose} className="text-white/80 hover:text-white">✕</button>
+      </div>
+    </motion.div>
+  );
+}

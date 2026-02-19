@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Demand Analysis - South Water Park</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">🎢 Ticket Type Demand Analysis</h1>
+            <p class="text-gray-600">Comprehensive analysis of ticket demand patterns and upgrade insights</p>
+            <div class="mt-4 flex items-center space-x-4">
+                <select id="periodSelect" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="7">Last 7 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                </select>
+                <button id="refreshBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    🔄 Refresh Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden">
+            <div class="flex items-center justify-center h-64">
+                <div class="text-lg text-gray-600">Loading analysis data...</div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="text-red-800" id="errorMessage"></div>
+        </div>
+
+        <!-- Analysis Content -->
+        <div id="analysisContent" class="hidden space-y-6">
+            <!-- Highest Demand Summary -->
+            <div id="highestDemandCard" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">🏆 Highest Demand Ticket Type</h2>
+                <div id="highestDemandContent" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Summary Statistics -->
+            <div id="summaryStats" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Stats will be populated by JavaScript -->
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Demand Comparison Chart -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Demand Comparison</h3>
+                    <div class="chart-container">
+                        <canvas id="demandChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Revenue Comparison Chart -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Revenue Comparison</h3>
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Market Share Pie Chart -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Market Share by Bookings</h3>
+                    <div class="chart-container">
+                        <canvas id="marketShareChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Weekly Trend Chart -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Weekly Booking Trend</h3>
+                    <div class="chart-container">
+                        <canvas id="weeklyTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upgrade Insights -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">💡 Upgrade Insights</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="chart-container">
+                        <canvas id="upgradeChart"></canvas>
+                    </div>
+                    <div id="upgradeInsights" class="space-y-2">
+                        <!-- Upgrade insights will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">📊 Recommendations</h3>
+                <div id="recommendations" class="space-y-3">
+                    <!-- Recommendations will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentData = null;
+        let charts = {};
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAnalysisData();
+            
+            document.getElementById('periodSelect').addEventListener('change', loadAnalysisData);
+            document.getElementById('refreshBtn').addEventListener('click', loadAnalysisData);
+        });
+
+        async function loadAnalysisData() {
+            const period = document.getElementById('periodSelect').value;
+            
+            showLoading();
+            hideError();
+            hideContent();
+
+            try {
+                const response = await fetch(`http://localhost:5000/api/ticket-demand-analysis/analysis?days=${period}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                currentData = data;
+                
+                hideLoading();
+                showContent();
+                renderAnalysis(data);
+                
+            } catch (error) {
+                hideLoading();
+                showError(error.message);
+                console.error('Error loading analysis data:', error);
+            }
+        }
+
+        function renderAnalysis(data) {
+            renderHighestDemand(data.highestDemand);
+            renderSummaryStats(data.summary);
+            renderCharts(data);
+            renderUpgradeInsights(data.upgradeInsights);
+            renderRecommendations(data.recommendations);
+        }
+
+        function renderHighestDemand(highestDemand) {
+            const content = document.getElementById('highestDemandContent');
+            content.innerHTML = `
+                <div class="bg-white rounded-lg p-4">
+                    <div class="text-sm text-gray-600">Ticket Type</div>
+                    <div class="text-lg font-bold text-blue-600">${highestDemand.ticketName}</div>
+                    <div class="text-sm text-gray-500">₹${highestDemand.ticketType}</div>
+                </div>
+                <div class="bg-white rounded-lg p-4">
+                    <div class="text-sm text-gray-600">Total Bookings</div>
+                    <div class="text-lg font-bold text-green-600">${highestDemand.totalBookings}</div>
+                    <div class="text-sm text-gray-500">${highestDemand.totalPeople} people</div>
+                </div>
+                <div class="bg-white rounded-lg p-4">
+                    <div class="text-sm text-gray-600">Revenue</div>
+                    <div class="text-lg font-bold text-purple-600">₹${highestDemand.revenue.toLocaleString()}</div>
+                    <div class="text-sm text-gray-500">Demand Score: ${highestDemand.demandScore.toFixed(1)}</div>
+                </div>
+            `;
+        }
+
+        function renderSummaryStats(summary) {
+            const container = document.getElementById('summaryStats');
+            container.innerHTML = `
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="text-sm text-gray-600">Total Bookings</div>
+                    <div class="text-xl font-bold text-gray-800">${summary.totalBookings}</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="text-sm text-gray-600">Total People</div>
+                    <div class="text-xl font-bold text-gray-800">${summary.totalPeople}</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="text-sm text-gray-600">Total Revenue</div>
+                    <div class="text-xl font-bold text-green-600">₹${summary.totalRevenue.toLocaleString()}</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="text-sm text-gray-600">Growth Rate</div>
+                    <div class="text-xl font-bold ${summary.growthRate >= 0 ? 'text-green-600' : 'text-red-600'}">
+                        ${summary.growthRate >= 0 ? '+' : ''}${summary.growthRate.toFixed(1)}%
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCharts(data) {
+            // Destroy existing charts
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+
+            // Demand Comparison Chart
+            const demandCtx = document.getElementById('demandChart').getContext('2d');
+            charts.demand = new Chart(demandCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.ranking.map(item => item.ticketName),
+                    datasets: [
+                        {
+                            label: 'Bookings',
+                            data: data.ranking.map(item => item.totalBookings),
+                            backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'People',
+                            data: data.ranking.map(item => item.totalPeople),
+                            backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Revenue Comparison Chart
+            const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+            charts.revenue = new Chart(revenueCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.ranking.map(item => item.ticketName),
+                    datasets: [{
+                        label: 'Revenue',
+                        data: data.ranking.map(item => item.revenue),
+                        backgroundColor: 'rgba(255, 206, 86, 0.8)',
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Market Share Pie Chart
+            const pieCtx = document.getElementById('marketShareChart').getContext('2d');
+            charts.pie = new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: data.ranking.map(item => item.ticketName),
+                    datasets: [{
+                        data: data.ranking.map(item => item.totalBookings),
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 206, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Weekly Trend Chart
+            const weeklyCtx = document.getElementById('weeklyTrendChart').getContext('2d');
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            
+            charts.weekly = new Chart(weeklyCtx, {
+                type: 'line',
+                data: {
+                    labels: days,
+                    datasets: data.ranking.map((ticket, index) => ({
+                        label: ticket.ticketName,
+                        data: ticket.weeklyTrend,
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)'
+                        ][index],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(153, 102, 255, 0.2)'
+                        ][index],
+                        tension: 0.1
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Upgrade Chart
+            const upgradeCtx = document.getElementById('upgradeChart').getContext('2d');
+            const upgradeData = data.upgradeInsights.slice(0, 5);
+            
+            charts.upgrade = new Chart(upgradeCtx, {
+                type: 'bar',
+                data: {
+                    labels: upgradeData.map(insight => `₹${insight.fromTicketType} → ₹${insight.toTicketType}`),
+                    datasets: [{
+                        label: 'Upgrade Revenue',
+                        data: upgradeData.map(insight => insight.upgradeRevenue),
+                        backgroundColor: 'rgba(153, 102, 255, 0.8)',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderUpgradeInsights(upgradeInsights) {
+            const container = document.getElementById('upgradeInsights');
+            container.innerHTML = upgradeInsights.slice(0, 3).map((insight, index) => `
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="font-semibold">₹${insight.fromTicketType} → ₹${insight.toTicketType}</span>
+                            <div class="text-sm text-gray-600">
+                                ${insight.upgradeCount} upgrades (${insight.upgradeRate.toFixed(1)}% rate)
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-semibold text-green-600">₹${insight.upgradeRevenue.toLocaleString()}</div>
+                            <div class="text-sm text-gray-500">Potential: ₹${insight.potentialRevenue.toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderRecommendations(recommendations) {
+            const container = document.getElementById('recommendations');
+            container.innerHTML = recommendations.map((recommendation, index) => `
+                <div class="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                    <div class="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        ${index + 1}
+                    </div>
+                    <div class="text-gray-800">${recommendation}</div>
+                </div>
+            `).join('');
+        }
+
+        // UI State Management
+        function showLoading() {
+            document.getElementById('loadingState').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').classList.add('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('errorState').classList.add('hidden');
+        }
+
+        function showContent() {
+            document.getElementById('analysisContent').classList.remove('hidden');
+        }
+
+        function hideContent() {
+            document.getElementById('analysisContent').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

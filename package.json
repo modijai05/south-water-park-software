@@ -1,0 +1,39 @@
+{
+  "name": "south-water-park",
+  "version": "1.0.0",
+  "description": "South Water Park Management System - Complete ticketing and admin solution",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend/client && npm run dev",
+    "dev:backend": "cd backend/server && npm run dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend/client && npm run build",
+    "build:backend": "cd backend/server && npm run build",
+    "start": "npm run start:backend",
+    "start:backend": "cd backend/server && npm start",
+    "install:all": "npm install && cd frontend/client && npm install && cd ../../backend/server && npm install",
+    "clean": "rm -rf frontend/client/node_modules backend/server/node_modules node_modules",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:frontend": "cd frontend/client && npm run lint",
+    "lint:backend": "cd backend/server && npm run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "workspaces": [
+    "frontend/client",
+    "backend/server"
+  ],
+  "keywords": [
+    "water-park",
+    "ticketing",
+    "management",
+    "react",
+    "nodejs",
+    "mongodb",
+    "typescript"
+  ],
+  "author": "South Water Park Team",
+  "license": "MIT"
+}

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: south-water-park-backend
+    env: node
+    plan: free
+    buildCommand: "npm run build"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        value: ${MONGODB_URI}
+      - key: JWT_SECRET
+        value: ${JWT_SECRET}
+      - key: PORT
+        value: 10000
+    healthCheckPath: /api/health
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - src/**
+        - package.json
+        - tsconfig.json
