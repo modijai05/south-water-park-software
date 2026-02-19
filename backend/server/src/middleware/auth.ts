@@ -6,6 +6,11 @@ const JWT_SECRET = process.env.JWT_SECRET ?? 'south-water-park-secret-change-in-
 
 export interface AuthRequest extends Request {
   user?: IUser;
+  // Express Request properties
+  query: any;
+  params: any;
+  body: any;
+  headers: any;
 }
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
