@@ -50,11 +50,11 @@ async function seed() {
     if (mongod) {
       await mongod.stop();
     }
-    process.exit(0);
+    (globalThis as any).process?.exit(0);
   }
 }
 
 seed().catch((e) => {
   console.error(e);
-  process.exit(1);
+  (globalThis as any).process?.exit(1);
 });

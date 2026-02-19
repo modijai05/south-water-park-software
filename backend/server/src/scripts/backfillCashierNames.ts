@@ -33,11 +33,11 @@ async function backfillCashierNames() {
   }
 }
 
-// Run the backfill if this file is executed directly
+// Run backfill if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   backfillCashierNames().then(() => {
     console.log('Script completed');
-    process.exit(0);
+    (globalThis as any).process?.exit(0);
   });
 }
 

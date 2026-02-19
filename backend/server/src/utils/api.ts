@@ -14,8 +14,8 @@ export function api<T = any>(
   options: ApiOptions = {}
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    const https = require('https');
-    const http = require('http');
+    const https = (globalThis as any).require?.('https') || require('https');
+    const http = (globalThis as any).require?.('http') || require('http');
     const urlObj = new URL(url);
     const isHttps = urlObj.protocol === 'https:';
     const lib = isHttps ? https : http;
@@ -32,7 +32,7 @@ export function api<T = any>(
     };
     
     if (options.body) {
-      requestOptions.headers['Content-Length'] = Buffer.byteLength(options.body).toString();
+      requestOptions.headers['Content-Length'] = (globalThis as any).Buffer?.byteLength(options.body).toString();
     }
     
     const req = lib.request(requestOptions, (res: any) => {

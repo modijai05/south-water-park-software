@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 const router = Router();
 
 /** GET /api/users - List users (admin only) */
-router.get('/', authenticate, requireAdmin, async (_req, res) => {
+router.get('/', authenticate, requireAdmin, async (_req: any, res: any) => {
   try {
     const users = await User.find().select('-password').sort({ createdAt: -1 }).lean();
     res.json(users);
@@ -16,7 +16,7 @@ router.get('/', authenticate, requireAdmin, async (_req, res) => {
 });
 
 /** POST /api/users - Create user (admin only) */
-router.post('/', authenticate, requireAdmin, async (req, res) => {
+router.post('/', authenticate, requireAdmin, async (req: any, res: any) => {
   try {
     const { username, password, role, email, fullName } = req.body;
     if (!username || !password || !role) {
@@ -63,7 +63,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 });
 
 /** PATCH /api/users/:id - Update user (admin only) */
-router.patch('/:id', authenticate, requireAdmin, async (req, res) => {
+router.patch('/:id', authenticate, requireAdmin, async (req: any, res: any) => {
   try {
     const { active, password, username, role, email, fullName } = req.body;
     const update: Record<string, unknown> = {};
@@ -138,7 +138,7 @@ router.patch('/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 /** DELETE /api/users/:id - Admin only */
-router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
+router.delete('/:id', authenticate, requireAdmin, async (req: any, res: any) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) {
@@ -152,7 +152,7 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
 });
 
 /** GET /api/users/:id/logs - Login logs (admin only) */
-router.get('/:id/logs', authenticate, requireAdmin, async (req, res) => {
+router.get('/:id/logs', authenticate, requireAdmin, async (req: any, res: any) => {
   try {
     const user = await User.findById(req.params.id).select('loginLogs username').lean();
     if (!user) {
@@ -167,7 +167,7 @@ router.get('/:id/logs', authenticate, requireAdmin, async (req, res) => {
 });
 
 /** POST /api/users/bulk - Bulk operations (admin only) */
-router.post('/bulk', authenticate, requireAdmin, async (req, res) => {
+router.post('/bulk', authenticate, requireAdmin, async (req: any, res: any) => {
   try {
     const { operation, userIds, data } = req.body;
     
@@ -219,7 +219,7 @@ router.post('/bulk', authenticate, requireAdmin, async (req, res) => {
 });
 
 /** POST /api/users/:id/reset-password - Reset user password (admin only) */
-router.post('/:id/reset-password', authenticate, requireAdmin, async (req, res) => {
+router.post('/:id/reset-password', authenticate, requireAdmin, async (req: any, res: any) => {
   try {
     const { newPassword } = req.body;
     
@@ -264,7 +264,7 @@ router.post('/:id/reset-password', authenticate, requireAdmin, async (req, res) 
 });
 
 /** GET /api/users/stats - User statistics (admin only) */
-router.get('/stats', authenticate, requireAdmin, async (_req, res) => {
+router.get('/stats', authenticate, requireAdmin, async (_req: any, res: any) => {
   try {
     const [totalUsers, activeUsers, adminUsers, staffUsers, recentUsers] = await Promise.all([
       User.countDocuments(),

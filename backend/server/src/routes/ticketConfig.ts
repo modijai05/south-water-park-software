@@ -289,7 +289,7 @@ router.post('/import', authenticate, async (req: AuthRequest, res) => {
     }
     
     // Trigger global update event
-    (global as any).io?.emit('ticket-config-updated', {
+    (globalThis as any).io?.emit('ticket-config-updated', {
       timestamp: new Date().toISOString(),
       source: 'excel-import',
       updatedCount: updateResults.filter(r => r.success).length
@@ -312,7 +312,7 @@ router.post('/import', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Initialize default ticket configurations
-router.post('/initialize', authenticate, async (req: AuthRequest, res) => {
+router.post('/initialize', authenticate, async (req: AuthRequest, res: any) => {
   try {
     const defaultTickets = [
       {

@@ -30,7 +30,7 @@ interface UpgradeInsight {
   potentialRevenue: number;
 }
 
-router.get('/analysis', async (req, res) => {
+router.get('/analysis', async (req: any, res: any) => {
   try {
     const days = parseInt(req.query.days as string) || 30;
     const startDate = dayjs().subtract(days, 'day').startOf('day').toDate();
@@ -73,13 +73,13 @@ router.get('/analysis', async (req, res) => {
       }, [] as any[]);
       
       const totalBookings = mainEntries.length + upgradeEntries.length;
-      const totalAdults = mainEntries.reduce((sum, e) => sum + (e.adults || 0), 0) + 
-                          upgradeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
-      const totalKids = mainEntries.reduce((sum, e) => sum + (e.kids || 0), 0) + 
-                       upgradeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+      const totalAdults = mainEntries.reduce((sum: number, e: any) => sum + (e.adults || 0), 0) + 
+                          upgradeEntries.reduce((sum: number, e: any) => sum + (e.adults || 0), 0);
+      const totalKids = mainEntries.reduce((sum: number, e: any) => sum + (e.kids || 0), 0) + 
+                       upgradeEntries.reduce((sum: number, e: any) => sum + (e.kids || 0), 0);
       const totalPeople = totalAdults + totalKids;
-      const revenue = mainEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0) + 
-                     upgradeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+      const revenue = mainEntries.reduce((sum: number, e: any) => sum + (e.finalAmount || 0), 0) + 
+                     upgradeEntries.reduce((sum: number, e: any) => sum + (e.finalAmount || 0), 0);
       
       // Calculate peak hours
       const hourlyData = new Array(24).fill(0);
