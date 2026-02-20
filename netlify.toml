@@ -1,18 +1,12 @@
 [build]
 base = "frontend/client"
-command = "cd frontend/client && npm install && npm run build"
-publish = "frontend/client/dist"
+command = "npm install && npm run build"
+publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "18"
+NODE_VERSION = "18"
 
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-[context.production]
-  command = "npm run build:netlify"
-
-[context.deploy-preview]
-  command = "npm run build:netlify"
+from = "/*"
+to = "/index.html"
+status = 200
