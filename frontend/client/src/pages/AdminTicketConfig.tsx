@@ -102,9 +102,6 @@ export function AdminTicketConfig() {
         setTimeout(() => {
           setSuccessNotification(null);
         }, 3000);
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
     } catch (error) {
       console.error('Error initializing configs:', error);
       setSuccessNotification('❌ Failed to initialize default configurations');
@@ -121,12 +118,11 @@ export function AdminTicketConfig() {
       setSaving(true);
       const updatedConfig = await ticketConfigApi.update(ticketType, config);
       
-      if (updatedConfig.ok) {
-        await fetchConfigs();
-        setEditingTicket(null);
-        
-        // Show success notification
-        setSuccessNotification(`✅ ${config.label || ticketType} configuration updated successfully!`);
+      await fetchConfigs();
+      setEditingTicket(null);
+      
+      // Show success notification
+      setSuccessNotification(`✅ ${config.label || ticketType} configuration updated successfully!`);
         
         // Trigger real-time sync event for ticket forms with enhanced data
         console.log('🔄 AdminTicketConfig: Dispatching ticket-config-updated event', {
@@ -159,9 +155,6 @@ export function AdminTicketConfig() {
         setTimeout(() => {
           setSuccessNotification(null);
         }, 3000);
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
     } catch (error) {
       console.error('Error updating config:', error);
       setSuccessNotification(`❌ Failed to update ${ticketType} configuration`);
