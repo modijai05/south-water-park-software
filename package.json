@@ -9,7 +9,6 @@
     "dev:backend": "cd backend/server && npm run dev",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "cd frontend/client && npm run build",
-    "build:netlify": "cd frontend/client && npm install && npm run build",
     "build:backend": "cd backend/server && npm run build",
     "start": "npm run start:backend",
     "start:backend": "cd backend/server && npm start",
