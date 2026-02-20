@@ -1,9 +1,10 @@
 import { TicketConfig } from '@/types';
+import { API_BASE } from './api';
 
 export const ticketConfigApi = {
   // Get all ticket configurations
   getAll: async (): Promise<TicketConfig[]> => {
-    const response = await fetch('/api/ticket-config', {
+    const response = await fetch(`${API_BASE}/ticket-config`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -14,7 +15,7 @@ export const ticketConfigApi = {
 
   // Get single ticket configuration
   get: async (ticketType: string): Promise<TicketConfig> => {
-    const response = await fetch(`/api/ticket-config/${ticketType}`, {
+    const response = await fetch(`${API_BASE}/ticket-config/${ticketType}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -25,7 +26,7 @@ export const ticketConfigApi = {
 
   // Update ticket configuration
   update: async (ticketType: string, config: Partial<TicketConfig>): Promise<TicketConfig> => {
-    const response = await fetch(`/api/ticket-config/${ticketType}`, {
+    const response = await fetch(`${API_BASE}/ticket-config/${ticketType}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -39,7 +40,7 @@ export const ticketConfigApi = {
 
   // Delete ticket configuration
   delete: async (ticketType: string): Promise<void> => {
-    const response = await fetch(`/api/ticket-config/${ticketType}`, {
+    const response = await fetch(`${API_BASE}/ticket-config/${ticketType}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -50,14 +51,14 @@ export const ticketConfigApi = {
 
   // Get pricing for specific day
   getPricing: async (day: string): Promise<any[]> => {
-    const response = await fetch(`/api/ticket-config/pricing/${day}`);
+    const response = await fetch(`${API_BASE}/ticket-config/pricing/${day}`);
     if (!response.ok) throw new Error('Failed to fetch pricing');
     return response.json();
   },
 
   // Initialize default configurations
   initialize: async (): Promise<void> => {
-    const response = await fetch('/api/ticket-config/initialize', {
+    const response = await fetch(`${API_BASE}/ticket-config/initialize`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -68,7 +69,7 @@ export const ticketConfigApi = {
 
   // Export ticket configurations to Excel format
   exportToExcel: async (): Promise<any[]> => {
-    const response = await fetch('/api/ticket-config/export', {
+    const response = await fetch(`${API_BASE}/ticket-config/export`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -79,7 +80,7 @@ export const ticketConfigApi = {
 
   // Import ticket configurations from Excel
   importFromExcel: async (data: any[]): Promise<{ message: string; results: any[]; totalProcessed: number; successCount: number; failureCount: number }> => {
-    const response = await fetch('/api/ticket-config/import', {
+    const response = await fetch(`${API_BASE}/ticket-config/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

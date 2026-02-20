@@ -1,4 +1,5 @@
 import { dataManager } from './dataManager';
+import { API_BASE } from './api';
 
 /**
  * Self-Healing AI Tool
@@ -336,7 +337,7 @@ export class SelfHealingAI {
     const startTime = Date.now();
     
     try {
-      const response = await fetch('/api/health', { 
+      const response = await fetch(`${API_BASE}/health`, { 
         method: 'GET',
         signal: AbortSignal.timeout(5000)
       });

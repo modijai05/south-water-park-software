@@ -1,5 +1,7 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
+export { API_BASE };
+
 function getToken(): string | null {
   return localStorage.getItem('token');
 }
@@ -20,13 +22,8 @@ export async function api<T>(
   } catch (err) {
     throw new Error('Cannot reach server. Make sure the backend is running (npm run dev in server folder).');
   }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const msg = data && typeof data.message === 'string' ? data.message : res.statusText;
-    if (res.status === 503) throw new Error(msg || 'Server is starting. Try again in a moment.');
-    throw new Error(msg || 'Request failed');
-  }
-  return data as T;
+  if (!res.ok) throw new Error('API error');
+  return res.json();
 }
 
 export const authApi = {

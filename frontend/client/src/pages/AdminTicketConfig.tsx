@@ -56,18 +56,9 @@ export function AdminTicketConfig() {
   const fetchConfigs = async () => {
     try {
       console.log('🔄 AdminTicketConfig: Fetching configs...');
-      const response = await fetch('/api/ticket-config', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ AdminTicketConfig: Fetched configs:', data);
-        setConfigs(data);
-      } else {
-        console.error('❌ AdminTicketConfig: Failed to fetch configs:', response.status, response.statusText);
-      }
+      const data = await ticketConfigApi.getAll();
+      console.log('✅ AdminTicketConfig: Fetched configs:', data);
+      setConfigs(data);
     } catch (error) {
       console.error('❌ AdminTicketConfig: Error fetching ticket configs:', error);
     } finally {
@@ -78,15 +69,8 @@ export function AdminTicketConfig() {
   const initializeDefaults = async () => {
     try {
       setSaving(true);
-      const response = await fetch('/api/ticket-config/initialize', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        await fetchConfigs();
+      await ticketConfigApi.initialize();
+      await fetchConfigs();
         
         // Show success notification
         setSuccessNotification('✅ Default ticket configurations initialized successfully!');
@@ -135,16 +119,9 @@ export function AdminTicketConfig() {
   const updateConfig = async (ticketType: string, config: Partial<TicketConfig>) => {
     try {
       setSaving(true);
-      const response = await fetch(`/api/ticket-config/${ticketType}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(config)
-      });
+      const updatedConfig = await ticketConfigApi.update(ticketType, config);
       
-      if (response.ok) {
+      if (updatedConfig.ok) {
         await fetchConfigs();
         setEditingTicket(null);
         

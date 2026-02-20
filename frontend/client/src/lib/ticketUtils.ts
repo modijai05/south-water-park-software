@@ -1,6 +1,7 @@
 import { TICKET_OPTIONS, KID_DISCOUNT, TicketConfig, DayWisePricing } from '@/types';
 export { TICKET_OPTIONS };
 import type { TicketType, UpgradeItem } from '@/types';
+import { API_BASE } from './api';
 
 // Cache for ticket configurations
 let ticketConfigs: TicketConfig[] = [];
@@ -40,7 +41,7 @@ async function fetchTicketConfigs(): Promise<TicketConfig[]> {
 
   try {
     const today = getDayName();
-    const response = await fetch(`/api/ticket-config/pricing/${today}`);
+    const response = await fetch(`${API_BASE}/ticket-config/pricing/${today}`);
     if (response.ok) {
       const pricingData = await response.json();
       // Convert pricing data back to TicketConfig format with current day pricing

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../lib/api';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
 interface TicketDemandData {
@@ -56,7 +57,7 @@ const TicketDemandAnalysis: React.FC = () => {
   const fetchAnalysisData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/ticket-demand-analysis/analysis?days=${days}`);
+      const response = await fetch(`${API_BASE}/ticket-demand-analysis/analysis?days=${days}`);
       if (!response.ok) {
         throw new Error('Failed to fetch analysis data');
       }
