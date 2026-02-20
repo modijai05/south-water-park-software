@@ -1,6 +1,6 @@
 [build]
 base = "frontend/client"
-command = "rm -rf node_modules package-lock.json && npm install && npm run build"
+command = "npm install --no-workspaces && npm run build"
 publish = "dist"
 
 [build.environment]
