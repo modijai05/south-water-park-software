@@ -12,6 +12,9 @@ export default defineConfig({
       overlay: false
     }
   },
+  define: {
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString())
+  },
   build: {
     outDir: 'dist',
     sourcemap: true,
