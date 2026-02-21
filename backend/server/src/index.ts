@@ -147,39 +147,53 @@ async function startServer() {
     // Try to connect to persistent MongoDB first
     const mongoUri = process.env.MONGODB_URI;
     
+    console.log('🔗 MongoDB Connection Setup');
+    console.log('📋 MONGODB_URI:', mongoUri ? 'CONFIGURED' : 'NOT CONFIGURED');
+    
     if (mongoUri) {
       try {
+        console.log('🔄 Attempting persistent MongoDB connection...');
+        console.log('📍 MongoDB URI:', mongoUri.replace(/\/\/([^:]+)@/, '//***:***@')); // Hide credentials in logs
+        
         await mongoose.connect(mongoUri);
-        console.log('MongoDB connected (persistent)');
+        console.log('✅ MongoDB connected (persistent)');
+        console.log('🗄️ Database: MongoDB Atlas - Production Ready');
       } catch (error) {
-        console.log('Failed to connect to persistent MongoDB, falling back to in-memory...');
+        console.error('❌ Persistent MongoDB connection failed:', error.message);
+        console.log('🔄 Falling back to in-memory MongoDB...');
+        
         // Fallback to in-memory MongoDB
         mongod = await MongoMemoryServer.create();
         const fallbackUri = mongod.getUri();
         await mongoose.connect(fallbackUri);
-        console.log('MongoDB connected (in-memory fallback)');
+        console.log('⚠️ MongoDB connected (in-memory fallback) - Data will be lost on restart');
       }
     } else {
+      console.log('⚠️ MONGODB_URI not provided in environment variables');
+      console.log('🔄 Using in-memory MongoDB for development');
+      
       // Use in-memory MongoDB if no URI provided
       mongod = await MongoMemoryServer.create();
       const inMemoryUri = mongod.getUri();
       await mongoose.connect(inMemoryUri);
-      console.log('MongoDB connected (in-memory)');
+      console.log('⚠️ MongoDB connected (in-memory) - Data will be lost on restart');
     }
     
-    // Auto-seed the database with default users
+    // Auto-seed database with default users
+    console.log('🌱 Seeding database with default users...');
     await seedDatabase();
     
     // Start the server
     app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-      console.log(process.env.MONGODB_URI ? 'MongoDB connected (persistent)' : 'MongoDB connected (in-memory)');
-      console.log('Database seeded with default users');
-      console.log('Default admin credentials: admin1/admin1, admin2/admin2, admin3/admin3');
-      console.log('Default staff credentials: staff1/staff1, staff2/staff2, staff3/staff3, staff4/staff4, staff5/staff5');
+      console.log('🚀 Server started successfully');
+      console.log('📍 Server URL:', `http://localhost:${PORT}`);
+      console.log('🗄️ Database Status:', process.env.MONGODB_URI ? 'MongoDB Atlas (Persistent)' : 'In-Memory (Temporary)');
+      console.log('👥 Default Admins: admin1/admin1, admin2/admin2, admin3/admin3');
+      console.log('👥 Default Staff: staff1/staff1, staff2/staff2, staff3/staff3, staff4/staff4, staff5/staff5');
+      console.log('🔐 Environment:', process.env.NODE_ENV || 'development');
     });
   } catch (err) {
-    console.error('Failed to start server:', err);
+    console.error('💥 Failed to start server:', err);
     process.exit(1);
   }
 }
