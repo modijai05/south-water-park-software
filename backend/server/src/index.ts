@@ -22,9 +22,12 @@ const PORT = process.env.PORT ?? 5000;
 app.use(cors({ 
   origin: process.env.CLIENT_URL ?? ['http://localhost:5174', 'https://ticketmanagementthesouth.netlify.app'], 
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Explicit preflight handling
+app.options('*', cors());
 
 // Increase payload size for large data
 app.use(express.json({ limit: '50mb' }));
