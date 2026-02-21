@@ -198,15 +198,19 @@ async function seedDatabase() {
     { username: 'staff5', password: 'staff5', role: 'staff' as const },
   ];
 
+  console.log('Seeding database - checking existing users...');
+  
   for (const u of [...ADMINS, ...STAFF]) {
     const existing = await User.findOne({ username: u.username });
     if (!existing) {
       await User.create(u);
-      console.log('Created:', u.username, u.role);
+      console.log('Created new user:', u.username, u.role);
     } else {
-      console.log('Exists:', u.username);
+      console.log('User already exists, keeping existing data:', u.username, 'Role:', existing.role, 'Active:', existing.active);
     }
   }
+  
+  console.log('Database seeding completed');
 }
 
 // Graceful shutdown
