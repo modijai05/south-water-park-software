@@ -18,9 +18,7 @@ router.post('/login', async (req, res) => {
       return;
     }
     
-    const user = await User.findOne({ username: String(username).trim() }).select('+password');
-    console.log('Login: User found:', !!user, 'Username:', username);
-    
+    const user = await User.findOne({ username: String(username).trim() });
     if (!user) {
       await logLogin(username, false).catch(() => {});
       console.log('Login: User not found');
@@ -29,14 +27,13 @@ router.post('/login', async (req, res) => {
     }
     
     if (!user.active) {
-      console.log('Login: User is inactive:', user.username);
+      await logLogin(username, false).catch(() => {});
+      console.log('Login: User is inactive');
       res.status(401).json({ message: 'Account is inactive' });
       return;
     }
     
     const match = await user.comparePassword(String(password));
-    console.log('Login: Password match:', match);
-    
     if (!match) {
       await logLogin(username, false).catch(() => {});
       console.log('Login: Password mismatch');
@@ -45,12 +42,24 @@ router.post('/login', async (req, res) => {
     }
     
     await logLogin(username, true).catch(() => {});
-    const token = jwt.sign({ userId: user._id.toString() }, JWT_SECRET, { expiresIn: '7d' });
-    console.log('Login: Success, token generated for user:', user.username, 'Role:', user.role);
+    console.log('Login: Success for user:', username);
+    
+    const token = jwt.sign(
+      { userId: user._id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
     
     res.json({
+      message: 'Login successful',
       token,
-      user: { id: user._id.toString(), username: user.username, fullName: user.fullName, role: user.role },
+      user: {
+        id: user._id,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+        active: user.active
+      }
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Login failed';
@@ -58,15 +67,6 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Login failed. Please try again.' });
   }
 });
-
-async function logLogin(username: string, success: boolean) {
-  const user = await User.findOne({ username: String(username).trim() });
-  if (user) {
-    if (!Array.isArray(user.loginLogs)) user.loginLogs = [];
-    user.loginLogs.push({ timestamp: new Date(), success });
-    await user.save();
-  }
-}
 
 /** GET /api/auth/me */
 router.get('/me', authenticate, (req, res) => {
@@ -76,5 +76,14 @@ router.get('/me', authenticate, (req, res) => {
       : null,
   });
 });
+
+async function logLogin(username, success) {
+  const user = await User.findOne({ username: String(username).trim() });
+  if (user) {
+    if (!Array.isArray(user.loginLogs)) user.loginLogs = [];
+    user.loginLogs.push({ timestamp: new Date(), success });
+    await user.save();
+  }
+}
 
 module.exports = router;
