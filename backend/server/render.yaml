@@ -9,11 +9,11 @@ services:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
-        sync: false
+        value: mongodb+srv://jaimodi05bapa_db_user:npPqPhXwCMbiSIFS@tms.f2ekue9.mongodb.net/south_water_park?appName=TMS
       - key: JWT_SECRET
-        sync: false
+        value: south-water-park-secret-change-in-prod
       - key: CLIENT_URL
-        sync: false
+        value: https://ticketmanagementthesouth.netlify.app
       - key: PORT
         value: 10000
     healthCheckPath: /api/health
