@@ -3,7 +3,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 export { API_BASE };
 
 function getToken(): string | null {
-  return localStorage.getItem('token');
+  return localStorage.getItem('token') || sessionStorage.getItem('token');
 }
 
 export async function api<T>(
@@ -13,16 +13,25 @@ export async function api<T>(
   const token = getToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    res = await fetch(`${API_BASE}${path}`, { 
+      ...options, 
+      headers,
+      credentials: 'include'
+    });
   } catch (err) {
     throw new Error('Cannot reach server. Make sure the backend is running (npm run dev in server folder).');
   }
-  if (!res.ok) throw new Error('API error');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const errorMessage = errorData.message || res.statusText || 'API error';
+    throw new Error(errorMessage);
+  }
   return res.json();
 }
 

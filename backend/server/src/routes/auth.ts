@@ -18,13 +18,13 @@ router.post('/login', async (req, res) => {
       return;
     }
     
-    const user = await User.findOne({ username: String(username).trim() });
+    const user = await User.findOne({ username: String(username).trim() }).select('+password');
     console.log('Login: User found:', !!user, 'Username:', username);
     
     if (!user) {
       await logLogin(username, false).catch(() => {});
       console.log('Login: User not found');
-      res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid username or password' });
       return;
     }
     
@@ -40,7 +40,7 @@ router.post('/login', async (req, res) => {
     if (!match) {
       await logLogin(username, false).catch(() => {});
       console.log('Login: Password mismatch');
-      res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid username or password' });
       return;
     }
     
@@ -55,7 +55,7 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Login failed';
     console.error('Login error:', err);
-    res.status(500).json({ message });
+    res.status(500).json({ message: 'Login failed. Please try again.' });
   }
 });
 

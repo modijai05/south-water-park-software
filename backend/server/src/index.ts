@@ -20,10 +20,18 @@ const PORT = process.env.PORT ?? 5000;
 
 // Configure Express for scalability
 app.use(cors({ 
-  origin: process.env.CLIENT_URL ?? ['http://localhost:5174', 'https://ticketmanagementthesouth.netlify.app'], 
+  origin: [
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://ticketmanagementthesouth.netlify.app',
+    'https://south-water-park-backend.onrender.com'
+  ], 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Set-Cookie'],
+  maxAge: 86400 // Cache preflight for 24 hours
 }));
 
 // Explicit preflight handling
@@ -155,7 +163,11 @@ async function startServer() {
         console.log('🔄 Attempting persistent MongoDB connection...');
         console.log('📍 MongoDB URI:', mongoUri.replace(/\/\/([^:]+)@/, '//***:***@')); // Hide credentials in logs
         
-        await mongoose.connect(mongoUri);
+        await mongoose.connect(mongoUri, {
+          maxPoolSize: 10, // Maintain up to 10 socket connections
+          serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+          socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+        });
         console.log('✅ MongoDB connected (persistent)');
         console.log('🗄️ Database: MongoDB Atlas - Production Ready');
       } catch (error) {

@@ -9,9 +9,11 @@ services:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
-        value: ${MONGODB_URI}
+        sync: false
       - key: JWT_SECRET
-        value: ${JWT_SECRET}
+        sync: false
+      - key: CLIENT_URL
+        sync: false
       - key: PORT
         value: 10000
     healthCheckPath: /api/health
@@ -21,3 +23,5 @@ services:
         - src/**
         - package.json
         - tsconfig.json
+    domains:
+      - south-water-park-api.onrender.com
