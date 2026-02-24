@@ -1,5 +1,5 @@
-import { Entry } from '../models/Entry.js';
-import { User } from '../models/User.js';
+const EntryModel = require('../models/Entry.js').Entry;
+const UserModel = require('../models/User.js').User;
 
 /**
  * Script to backfill filledByFullName field for existing entries
@@ -10,17 +10,17 @@ async function backfillCashierNames() {
     console.log('Starting backfill of cashier names...');
     
     // Find all entries that don't have filledByFullName but have createdBy
-    const entries = await Entry.find({ 
+    const entries = await EntryModel.find({ 
       filledByFullName: { $exists: false } 
     }).populate('createdBy', 'username fullName');
     
     console.log(`Found ${entries.length} entries to backfill`);
     
     for (const entry of entries) {
-      const user = entry.createdBy as any;
+      const user = entry.createdBy;
       if (user) {
         const fullName = user.fullName || user.username;
-        await Entry.findByIdAndUpdate(entry._id, { 
+        await EntryModel.findByIdAndUpdate(entry._id, { 
           filledByFullName: fullName 
         });
         console.log(`Updated entry ${entry._id} with cashier name: ${fullName}`);
@@ -34,11 +34,11 @@ async function backfillCashierNames() {
 }
 
 // Run backfill if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   backfillCashierNames().then(() => {
     console.log('Script completed');
     process.exit(0);
   });
 }
 
-export { backfillCashierNames };
+module.exports = { backfillCashierNames };

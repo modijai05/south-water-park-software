@@ -1,18 +1,18 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
-import authRoutes from './routes/auth.js';
-import entryRoutes from './routes/entries.js';
-import userRoutes from './routes/users.js';
-import { sendSMSRouter } from './routes/sms.js';
-import ticketConfigRoutes from './routes/ticketConfig.js';
-import ticketDemandAnalysisRoutes from './routes/ticketDemandAnalysis.js';
-import { analyticsRouter } from './routes/analytics.js';
-import { errorHandler } from './middleware/errorHandler.js';
-import { User } from './models/User.js';
-import { dbHealthMonitor } from './utils/databaseHealth.js';
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+const authRoutes = require('./routes/auth.js');
+const entryRoutes = require('./routes/entries.js');
+const userRoutes = require('./routes/users.js');
+const { sendSMSRouter } = require('./routes/sms.js');
+const ticketConfigRoutes = require('./routes/ticketConfig.js');
+const ticketDemandAnalysisRoutes = require('./routes/ticketDemandAnalysis.js');
+const { analyticsRouter } = require('./routes/analytics.js');
+const { errorHandler } = require('./middleware/errorHandler.js');
+const { User } = require('./models/User.js');
+const { dbHealthMonitor } = require('./utils/databaseHealth.js');
 
 dotenv.config();
 
@@ -159,7 +159,7 @@ app.use('/api', sendSMSRouter);
 app.use(errorHandler);
 
 // Use persistent MongoDB with enhanced connection handling
-let mongod: MongoMemoryServer | null = null;
+let mongod: any = null;
 
 async function startServer() {
   try {

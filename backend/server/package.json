@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "Backend for The South Water Park – Ticket Entry System",
   "main": "dist/index.js",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "start:prod": "NODE_ENV=production node dist/index.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

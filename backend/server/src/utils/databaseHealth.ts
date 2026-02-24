@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 export interface DatabaseHealth {
   connected: boolean;
@@ -10,7 +10,7 @@ export interface DatabaseHealth {
 }
 
 class DatabaseHealthMonitor {
-  private healthCheckInterval: NodeJS.Timeout | null = null;
+  private healthCheckInterval: any = null;
   private isHealthy = false;
   private lastHealthCheck: Date | null = null;
 
@@ -42,7 +42,7 @@ class DatabaseHealthMonitor {
         return;
       }
 
-      // Ping the database to check connectivity
+      // Ping database to check connectivity
       await mongoose.connection.db.admin().ping();
       
       this.isHealthy = true;
