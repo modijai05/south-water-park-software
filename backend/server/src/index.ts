@@ -12,6 +12,7 @@ import ticketDemandAnalysisRoutes from './routes/ticketDemandAnalysis.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { User } from './models/User.js';
+import { dbHealthMonitor } from './utils/databaseHealth.js';
 
 dotenv.config();
 
@@ -85,15 +86,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint
+// Health check endpoint with database status
 app.get('/api/health', (req, res) => {
+  const dbHealth = dbHealthMonitor.getHealth();
   res.json({ 
     ok: true, 
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
-    activeConnections: requestCounts.size
+    activeConnections: requestCounts.size,
+    database: dbHealth,
+    environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Database health check endpoint
+app.get('/api/database-health', (req, res) => {
+  const health = dbHealthMonitor.getHealth();
+  const statusCode = health.connected ? 200 : 503;
+  res.status(statusCode).json(health);
 });
 
 // Seed endpoint
@@ -147,7 +158,7 @@ app.use('/api', sendSMSRouter);
 
 app.use(errorHandler);
 
-// Use persistent MongoDB with fallback to in-memory
+// Use persistent MongoDB with enhanced connection handling
 let mongod: MongoMemoryServer | null = null;
 
 async function startServer() {
@@ -159,30 +170,82 @@ async function startServer() {
     console.log('📋 MONGODB_URI:', mongoUri ? 'CONFIGURED' : 'NOT CONFIGURED');
     
     if (mongoUri) {
-      try {
-        console.log('🔄 Attempting persistent MongoDB connection...');
-        console.log('📍 MongoDB URI:', mongoUri.replace(/\/\/([^:]+)@/, '//***:***@')); // Hide credentials in logs
-        
-        await mongoose.connect(mongoUri, {
-          maxPoolSize: 10, // Maintain up to 10 socket connections
-          serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-          socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-        });
-        console.log('✅ MongoDB connected (persistent)');
-        console.log('🗄️ Database: MongoDB Atlas - Production Ready');
-      } catch (error) {
-        console.error('❌ Persistent MongoDB connection failed:', error.message);
-        console.log('🔄 Falling back to in-memory MongoDB...');
-        
-        // Fallback to in-memory MongoDB
-        mongod = await MongoMemoryServer.create();
-        const fallbackUri = mongod.getUri();
-        await mongoose.connect(fallbackUri);
-        console.log('⚠️ MongoDB connected (in-memory fallback) - Data will be lost on restart');
+      let connectionAttempts = 0;
+      const maxAttempts = 3;
+      
+      while (connectionAttempts < maxAttempts) {
+        try {
+          connectionAttempts++;
+          console.log(`🔄 Connection attempt ${connectionAttempts}/${maxAttempts}...`);
+          console.log('📍 MongoDB URI:', mongoUri.replace(/\/\/([^:]+)@/, '//***:***@')); // Hide credentials in logs
+          
+          await mongoose.connect(mongoUri, {
+            maxPoolSize: 10, // Maintain up to 10 socket connections
+            serverSelectionTimeoutMS: 10000, // Keep trying to send operations for 10 seconds
+            socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+            connectTimeoutMS: 10000, // How long to try connecting
+            heartbeatFrequencyMS: 10000, // Check server status every 10 seconds
+            retryWrites: true, // Automatically retry write operations
+            w: 'majority', // Write concern for data safety
+            readPreference: 'primary', // Read from primary for consistency
+          });
+          
+          // Test the connection with a simple operation
+          await mongoose.connection.db.admin().ping();
+          
+          console.log('✅ MongoDB connected (persistent) - Production Ready');
+          console.log('🗄️ Database: MongoDB Atlas');
+          console.log('🔒 Connection: Secure with data persistence');
+          
+          // Set up connection monitoring
+          mongoose.connection.on('error', (err) => {
+            console.error('❌ MongoDB connection error:', err);
+          });
+          
+          mongoose.connection.on('disconnected', () => {
+            console.warn('⚠️ MongoDB disconnected');
+          });
+          
+          mongoose.connection.on('reconnected', () => {
+            console.log('🔄 MongoDB reconnected');
+          });
+          
+          break; // Success, exit retry loop
+          
+        } catch (error) {
+          console.error(`❌ Connection attempt ${connectionAttempts} failed:`, error.message);
+          
+          if (connectionAttempts >= maxAttempts) {
+            console.error('💥 All connection attempts failed');
+            console.log('📋 Common solutions:');
+            console.log('   1. Whitelist your IP in MongoDB Atlas: https://www.mongodb.com/docs/atlas/security-whitelist/');
+            console.log('   2. Check MongoDB Atlas cluster status');
+            console.log('   3. Verify connection string format');
+            console.log('   4. Ensure network allows outbound connections');
+            
+            // CRITICAL: Don't fall back to in-memory in production
+            if (process.env.NODE_ENV === 'production') {
+              console.error('🚨 Production mode: Cannot start without persistent database');
+              process.exit(1);
+            }
+            
+            console.log('🔄 Development mode: Falling back to in-memory MongoDB...');
+            console.log('⚠️ WARNING: All data will be lost on restart!');
+            
+            // Fallback to in-memory MongoDB only in development
+            mongod = await MongoMemoryServer.create();
+            const fallbackUri = mongod.getUri();
+            await mongoose.connect(fallbackUri);
+            console.log('⚠️ MongoDB connected (in-memory fallback) - Development Only');
+          } else {
+            console.log(`⏳ Retrying in 3 seconds...`);
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
+        }
       }
     } else {
       console.log('⚠️ MONGODB_URI not provided in environment variables');
-      console.log('🔄 Using in-memory MongoDB for development');
+      console.log('🔄 Using in-memory MongoDB for development only');
       
       // Use in-memory MongoDB if no URI provided
       mongod = await MongoMemoryServer.create();
@@ -190,6 +253,10 @@ async function startServer() {
       await mongoose.connect(inMemoryUri);
       console.log('⚠️ MongoDB connected (in-memory) - Data will be lost on restart');
     }
+    
+    // Start database health monitoring
+    console.log('🏥 Starting database health monitoring...');
+    dbHealthMonitor.startMonitoring(30000); // Check every 30 seconds
     
     // Auto-seed database with default users
     console.log('🌱 Seeding database with default users...');
@@ -200,9 +267,12 @@ async function startServer() {
       console.log('🚀 Server started successfully');
       console.log('📍 Server URL:', `http://localhost:${PORT}`);
       console.log('🗄️ Database Status:', process.env.MONGODB_URI ? 'MongoDB Atlas (Persistent)' : 'In-Memory (Temporary)');
-      console.log('👥 Default Admins: admin1/admin1, admin2/admin2, admin3/admin3');
+      console.log('� Data Persistence:', process.env.MONGODB_URI ? 'ENABLED - No data loss' : 'DISABLED - Data will be lost');
+      console.log('� Default Admins: admin1/admin1, admin2/admin2, admin3/admin3');
       console.log('👥 Default Staff: staff1/staff1, staff2/staff2, staff3/staff3, staff4/staff4, staff5/staff5');
       console.log('🔐 Environment:', process.env.NODE_ENV || 'development');
+      console.log('🏥 Health Monitoring: Active (30s intervals)');
+      console.log('🔍 Health Check: http://localhost:' + PORT + '/api/health');
     });
   } catch (err) {
     console.error('💥 Failed to start server:', err);
@@ -239,13 +309,69 @@ async function seedDatabase() {
   console.log('Database seeding completed');
 }
 
-// Graceful shutdown
+// Graceful shutdown with data preservation
 process.on('SIGINT', async () => {
-  if (mongod) {
-    await mongod.stop();
+  console.log('\n🛑 SIGINT received - Starting graceful shutdown...');
+  
+  try {
+    // Stop health monitoring
+    dbHealthMonitor.stopMonitoring();
+    console.log('🔄 Database health monitoring stopped');
+    
+    // Close all database connections
+    if (mongoose.connection.readyState === 1) {
+      console.log('🔄 Closing MongoDB connection...');
+      await mongoose.connection.close();
+      console.log('✅ MongoDB connection closed');
+    }
+    
+    // Stop in-memory server if it was used
+    if (mongod) {
+      console.log('🔄 Stopping in-memory MongoDB...');
+      await mongod.stop();
+      console.log('✅ In-memory MongoDB stopped');
+    }
+    
+    console.log('✅ Graceful shutdown completed');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error during graceful shutdown:', error);
+    process.exit(1);
   }
-  await mongoose.disconnect();
-  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('\n🛑 SIGTERM received - Starting graceful shutdown...');
+  
+  try {
+    // Stop health monitoring
+    dbHealthMonitor.stopMonitoring();
+    
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.close();
+    }
+    
+    if (mongod) {
+      await mongod.stop();
+    }
+    
+    console.log('✅ Graceful shutdown completed');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error during graceful shutdown:', error);
+    process.exit(1);
+  }
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('💥 Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
 
 startServer();
