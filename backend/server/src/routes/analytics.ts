@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { Entry, IEntry } from '../models/Entry.js';
-import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth.js';
+import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import dayjs from 'dayjs';
 
 const router = Router();

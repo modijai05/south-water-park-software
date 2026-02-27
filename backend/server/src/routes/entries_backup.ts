@@ -2,7 +2,7 @@
 // We'll restore the main file from this if needed
 
 import { Router } from 'express';
-import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth.js';
+import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import { Entry, IEntry } from '../models/Entry.js';
 import { aggregateCouponCounts } from '../utils/couponCounter.js';
 import dayjs from 'dayjs';

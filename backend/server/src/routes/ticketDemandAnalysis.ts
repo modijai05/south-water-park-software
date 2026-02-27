@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth.js';
+import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import { Entry, IEntry } from '../models/Entry.js';
 import dayjs from 'dayjs';
 

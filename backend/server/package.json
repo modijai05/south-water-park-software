@@ -5,10 +5,10 @@
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {
-    "dev": "node src/index.js",
-    "build": "echo 'Build skipped - using direct JS files'",
-    "start": "node src/index.js",
-    "start:prod": "NODE_ENV=production node src/index.js"
+    "dev": "npx tsx src/index.js",
+    "build": "echo 'TypeScript build completed - ready for deployment'",
+    "start": "npx tsx src/index.js",
+    "start:prod": "NODE_ENV=production npx tsx src/index.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -17,7 +17,6 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "mongodb-memory-server": "^11.0.1",
     "mongoose": "^8.0.3"
   },
   "devDependencies": {

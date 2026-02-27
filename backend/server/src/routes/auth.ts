@@ -1,13 +1,13 @@
-const { Router } = require('express');
-const jwt = require('jsonwebtoken');
-const { User } = require('../models/User.js');
-const { authenticate } = require('../middleware/auth.js');
+import { Router, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { User } from '../models/User';
+import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? 'south-water-park-secret-change-in-prod';
 
 /** POST /api/auth/login */
-router.post('/login', async (req, res) => {
+router.post('/login', async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body ?? {};
     console.log('Login attempt:', { username, passwordProvided: !!password });
@@ -69,7 +69,7 @@ async function logLogin(username: string, success: boolean) {
 }
 
 /** GET /api/auth/me */
-router.get('/me', authenticate, (req, res) => {
+router.get('/me', authenticate, (req: AuthRequest, res: Response) => {
   res.json({
     user: req.user
       ? { id: req.user._id, username: req.user.username, fullName: req.user.fullName, role: req.user.role }
@@ -77,4 +77,4 @@ router.get('/me', authenticate, (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

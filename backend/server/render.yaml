@@ -3,19 +3,21 @@ services:
     name: south-water-park-backend
     env: node
     plan: free
-    buildCommand: "npm run build"
-    startCommand: "npm start"
+    buildCommand: "npm install && npm run build"
+    startCommand: "npx tsx src/index.js"
     envVars:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
         value: mongodb+srv://jaimodi05bapa_db_user:npPqPhXwCMbiSIFS@tms.f2ekue9.mongodb.net/south_water_park?appName=TMS
       - key: JWT_SECRET
-        value: south-water-park-secret-change-in-prod
+        value: south-water-park-production-secret-2024
       - key: CLIENT_URL
         value: https://ticketmanagementthesouth.netlify.app
       - key: PORT
         value: 10000
+      - key: TZ
+        value: UTC
     healthCheckPath: /api/health
     autoDeploy: true
     buildFilter:
@@ -23,6 +25,7 @@ services:
         - src/**
         - package.json
         - tsconfig.json
+        - .env.example
     domains:
       - south-water-park-api.onrender.com
       - south-water-park-backend.onrender.com

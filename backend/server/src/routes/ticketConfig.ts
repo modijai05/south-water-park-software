@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { TicketConfig, ITicketConfig } from '../models/TicketConfig.js';
-import { authenticate, AuthRequest } from '../middleware/auth.js';
+import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 

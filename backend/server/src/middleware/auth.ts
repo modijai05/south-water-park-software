@@ -1,9 +1,22 @@
-const jwt = require('jsonwebtoken');
-const { User } = require('../models/User.js');
+import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
+import { User } from '../models/User.js';
+
+type UserDocument = ReturnType<typeof User.findById> extends Promise<infer T> ? T : never;
+
+interface JwtPayload {
+  userId: string;
+  iat: number;
+  exp: number;
+}
+
+interface AuthenticatedRequest extends Request {
+  user?: any;
+}
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'south-water-park-secret-change-in-prod';
 
-const authenticate = async (req, res, next) => {
+export const authenticate = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -15,7 +28,7 @@ const authenticate = async (req, res, next) => {
     }
     
     console.log('Auth: Token provided, verifying...');
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     console.log('Auth: Token decoded for userId:', decoded.userId);
     
     const user = await User.findById(decoded.userId);
@@ -40,7 +53,7 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-const requireAdmin = (req, res, next) => {
+export const requireAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (req.user?.role !== 'admin') {
     res.status(403).json({ message: 'Admin access required' });
     return;
@@ -48,4 +61,4 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, requireAdmin };
+export type { AuthenticatedRequest as AuthRequest };

@@ -1,7 +1,20 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose, { Schema, Document } from 'mongoose';
+import bcrypt from 'bcryptjs';
 
-const userSchema = new mongoose.Schema(
+export interface IUser extends Document {
+  username: string;
+  password: string;
+  role: 'admin' | 'staff';
+  active: boolean;
+  email?: string;
+  fullName?: string;
+  loginLogs: Array<{ timestamp: Date; success: boolean }>;
+  createdAt: Date;
+  updatedAt: Date;
+  comparePassword(candidate: string): Promise<boolean>;
+}
+
+const userSchema = new Schema<IUser>(
   {
     username: { type: String, required: true, unique: true, index: true },
     password: { type: String, required: true, minlength: 6 },
@@ -20,14 +33,14 @@ userSchema.pre('save', async function (next) {
   try {
     this.password = await bcrypt.hash(this.password, 12);
     next();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Password hashing error:', error);
     next(error);
   }
 });
 
 // Password comparison method
-userSchema.methods.comparePassword = async function (candidate) {
+userSchema.methods.comparePassword = async function (candidate: string): Promise<boolean> {
   return bcrypt.compare(candidate, this.password);
 };
 
@@ -56,6 +69,5 @@ userSchema.virtual('profile').get(function () {
 userSchema.set('toJSON', { virtuals: true });
 userSchema.set('toObject', { virtuals: true });
 
-const User = mongoose.model('User', userSchema);
-
-module.exports = { User };
+export const User = mongoose.model<IUser>('User', userSchema);
+export type UserDocument = IUser;

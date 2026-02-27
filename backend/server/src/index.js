@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 const authRoutes = require('./routes/auth.js');
 const entryRoutes = require('./routes/entries.js');
 const userRoutes = require('./routes/users.js');
@@ -10,8 +9,8 @@ const { sendSMSRouter } = require('./routes/sms.js');
 const ticketConfigRoutes = require('./routes/ticketConfig.js');
 const ticketDemandAnalysisRoutes = require('./routes/ticketDemandAnalysis.js');
 const { analyticsRouter } = require('./routes/analytics.js');
-const { errorHandler } = require('./middleware/errorHandler.js');
-const { User } = require('./models/User.js');
+const { errorHandler } = require('./middleware/errorHandler.ts');
+const { User } = require('./models/User.ts');
 const { dbHealthMonitor } = require('./utils/databaseHealth.js');
 
 dotenv.config();
@@ -79,111 +78,91 @@ app.use('/api', sendSMSRouter);
 app.use(errorHandler);
 
 // Use persistent MongoDB with enhanced connection handling
-let mongod = null;
 
 async function startServer() {
   try {
-    // Try to connect to persistent MongoDB first
+    // REQUIRE MongoDB URI for data persistence
     const mongoUri = process.env.MONGODB_URI;
     
-    console.log('🔗 MongoDB Connection Setup');
-    console.log('📋 MONGODB_URI:', mongoUri ? 'CONFIGURED' : 'NOT CONFIGURED');
+    if (!mongoUri) {
+      console.error('❌ MONGODB_URI is required for data persistence');
+      console.error('💥 Server cannot start without database connection');
+      console.error('🔧 Please set MONGODB_URI in your environment variables');
+      process.exit(1);
+    }
     
-    if (mongoUri) {
-      let connectionAttempts = 0;
-      const maxAttempts = 3;
-      
-      while (connectionAttempts < maxAttempts) {
-        try {
-          connectionAttempts++;
-          console.log(`🔄 Connection attempt ${connectionAttempts}/${maxAttempts}...`);
-          
-          await mongoose.connect(mongoUri, {
-            maxPoolSize: 10,
-            serverSelectionTimeoutMS: 10000,
-            socketTimeoutMS: 45000,
-            connectTimeoutMS: 10000,
-            heartbeatFrequencyMS: 10000,
-            retryWrites: true,
-            w: 'majority',
-            readPreference: 'primary',
-          });
-          
-          await mongoose.connection.db.admin().ping();
-          
-          console.log('✅ MongoDB connected (persistent) - Production Ready');
-          console.log('🔗 Connection Details:');
-          console.log(`   - Host: ${mongoose.connection.host}`);
-          console.log(`   - Database: ${mongoose.connection.name}`);
-          console.log(`   - Ready State: ${mongoose.connection.readyState}`);
-          console.log('🛡️ Production Safeguards: ENABLED');
-          console.log('   - No in-memory fallback');
-          console.log('   - Zero data loss guarantee');
-          console.log('   - Connection retry logic active');
-          
-          // Set up connection monitoring
-          mongoose.connection.on('error', (err) => {
-            console.error('❌ MongoDB connection error:', err);
-            if (process.env.NODE_ENV === 'production') {
-              console.error('🚨 Production: Database connection lost - Server will exit');
-              process.exit(1);
-            }
-          });
-          
-          mongoose.connection.on('disconnected', () => {
-            console.warn('⚠️ MongoDB disconnected');
-            if (process.env.NODE_ENV === 'production') {
-              console.error('🚨 Production: Database connection lost - Server will exit');
-              process.exit(1);
-            }
-          });
-          
-          mongoose.connection.on('reconnected', () => {
-            console.log('🔄 MongoDB reconnected');
-          });
-          
-          break; // Success, exit retry loop
-          
-        } catch (error) {
-          console.error(`❌ Connection attempt ${connectionAttempts} failed:`, error.message);
-          
-          if (connectionAttempts >= maxAttempts) {
-            console.error('💥 All connection attempts failed');
-            console.error('🔧 Common solutions:');
-            console.error('   1. Check MongoDB Atlas IP whitelist');
-            console.error('   2. Verify connection string format');
-            console.error('   3. Check network connectivity');
-            console.error('   4. Confirm database credentials');
-            
-            if (process.env.NODE_ENV === 'production') {
-              console.error('🚨 Production mode: Cannot start without persistent database');
-              console.error('💥 Server exiting to prevent data loss');
-              process.exit(1);
-            } else {
-              console.warn('⚠️ Development mode: Falling back to in-memory database');
-              console.warn('⚠️ WARNING: Data will be lost on server restart');
-              
-              // Fallback to in-memory database for development
-              mongod = await MongoMemoryServer.create();
-              const uri = mongod.getUri();
-              await mongoose.connect(uri);
-              console.log('📦 In-memory MongoDB started (development only)');
-            }
-          } else {
-            console.log(`⏳ Retrying in 3 seconds...`);
-            await new Promise(resolve => setTimeout(resolve, 3000));
-          }
+    console.log('🔗 MongoDB Connection Setup');
+    console.log('📋 MONGODB_URI: CONFIGURED');
+    
+    let connectionAttempts = 0;
+    const maxAttempts = 5; // Increased attempts for reliability
+    
+    while (connectionAttempts < maxAttempts) {
+      try {
+        connectionAttempts++;
+        console.log(`🔄 Connection attempt ${connectionAttempts}/${maxAttempts}...`);
+        
+        await mongoose.connect(mongoUri, {
+          maxPoolSize: 20, // Increased pool size for production
+          serverSelectionTimeoutMS: 15000, // Increased timeout
+          socketTimeoutMS: 60000, // Increased timeout
+          connectTimeoutMS: 15000, // Increased timeout
+          heartbeatFrequencyMS: 10000,
+          retryWrites: true,
+          w: 'majority',
+          readPreference: 'primary',
+        });
+        
+        await mongoose.connection.db.admin().ping();
+        
+        console.log('✅ MongoDB connected (persistent) - Production Ready');
+        console.log('🔗 Connection Details:');
+        console.log(`   - Host: ${mongoose.connection.host}`);
+        console.log(`   - Database: ${mongoose.connection.name}`);
+        console.log(`   - Ready State: ${mongoose.connection.readyState}`);
+        console.log('🛡️ Production Safeguards: ENABLED');
+        console.log('   - No in-memory fallback');
+        console.log('   - Zero data loss guarantee');
+        console.log('   - Connection retry logic active');
+        console.log('   - Data persistence enforced');
+        
+        // Set up connection monitoring
+        mongoose.connection.on('error', (err) => {
+          console.error('❌ MongoDB connection error:', err);
+          console.error('🚨 Database connection lost - Server will exit');
+          process.exit(1);
+        });
+        
+        mongoose.connection.on('disconnected', () => {
+          console.warn('⚠️ MongoDB disconnected');
+          console.error('🚨 Database connection lost - Server will exit');
+          process.exit(1);
+        });
+        
+        mongoose.connection.on('reconnected', () => {
+          console.log('🔄 MongoDB reconnected');
+        });
+        
+        break; // Success, exit retry loop
+        
+      } catch (error) {
+        console.error(`❌ Connection attempt ${connectionAttempts} failed:`, error.message);
+        
+        if (connectionAttempts >= maxAttempts) {
+          console.error('💥 All connection attempts failed');
+          console.error('🔧 Common solutions:');
+          console.error('   1. Check MongoDB Atlas IP whitelist');
+          console.error('   2. Verify connection string format');
+          console.error('   3. Check network connectivity');
+          console.error('   4. Confirm database credentials');
+          console.error('🚨 Cannot start without persistent database');
+          console.error('💥 Server exiting to prevent data loss');
+          process.exit(1);
+        } else {
+          console.log(`⏳ Retrying in 5 seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
         }
       }
-    } else {
-      console.warn('⚠️ No MONGODB_URI provided - Using in-memory database');
-      console.warn('⚠️ WARNING: Data will be lost on server restart');
-      console.warn('⚠️ Set MONGODB_URI for persistent storage');
-      
-      mongod = await MongoMemoryServer.create();
-      const uri = mongod.getUri();
-      await mongoose.connect(uri);
-      console.log('📦 In-memory MongoDB started');
     }
     
     // Start database health monitoring
@@ -198,8 +177,9 @@ async function startServer() {
     app.listen(PORT, () => {
       console.log('🚀 Server started successfully');
       console.log('📍 Server URL:', `http://localhost:${PORT}`);
-      console.log('🗄️ Database Status:', process.env.MONGODB_URI ? 'MongoDB Atlas (Persistent)' : 'In-Memory (Temporary)');
-      console.log('🔒 Data Persistence:', process.env.MONGODB_URI ? 'ENABLED - No data loss' : 'DISABLED - Data will be lost');
+      console.log('🗄️ Database Status: MongoDB Atlas (Persistent)');
+      console.log('🔒 Data Persistence: ENABLED - Zero data loss guaranteed');
+      console.log('🛡️ Production Mode: All data persisted to MongoDB Atlas');
       console.log('👥 Default Admins: admin1/admin1, admin2/admin2, admin3/admin3');
       console.log('👥 Default Staff: staff1/staff1, staff2/staff2, staff3/staff3, staff4/staff4, staff5/staff5');
       console.log('🔐 Environment:', process.env.NODE_ENV || 'development');
@@ -251,18 +231,11 @@ process.on('SIGINT', async () => {
     dbHealthMonitor.stopMonitoring();
     console.log('🔄 Database health monitoring stopped');
     
-    // Close all database connections
+    // Close MongoDB connection
     if (mongoose.connection.readyState === 1) {
       console.log('🔄 Closing MongoDB connection...');
       await mongoose.connection.close();
       console.log('✅ MongoDB connection closed');
-    }
-    
-    // Stop in-memory server if it was used
-    if (mongod) {
-      console.log('🔄 Stopping in-memory MongoDB...');
-      await mongod.stop();
-      console.log('✅ In-memory MongoDB stopped');
     }
     
     console.log('✅ Graceful shutdown completed');
@@ -282,10 +255,6 @@ process.on('SIGTERM', async () => {
     
     if (mongoose.connection.readyState === 1) {
       await mongoose.connection.close();
-    }
-    
-    if (mongod) {
-      await mongod.stop();
     }
     
     console.log('✅ Graceful shutdown completed');

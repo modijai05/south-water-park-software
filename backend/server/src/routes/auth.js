@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const jwt = require('jsonwebtoken');
-const { User } = require('../models/User.js');
-const { authenticate } = require('../middleware/auth.js');
+const { User } = require('../models/User.ts');
+const { authenticate } = require('../middleware/auth.ts');
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? 'south-water-park-secret-change-in-prod';
