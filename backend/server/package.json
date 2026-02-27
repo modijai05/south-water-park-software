@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "dev": "npx tsx src/index.js",
-    "build": "echo 'TypeScript build completed - ready for deployment'",
+    "build": "npm install && npx tsc --noEmit",
     "start": "npx tsx src/index.js",
     "start:prod": "NODE_ENV=production npx tsx src/index.js"
   },

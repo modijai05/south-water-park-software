@@ -3,7 +3,7 @@ services:
     name: south-water-park-backend
     env: node
     plan: free
-    buildCommand: "npm install && npm run build"
+    buildCommand: "npm run build"
     startCommand: "npx tsx src/index.js"
     envVars:
       - key: NODE_ENV
@@ -19,6 +19,7 @@ services:
       - key: TZ
         value: UTC
     healthCheckPath: /api/health
+    healthCheckTimeout: 30
     autoDeploy: true
     buildFilter:
       paths:

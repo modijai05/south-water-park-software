@@ -35,7 +35,7 @@ The system automatically seeds with default users when the server starts:
 1. **Start the Server**: Run `npm run dev` in the `server` directory
 2. **Start the Client**: Run `npm run dev` in the `client` directory  
 3. **Login**: Use any of the credentials above to access the system
-4. **Database**: The system uses in-memory MongoDB that auto-seeds on startup
+4. **Database**: The system uses MongoDB Atlas for persistent data storage with zero data loss
 
 ## Security Notes
 
@@ -47,9 +47,10 @@ The system automatically seeds with default users when the server starts:
 ## Troubleshooting
 
 If you encounter 401 Unauthorized errors:
-1. Make sure the server is running
+1. Make sure the server is running and connected to MongoDB Atlas
 2. Check that you're using correct credentials
-3. The database automatically seeds, but you can manually seed by visiting `http://localhost:5000/api/seed`
+3. Verify MongoDB Atlas connection is active
+4. The database automatically seeds with default users on first startup
 
 ## User Management
 
