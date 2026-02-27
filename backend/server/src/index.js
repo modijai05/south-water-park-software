@@ -82,22 +82,14 @@ app.use(errorHandler);
 async function startServer() {
   try {
     // REQUIRE MongoDB URI for data persistence
-    const mongoUri = process.env.MONGODB_URI;
+    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://southpark_user:SouthPark2024!@south-water-park-new.mongodb.net/south_water_park?retryWrites=true&w=majority';
     
     if (!mongoUri) {
       console.error('❌ MONGODB_URI is required for data persistence');
       console.error('💥 Server cannot start without database connection');
       console.error('🔧 Please set MONGODB_URI in your environment variables');
       console.error('🌐 For MongoDB Atlas setup, see: MONGODB_ATLAS_PROFESSIONAL_SETUP.md');
-      
-      // Provide fallback for local development only
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn('⚠️ Development mode: Using fallback MongoDB URI');
-        console.warn('⚠️ This should NOT be used in production!');
-        process.env.MONGODB_URI = 'mongodb+srv://southpark_user:SouthPark2024!@south-water-park-new.mongodb.net/south_water_park?retryWrites=true&w=majority';
-      } else {
-        process.exit(1);
-      }
+      process.exit(1);
     }
     
     console.log('🔗 MongoDB Connection Setup');
