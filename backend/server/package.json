@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "dev": "npx tsx src/index.js",
-    "build": "npm install && npx tsc --noEmit",
+    "build": "npm ci --production && npx tsc --noEmit --strict",
     "start": "npx tsx src/index.js",
     "start:prod": "NODE_ENV=production npx tsx src/index.js"
   },
