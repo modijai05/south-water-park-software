@@ -88,7 +88,16 @@ async function startServer() {
       console.error('❌ MONGODB_URI is required for data persistence');
       console.error('💥 Server cannot start without database connection');
       console.error('🔧 Please set MONGODB_URI in your environment variables');
-      process.exit(1);
+      console.error('🌐 For MongoDB Atlas setup, see: MONGODB_ATLAS_PROFESSIONAL_SETUP.md');
+      
+      // Provide fallback for local development only
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('⚠️ Development mode: Using fallback MongoDB URI');
+        console.warn('⚠️ This should NOT be used in production!');
+        process.env.MONGODB_URI = 'mongodb+srv://southwaterpark:southpark123@cluster0.8xgka.mongodb.net/south_water_park?retryWrites=true&w=majority';
+      } else {
+        process.exit(1);
+      }
     }
     
     console.log('🔗 MongoDB Connection Setup');
