@@ -94,7 +94,7 @@ async function startServer() {
       if (process.env.NODE_ENV !== 'production') {
         console.warn('⚠️ Development mode: Using fallback MongoDB URI');
         console.warn('⚠️ This should NOT be used in production!');
-        process.env.MONGODB_URI = 'mongodb+srv://southwaterpark:southpark123@cluster0.8xgka.mongodb.net/south_water_park?retryWrites=true&w=majority';
+        process.env.MONGODB_URI = 'mongodb+srv://southpark_admin:SouthPark2024!@south-water-park.x8a.mongodb.net/south_water_park?retryWrites=true&w=majority';
       } else {
         process.exit(1);
       }
