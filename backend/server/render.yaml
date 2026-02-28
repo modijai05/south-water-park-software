@@ -9,7 +9,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
-        value: mongodb+srv://southpark_user:SouthPark2024!@south-water-park-new.mongodb.net/south_water_park?retryWrites=true&w=majority
+        value: mongodb+srv://jaimodi05bapa_db_user:npPqPhXwCMbiSIFS@tms.f2ekue9.mongodb.net/south_water_park?appName=TMS
       - key: JWT_SECRET
         value: south-water-park-production-secret-2024-secure
       - key: CLIENT_URL

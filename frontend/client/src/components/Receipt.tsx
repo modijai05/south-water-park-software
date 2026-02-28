@@ -310,12 +310,12 @@ const Receipt: React.FC<ReceiptProps> = ({ data, onClose, batchData }) => {
                 {batchEntryData.entries.map((entry, index) => (
                   <div key={index} className="batch-entry">
                     <h4>Entry {index + 1}</h4>
-                    {entry.receiptNumber && (
+                    <div className="mt-2 mb-2 p-2 bg-blue-50 border-2 border-blue-200 rounded-lg">
                       <div className="receipt-row">
-                        <span className="receipt-label">Receipt No:</span>
-                        <span className="font-bold text-blue-600">{entry.receiptNumber}</span>
+                        <span className="receipt-label font-bold text-blue-900">Receipt No:</span>
+                        <span className="font-bold text-blue-900">{entry.receiptNumber || 'N/A'}</span>
                       </div>
-                    )}
+                    </div>
                     <div className="receipt-row">
                       <span className="receipt-label">Name:</span>
                       <span>{entry.name}</span>
@@ -419,9 +419,9 @@ const Receipt: React.FC<ReceiptProps> = ({ data, onClose, batchData }) => {
                 <h1 className="text-lg font-bold text-blue-900">THE SOUTH WATER PARK</h1>
                 <p className="text-xs text-gray-600">JAIPUR | PH: 9462015450</p>
                 <p className="text-xs text-gray-600">{formatDate(singleEntryData.createdAt)}</p>
-                {singleEntryData.receiptNumber && (
-                  <p className="text-sm font-bold text-blue-600 mt-2">Receipt No: {singleEntryData.receiptNumber}</p>
-                )}
+                <div className="mt-3 mb-3 p-2 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                  <p className="text-lg font-bold text-blue-900">Receipt No: {singleEntryData.receiptNumber || 'N/A'}</p>
+                </div>
               </div>
               
               <div>
