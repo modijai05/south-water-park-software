@@ -47,6 +47,10 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoints
+app.get('/health', (req, res) => {
+  res.json({ status: "OK" });
+});
+
 app.get('/api/health', (req, res) => {
   const dbHealth = dbHealthMonitor.getHealth();
   res.json({ 
@@ -88,123 +92,22 @@ async function startServer() {
       console.error('❌ MONGODB_URI is required for data persistence');
       console.error('💥 Server cannot start without database connection');
       console.error('🔧 Please set MONGODB_URI in your environment variables');
-      console.error('🌐 For MongoDB Atlas setup, see: MONGODB_ATLAS_PROFESSIONAL_SETUP.md');
       process.exit(1);
     }
     
     console.log('🔗 MongoDB Connection Setup');
     console.log('📋 MONGODB_URI: CONFIGURED');
     
-    let connectionAttempts = 0;
-    const maxAttempts = 5; // Increased attempts for reliability
-    
-    while (connectionAttempts < maxAttempts) {
-      try {
-        connectionAttempts++;
-        console.log(`🔄 Connection attempt ${connectionAttempts}/${maxAttempts}...`);
-        
-        await mongoose.connect(mongoUri, {
-          maxPoolSize: 20, // Increased pool size for production
-          serverSelectionTimeoutMS: 15000, // Increased timeout
-          socketTimeoutMS: 60000, // Increased timeout
-          connectTimeoutMS: 15000, // Increased timeout
-          heartbeatFrequencyMS: 10000,
-          retryWrites: true,
-          w: 'majority',
-          readPreference: 'primary',
-        });
-        
-        await mongoose.connection.db.admin().ping();
-        
-        console.log('✅ MongoDB connected (persistent) - Production Ready');
-        console.log('🔗 Connection Details:');
-        console.log(`   - Host: ${mongoose.connection.host}`);
-        console.log(`   - Database: ${mongoose.connection.name}`);
-        console.log(`   - Ready State: ${mongoose.connection.readyState}`);
-        console.log('🛡️ Production Safeguards: ENABLED');
-        console.log('   - No in-memory fallback');
-        console.log('   - Zero data loss guarantee');
-        console.log('   - Connection retry logic active');
-        console.log('   - Data persistence enforced');
-        
-        // Set up connection monitoring
-        mongoose.connection.on('error', (err) => {
-          console.error('❌ MongoDB connection error:', err);
-          // Don't exit immediately, let the connection retry
-        });
-        
-        mongoose.connection.on('disconnected', () => {
-          console.warn('⚠️ MongoDB disconnected');
-          // Don't exit immediately, let the connection retry
-        });
-        
-        mongoose.connection.on('reconnected', () => {
-          console.log('🔄 MongoDB reconnected');
-        });
-        
-        break; // Success, exit retry loop
-        
-      } catch (error) {
-        console.error(`❌ Connection attempt ${connectionAttempts} failed:`, error.message);
-        
-        if (connectionAttempts >= maxAttempts) {
-          console.error('💥 All connection attempts failed');
-          console.error('🔧 Common solutions:');
-          console.error('   1. Check MongoDB Atlas IP whitelist');
-          console.error('   2. Verify connection string format');
-          console.error('   3. Check network connectivity');
-          console.error('   4. Confirm database credentials');
-          
-          // In production, exit to prevent data loss
-          if (process.env.NODE_ENV === 'production') {
-            console.error('🚨 Cannot start without persistent database in production');
-            console.error('💥 Server exiting to prevent data loss');
-            process.exit(1);
-          } else {
-            // In development, continue with in-memory fallback
-            console.warn('⚠️ Continuing in development mode without database');
-            console.warn('🔄 Some features may not work properly');
-          }
-        } else {
-          console.log(`⏳ Retrying in 5 seconds...`);
-          await new Promise(resolve => setTimeout(resolve, 5000));
-        }
-      }
-    }
-    
-    // Only start database monitoring and seeding if MongoDB is connected
-    if (mongoose.connection.readyState === 1) {
-      // Start database health monitoring
-      console.log('🏥 Starting database health monitoring...');
-      dbHealthMonitor.startMonitoring(30000); // Check every 30 seconds
+    // Start MongoDB connection in background - don't block server startup
+    connectToMongoDB(mongoUri);
 
-      // Auto-seed database with default users
-      console.log('🌱 Seeding database with default users...');
-      await seedDatabase();
-    } else {
-      console.warn('⚠️ Skipping database monitoring and seeding due to connection failure');
-    }
-
-    // Start the server
+    // Start server immediately - Render needs to detect open PORT
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log('🚀 Server started successfully');
       console.log('📍 Server URL:', `http://0.0.0.0:${PORT}`);
-      
-      if (mongoose.connection.readyState === 1) {
-        console.log('🗄️ Database Status: MongoDB Atlas (Connected)');
-        console.log('🔒 Data Persistence: ENABLED - Zero data loss guaranteed');
-        console.log('🛡️ Production Mode: All data persisted to MongoDB Atlas');
-        console.log('👥 Default Admins: admin1/admin1, admin2/admin2, admin3/admin3');
-        console.log('👥 Default Staff: staff1/staff1, staff2/staff2, staff3/staff3, staff4/staff4, staff5/staff5');
-        console.log('🏥 Health Monitoring: Active (30s intervals)');
-      } else {
-        console.log('⚠️ Database Status: Not Connected');
-        console.log('🔒 Data Persistence: DISABLED - Development Mode Only');
-        console.log('🛡️ Some features may not work properly');
-      }
-      
       console.log('🔐 Environment:', process.env.NODE_ENV || 'development');
-      console.log('🔍 Health Check: http://0.0.0.0:' + PORT + '/api/health');
+      console.log('🔍 Health Check: http://0.0.0.0:' + PORT + '/health');
+      console.log('🔍 API Health Check: http://0.0.0.0:' + PORT + '/api/health');
     });
 
     // Handle server errors
@@ -221,6 +124,96 @@ async function startServer() {
     console.error('💥 Failed to start server:', err);
     process.exit(1);
   }
+}
+
+// Separate MongoDB connection function
+async function connectToMongoDB(mongoUri) {
+  let connectionAttempts = 0;
+  const maxAttempts = 5;
+  
+  const attemptConnection = async () => {
+    try {
+      connectionAttempts++;
+      console.log(`🔄 MongoDB connection attempt ${connectionAttempts}/${maxAttempts}...`);
+      
+      await mongoose.connect(mongoUri, {
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+        maxPoolSize: 10,
+        connectTimeoutMS: 10000,
+        heartbeatFrequencyMS: 10000,
+        retryWrites: true,
+        w: 'majority',
+        readPreference: 'primary',
+      });
+      
+      await mongoose.connection.db.admin().ping();
+      
+      console.log('✅ MongoDB connected (persistent) - Production Ready');
+      console.log('🔗 Connection Details:');
+      console.log(`   - Host: ${mongoose.connection.host}`);
+      console.log(`   - Database: ${mongoose.connection.name}`);
+      console.log(`   - Ready State: ${mongoose.connection.readyState}`);
+      
+      // Set up connection monitoring
+      setupConnectionMonitoring();
+      
+      // Start database health monitoring
+      console.log('🏥 Starting database health monitoring...');
+      dbHealthMonitor.startMonitoring(30000);
+
+      // Auto-seed database with default users
+      console.log('🌱 Seeding database with default users...');
+      await seedDatabase();
+      
+    } catch (error) {
+      console.error(`❌ Connection attempt ${connectionAttempts} failed:`, error.message);
+      
+      if (connectionAttempts >= maxAttempts) {
+        console.error('💥 All connection attempts failed');
+        console.error('🔧 Common solutions:');
+        console.error('   1. Check MongoDB Atlas IP whitelist');
+        console.error('   2. Verify connection string format');
+        console.error('   3. Check network connectivity');
+        console.error('   4. Confirm database credentials');
+        
+        // In production, schedule retry attempts
+        if (process.env.NODE_ENV === 'production') {
+          console.error('� Will retry connection in background...');
+          setTimeout(attemptConnection, 30000); // Retry after 30 seconds
+        } else {
+          console.warn('⚠️ Continuing in development mode without database');
+          console.warn('🔄 Some features may not work properly');
+        }
+      } else {
+        console.log(`⏳ Retrying in 5 seconds...`);
+        setTimeout(attemptConnection, 5000);
+      }
+    }
+  };
+  
+  // Start connection attempts
+  attemptConnection();
+}
+
+function setupConnectionMonitoring() {
+  mongoose.connection.on('error', (err) => {
+    console.error('❌ MongoDB connection error:', err);
+    // Don't exit - let mongoose auto-reconnect
+  });
+  
+  mongoose.connection.on('disconnected', () => {
+    console.warn('⚠️ MongoDB disconnected - attempting to reconnect...');
+    // Don't exit - let mongoose auto-reconnect
+  });
+  
+  mongoose.connection.on('reconnected', () => {
+    console.log('� MongoDB reconnected successfully');
+  });
+  
+  mongoose.connection.on('connecting', () => {
+    console.log('🔄 MongoDB connecting...');
+  });
 }
 
 // Seed database with default users

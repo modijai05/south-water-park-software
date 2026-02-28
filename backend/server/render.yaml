@@ -18,7 +18,7 @@ services:
         value: 10000
       - key: TZ
         value: UTC
-    healthCheckPath: /api/health
+    healthCheckPath: /health
     healthCheckTimeout: 30
     autoDeploy: true
     buildFilter:
