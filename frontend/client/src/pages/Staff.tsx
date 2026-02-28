@@ -334,8 +334,33 @@ export function Staff() {
   // Generate receipt for existing entry
   const generateReceiptForEntry = async (entry: any) => {
     try {
+      // Generate receipt number if it doesn't exist
+      let receiptNumber = entry.receiptNumber;
+      if (!receiptNumber) {
+        try {
+          console.log('🔍 Staff: Generating receipt number for existing entry...');
+          const receiptRes = await fetch(`/api/entries/${entry.id}/generate-receipt`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (receiptRes.ok) {
+            const receiptData = await receiptRes.json();
+            receiptNumber = receiptData.receiptNumber;
+            console.log('🔍 Staff: Receipt number generated:', receiptNumber);
+          } else {
+            console.error('🔍 Staff: Failed to generate receipt number');
+          }
+        } catch (error) {
+          console.error('🔍 Staff: Error generating receipt number:', error);
+        }
+      }
+      
       // Prepare receipt data directly from the existing entry
       const receiptPayload = {
+        receiptNumber,
         ...entry,
         // Add staff generation note with timestamp
         notes: `${entry.notes || ''} [Receipt printed by ${user?.username || 'Staff'} on ${new Date().toLocaleString()}]`

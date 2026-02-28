@@ -40,6 +40,7 @@ export interface IEntry extends Document {
   otherAmount: number;
   notes?: string;
   filledByFullName?: string; // Full name of person who filled the form
+  receiptNumber?: string; // Unique receipt number
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
 }
@@ -79,7 +80,8 @@ const entrySchema = new Schema<IEntry>(
     advanceAmount: { type: Number, default: 0 },
     otherAmount: { type: Number, default: 0 },
     notes: String,
-    filledByFullName: String, // Full name of person who filled the form
+    filledByFullName: String, // Full name of person who filled form
+    receiptNumber: { type: String, unique: true, sparse: true }, // Unique receipt number
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

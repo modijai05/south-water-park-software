@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 
 interface ReceiptData {
+  receiptNumber?: string;
   name: string;
   mobile: string;
   ticketType: string;
@@ -302,13 +303,19 @@ const Receipt: React.FC<ReceiptProps> = ({ data, onClose, batchData }) => {
                 <img src="/logo.png" alt="The South Water Park Logo" style={{width: '200px', height: 'auto', marginBottom: '10px'}} />
                 <h1 className="text-lg font-bold text-blue-900">THE SOUTH WATER PARK</h1>
                 <p className="text-xs text-gray-600">JAIPUR | PH: 9462015450</p>
-                <p className="text-xs text-gray-600">{batchEntryData.dateRange}</p>
+                {batchEntryData.dateRange && <p className="text-xs text-gray-600">{batchEntryData.dateRange}</p>}
                 <p className="text-xs text-gray-600">ENTRIES: {batchEntryData.totalEntries} | TOTAL: ₹{batchEntryData.totalRevenue}</p>
               </div>
               <div>
                 {batchEntryData.entries.map((entry, index) => (
                   <div key={index} className="batch-entry">
                     <h4>Entry {index + 1}</h4>
+                    {entry.receiptNumber && (
+                      <div className="receipt-row">
+                        <span className="receipt-label">Receipt No:</span>
+                        <span className="font-bold text-blue-600">{entry.receiptNumber}</span>
+                      </div>
+                    )}
                     <div className="receipt-row">
                       <span className="receipt-label">Name:</span>
                       <span>{entry.name}</span>
@@ -412,6 +419,9 @@ const Receipt: React.FC<ReceiptProps> = ({ data, onClose, batchData }) => {
                 <h1 className="text-lg font-bold text-blue-900">THE SOUTH WATER PARK</h1>
                 <p className="text-xs text-gray-600">JAIPUR | PH: 9462015450</p>
                 <p className="text-xs text-gray-600">{formatDate(singleEntryData.createdAt)}</p>
+                {singleEntryData.receiptNumber && (
+                  <p className="text-sm font-bold text-blue-600 mt-2">Receipt No: {singleEntryData.receiptNumber}</p>
+                )}
               </div>
               
               <div>

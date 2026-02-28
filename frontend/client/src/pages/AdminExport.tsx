@@ -969,23 +969,43 @@ export function AdminExport() {
     try {
       const res = await entriesApi.list({
         from: '2020-01-01T00:00:00.000Z',
-        to: '2030-12-31T23:59:59.999Z',
-        limit: 10000,
+        to: new Date().toISOString(),
+        search: searchTerm,
+        limit: 1,
       });
-      const entries = (res.entries as EntryRecord[]) ?? [];
       
-      // Search by mobile number or name (case-insensitive)
-      const entry = entries.find(e => 
-        e.mobile === searchTerm || 
-        e.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      
+      const entry = (res.entries as any[])[0];
       if (entry) {
         console.log('🔍 AdminExport: Entry found for receipt:', entry);
         console.log('🔍 AdminExport: Entry created by:', entry.createdBy);
         console.log('🔍 AdminExport: Entry filledByFullName:', (entry as any).filledByFullName);
         
+        // Generate receipt number if it doesn't exist
+        let receiptNumber = entry.receiptNumber;
+        if (!receiptNumber) {
+          try {
+            console.log('🔍 AdminExport: Generating receipt number for existing entry...');
+            const receiptRes = await fetch(`/api/entries/${entry.id}/generate-receipt`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (receiptRes.ok) {
+              const receiptData = await receiptRes.json();
+              receiptNumber = receiptData.receiptNumber;
+              console.log('🔍 AdminExport: Receipt number generated:', receiptNumber);
+            } else {
+              console.error('🔍 AdminExport: Failed to generate receipt number');
+            }
+          } catch (error) {
+            console.error('🔍 AdminExport: Error generating receipt number:', error);
+          }
+        }
+        
         const receiptData = {
+          receiptNumber,
           name: entry.name,
           mobile: entry.mobile,
           ticketType: entry.ticketType,

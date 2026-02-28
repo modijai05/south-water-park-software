@@ -3,6 +3,7 @@ import { Entry, IEntry } from '../models/Entry.js';
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import dayjs from 'dayjs';
 import { aggregateCouponCounts } from '../utils/couponCounter.js';
+import { generateUniqueReceiptNumber, generateReceiptNumberForExistingEntry } from '../utils/receiptNumberGenerator.js';
 
 const router = Router();
 
@@ -57,7 +58,7 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
     
     // Use lean() for better performance and only select needed fields
     const entries = await Entry.find(finalFilter)
-      .select('createdAt name mobile ticketType adults kids totalPeople baseAmount kidDiscount additionalDiscount finalAmount cashAmount upiAmount advanceAmount otherAmount notes upgrades adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon filledByFullName createdBy')
+      .select('createdAt name mobile ticketType adults kids totalPeople baseAmount kidDiscount additionalDiscount finalAmount cashAmount upiAmount advanceAmount otherAmount notes upgrades adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon filledByFullName createdBy receiptNumber')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(sanitizedLimit)
@@ -123,6 +124,9 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
       totalPeople = (body.adults || 0) + (body.kids || 0);
     }
     
+    // Generate unique receipt number
+    const receiptNumber = await generateUniqueReceiptNumber();
+    
     // Fetch user's full name to store as filledByFullName
     const User = (await import('../models/User.js')).User;
     const user = await User.findById(req.user._id).select('fullName');
@@ -130,6 +134,7 @@ router.post('/', authenticate, async (req: AuthRequest, res) => {
     const entry = new Entry({
       ...body,
       totalPeople,
+      receiptNumber,
       createdBy: req.user._id,
       filledByFullName: user?.fullName || req.user.username, // Use fullName if available, fallback to username
     });
@@ -477,6 +482,35 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
     }
     res.json({ message: 'Deleted' });
   } catch (err) {
+    res.status(500).json({ message: (err as Error).message });
+  }
+});
+
+/** POST /api/entries/:id/generate-receipt - Generate receipt number for existing entry */
+router.post('/:id/generate-receipt', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const entry = await Entry.findById(req.params.id);
+    if (!entry) {
+      res.status(404).json({ message: 'Entry not found' });
+      return;
+    }
+    
+    // If entry already has a receipt number, return it
+    if (entry.receiptNumber) {
+      res.json({ receiptNumber: entry.receiptNumber, message: 'Receipt number already exists' });
+      return;
+    }
+    
+    // Generate new receipt number for existing entry
+    const receiptNumber = await generateReceiptNumberForExistingEntry();
+    
+    // Update the entry with the receipt number
+    entry.receiptNumber = receiptNumber;
+    await entry.save();
+    
+    res.json({ receiptNumber, message: 'Receipt number generated successfully' });
+  } catch (err) {
+    console.error('Error generating receipt number:', err);
     res.status(500).json({ message: (err as Error).message });
   }
 });
