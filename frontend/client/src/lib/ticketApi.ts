@@ -10,7 +10,8 @@ export const ticketConfigApi = {
       }
     });
     if (!response.ok) throw new Error('Failed to fetch ticket configurations');
-    return response.json();
+    const result = await response.json();
+    return result.success ? result.data : [];
   },
 
   // Get single ticket configuration
@@ -21,7 +22,8 @@ export const ticketConfigApi = {
       }
     });
     if (!response.ok) throw new Error('Failed to fetch ticket configuration');
-    return response.json();
+    const result = await response.json();
+    return result.success ? result.data : null;
   },
 
   // Update ticket configuration
@@ -35,7 +37,8 @@ export const ticketConfigApi = {
       body: JSON.stringify(config)
     });
     if (!response.ok) throw new Error('Failed to update ticket configuration');
-    return response.json();
+    const result = await response.json();
+    return result.success ? result.data.config : null;
   },
 
   // Delete ticket configuration
@@ -53,7 +56,8 @@ export const ticketConfigApi = {
   getPricing: async (day: string): Promise<any[]> => {
     const response = await fetch(`${API_BASE}/ticket-config/pricing/${day}`);
     if (!response.ok) throw new Error('Failed to fetch pricing');
-    return response.json();
+    const result = await response.json();
+    return Array.isArray(result) ? result : [];
   },
 
   // Initialize default configurations
@@ -75,7 +79,8 @@ export const ticketConfigApi = {
       }
     });
     if (!response.ok) throw new Error('Failed to export ticket configurations');
-    return response.json();
+    const result = await response.json();
+    return Array.isArray(result) ? result : [];
   },
 
   // Import ticket configurations from Excel
@@ -89,6 +94,7 @@ export const ticketConfigApi = {
       body: JSON.stringify(data)
     });
     if (!response.ok) throw new Error('Failed to import ticket configurations');
-    return response.json();
+    const result = await response.json();
+    return result.success ? result : { message: 'Import failed', results: [], totalProcessed: 0, successCount: 0, failureCount: 0 };
   }
 };

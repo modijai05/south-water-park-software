@@ -29,7 +29,7 @@ export function AdminUsers() {
     try {
       const usersData = await usersApi.list();
       const usersWithStats = await Promise.all(
-        (usersData as UserRow[]).map(async (user) => {
+        (Array.isArray(usersData) ? usersData : []).map(async (user: any) => {
           try {
             const logs = await usersApi.logs(user._id);
             const successCount = logs.logs?.filter((l: any) => l.success).length || 0;
@@ -38,20 +38,20 @@ export function AdminUsers() {
             const lastLogin = logs.logs?.length > 0 ? logs.logs[0].timestamp : null;
             
             return {
-              ...user,
+              ...(user as UserRow),
               entriesCount: 0,
               successRate,
               lastLogin: lastLogin || undefined,
               performanceRating: 0
-            };
+            } as UserRow;
           } catch {
             return {
-              ...user,
+              ...(user as UserRow),
               entriesCount: 0,
               successRate: 0,
               lastLogin: undefined,
               performanceRating: 0
-            };
+            } as UserRow;
           }
         })
       );
@@ -207,7 +207,7 @@ export function AdminUsers() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((u, idx) => (
+                    {Array.isArray(users) && users.map((u, idx) => (
                       <motion.tr
                         key={u._id}
                         initial={{ opacity: 0 }}
@@ -743,11 +743,11 @@ function LogsModal({ userId, username, onClose }: { userId: string; username: st
         <div className="overflow-y-auto flex-1 text-sm bg-white/5 rounded-lg p-4 border border-white/10 max-h-[50vh]">
           {loading ? (
             <p className="text-white/70 text-center">Loading logs…</p>
-          ) : logs.length === 0 ? (
+          ) : !Array.isArray(logs) || logs.length === 0 ? (
             <p className="text-white/70 text-center">No login history</p>
           ) : (
             <ul className="space-y-2">
-                {logs.slice(0, 50).map((l, i) => (
+                {Array.isArray(logs) && logs.slice(0, 50).map((l, i) => (
                 <motion.li 
                   key={i}
                   initial={{ opacity: 0, x: -10 }}

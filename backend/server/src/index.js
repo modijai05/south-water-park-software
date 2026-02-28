@@ -9,8 +9,8 @@ const { sendSMSRouter } = require('./routes/sms.js');
 const ticketConfigRoutes = require('./routes/ticketConfig.js');
 const ticketDemandAnalysisRoutes = require('./routes/ticketDemandAnalysis.js');
 const { analyticsRouter } = require('./routes/analytics.js');
-const { errorHandler } = require('./middleware/errorHandler.ts');
-const { User } = require('./models/User.ts');
+const { errorHandler } = require('./middleware/errorHandler.js');
+const { User } = require('./models/User.js');
 const { dbHealthMonitor } = require('./utils/databaseHealth.js');
 
 dotenv.config();

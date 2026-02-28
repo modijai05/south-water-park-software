@@ -53,7 +53,8 @@ export const entriesApi = {
     if (params?.page != null) q.set('page', String(params.page));
     if (params?.limit != null) q.set('limit', String(params.limit));
     const query = q.toString();
-    return api<{ entries: unknown[]; total: number }>(`/entries${query ? `?${query}` : ''}`);
+    return api<{ success: boolean; data: { entries: unknown[]; total: number; page: number; limit: number; totalPages: number } }>(`/entries${query ? `?${query}` : ''}`)
+      .then(response => response.data);
   },
   searchAll: (params?: { search?: string; limit?: number }) => {
     console.log('🔍 API: searchAll called with params:', params);
@@ -66,46 +67,60 @@ export const entriesApi = {
     console.log('🔍 API: Making cross-user search request to:', url);
     console.log('🔍 API: Current user token:', localStorage.getItem('token')?.substring(0, 20) + '...');
     
-    return api<{ entries: unknown[]; total: number }>(url).then(response => {
-      console.log('🔍 API: Raw response:', response);
-      console.log('🔍 API: Response entries count:', response.entries?.length || 0);
-      return response;
-    }).catch(error => {
-      console.error('🔍 API: Request failed:', error);
-      throw error;
-    });
+    return api<{ success: boolean; data: { entries: unknown[]; total: number; page: number; limit: number; totalPages: number } }>(url)
+      .then(response => {
+        console.log('🔍 API: Raw response:', response);
+        console.log('🔍 API: Response entries count:', response.data?.entries?.length || 0);
+        return response.data;
+      })
+      .catch(error => {
+        console.error('🔍 API: Request failed:', error);
+        throw error;
+      });
   },
-  create: (body: unknown) => api<unknown>('/entries', { method: 'POST', body: JSON.stringify(body) }),
-  get: (id: string) => api<unknown>(`/entries/${id}`),
-  update: (id: string, body: unknown) => api<unknown>(`/entries/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  delete: (id: string) => api<{ message: string }>(`/entries/${id}`, { method: 'DELETE' }),
-  clearAll: () => api<{ message: string }>('/entries/clear-all', { method: 'DELETE' }),
-  stats: () => api<Record<string, number>>('/entries/stats'),
+  create: (body: unknown) => api<{ success: boolean; data: unknown }>('/entries', { method: 'POST', body: JSON.stringify(body) })
+    .then(response => response.data),
+  get: (id: string) => api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`)
+    .then(response => response.data),
+  update: (id: string, body: unknown) => api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+    .then(response => response.data),
+  delete: (id: string) => api<{ success: boolean; message: string }>(`/entries/${id}`, { method: 'DELETE' })
+    .then(response => response),
+  clearAll: () => api<{ success: boolean; message: string }>('/entries/clear-all', { method: 'DELETE' })
+    .then(response => response),
+  stats: () => api<{ success: boolean; data: Record<string, number> }>('/entries/stats')
+    .then(response => response.data),
   charts: () =>
-    api<{ last7Days: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number }[]; monthly: { _id: string; count: number; amount: number }[] }>(
+    api<{ success: boolean; data: { last7Days: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number }[]; monthly: { _id: string; count: number; amount: number }[] } }>(
       '/entries/charts'
-    ),
+    ).then(response => response.data),
 };
 
 export const usersApi = {
-  list: () => api<unknown[]>('/users'),
+  list: () => api<{ success: boolean; data: unknown[] }>('/users')
+    .then(response => response.data || []),
   create: (username: string, password: string, role: string, email?: string, fullName?: string) =>
-    api<unknown>('/users', { method: 'POST', body: JSON.stringify({ username, password, role, email, fullName }) }),
+    api<{ success: boolean; data: unknown }>('/users', { method: 'POST', body: JSON.stringify({ username, password, role, email, fullName }) })
+    .then(response => response.data),
   update: (id: string, body: { active?: boolean; password?: string; username?: string; role?: string; email?: string; fullName?: string }) =>
-    api<unknown>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  delete: (id: string) => api<{ message: string }>(`/users/${id}`, { method: 'DELETE' }),
-  logs: (id: string) => api<{ username: string; logs: { timestamp: string; success: boolean }[] }>(`/users/${id}/logs`),
+    api<{ success: boolean; data: { user: unknown } }>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+    .then(response => response.data),
+  delete: (id: string) => api<{ success: boolean; message: string }>(`/users/${id}`, { method: 'DELETE' })
+    .then(response => response),
+  logs: (id: string) => api<{ success: boolean; data: { username: string; logs: { timestamp: string; success: boolean }[] } }>(`/users/${id}/logs`)
+    .then(response => response.data),
   bulk: (operation: string, userIds: string[], data?: any) =>
-    api<{ message: string; modifiedCount: number; acknowledged: boolean }>('/users/bulk', { 
+    api<{ success: boolean; message: string; modifiedCount: number; acknowledged: boolean }>('/users/bulk', { 
       method: 'POST', 
       body: JSON.stringify({ operation, userIds, data }) 
-    }),
+    }).then(response => response),
   resetPassword: (id: string, newPassword: string) =>
-    api<{ message: string; user: any }>(`/users/${id}/reset-password`, { 
+    api<{ success: boolean; message: string; user: any }>(`/users/${id}/reset-password`, { 
       method: 'POST', 
       body: JSON.stringify({ newPassword }) 
-    }),
-  stats: () => api<{ totalUsers: number; activeUsers: number; inactiveUsers: number; adminUsers: number; staffUsers: number; recentUsers: number }>('/users/stats'),
+    }).then(response => response),
+  stats: () => api<{ success: boolean; data: { totalUsers: number; activeUsers: number; inactiveUsers: number; adminUsers: number; staffUsers: number; recentUsers: number } }>('/users/stats')
+    .then(response => response.data),
 };
 
 export const analyticsApi = {

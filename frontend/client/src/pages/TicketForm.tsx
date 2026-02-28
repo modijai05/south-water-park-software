@@ -91,8 +91,10 @@ export function TicketForm() {
     try {
       console.log('🔄 TicketForm: Fetching ticket configs...');
       // Use the same API as dashboard to get full configs with all day-wise pricing
-      const configs = await ticketConfigApi.getAll();
-      console.log('✅ TicketForm: Fetched configs:', configs);
+      const result = await ticketConfigApi.getAll();
+      console.log('✅ TicketForm: Fetched configs:', result);
+      // Handle both old format (direct array) and new format (success/data wrapper)
+      const configs = Array.isArray(result) ? result : ((result as any)?.data || []);
       setTicketConfigs(configs);
     } catch (error) {
       console.error('❌ Failed to fetch ticket configs:', error);
@@ -182,9 +184,10 @@ export function TicketForm() {
     }
     
     // Generate options from dynamic configs - stable reference
-    return ticketConfigs
-      .filter(config => config.isActive)
-      .map(config => {
+    return Array.isArray(ticketConfigs) 
+      ? ticketConfigs
+          .filter(config => config.isActive)
+          .map(config => {
         const baseLabel = config.label || `${config.ticketType} Ticket`;
         const priceDisplay = `₹${config.basePrice}`;
         const features = [];
@@ -203,8 +206,9 @@ export function TicketForm() {
           hasKids: config.hasKids
         };
       })
-      .sort((a, b) => a.price - b.price); // Sort by price
-  }, [ticketConfigs.length, ticketConfigs.map(c => `${c.ticketType}-${c.basePrice}-${c.isActive}`).join(',')]); // Stable dependency
+      .sort((a, b) => a.price - b.price) // Sort by price
+      : []; // Fallback to empty array if ticketConfigs is not an array
+  }, [ticketConfigs.length, Array.isArray(ticketConfigs) ? ticketConfigs.map(c => `${c.ticketType}-${c.basePrice}-${c.isActive}`).join(',') : '']); // Stable dependency
 
   const {
     register,
@@ -618,7 +622,7 @@ export function TicketForm() {
                 🎫 Ticket Selections
               </h2>
 
-              {fields.map((field, index) => (
+              {Array.isArray(fields) && fields.map((field, index) => (
                 <motion.div
                   key={field.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -649,7 +653,7 @@ export function TicketForm() {
                       🎫 Type of Ticket *
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {dynamicTicketOptions.map((t: { value: string; label: string; price: number; hasKids: boolean; description?: string }) => {
+                      {Array.isArray(dynamicTicketOptions) && dynamicTicketOptions.map((t: { value: string; label: string; price: number; hasKids: boolean; description?: string }) => {
                         const currentPrice = getCurrentDayPrice(t.value);
                         const currentLabel = getCurrentDayLabel(t.value);
                         const basePrice = t.price;

@@ -1,56 +1,36 @@
 const { Router } = require('express');
-const { authenticate, requireAdmin } = require('../middleware/auth.ts');
+const { authenticate, requireAdmin } = require('../middleware/auth.js');
+const { TicketConfig } = require('../models/TicketConfig.js');
 
 const router = Router();
 
-// Mock TicketConfig model
-const TicketConfig = {
-  findOne: async () => {
-    // Mock implementation
-    return {
-      _id: 'default',
-      name: 'Default Ticket Config',
-      price: 100,
-      maxEntries: 1000,
-      active: true
-    };
-  },
-  findByIdAndUpdate: async (id, data) => {
-    // Mock implementation
-    return { _id: id, ...data };
-  },
-  create: async (data) => {
-    // Mock implementation
-    return { _id: `config_${Date.now()}`, ...data };
-  },
-  find: async () => {
-    // Mock implementation
-    return [
-      {
-        _id: 'default',
-        name: 'Default Ticket Config',
-        price: 100,
-        maxEntries: 1000,
-        active: true
-      }
-    ];
-  }
-};
 
 // GET /api/ticket-config - Get current ticket configuration
 router.get('/', authenticate, async (req, res) => {
   try {
-    const config = await TicketConfig.findOne();
-    res.json({ config });
+    console.error('Ticket config list API called successfully');
+    const configs = await TicketConfig.find().sort({ ticketType: 1 });
+    
+    const result = {
+      success: true,
+      data: configs || []  // Always return an array
+    };
+    
+    res.json(result);
   } catch (error) {
-    console.error('Get ticket config error:', error);
-    res.status(500).json({ message: 'Failed to fetch ticket configuration' });
+    console.error('Ticket config list API error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch ticket configurations',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
 // PUT /api/ticket-config/:id - Update ticket configuration (admin only)
 router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
+    console.error('Update ticket config API called successfully');
     const config = await TicketConfig.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -58,30 +38,49 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     );
     
     if (!config) {
-      return res.status(404).json({ message: 'Ticket configuration not found' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Ticket configuration not found' 
+      });
     }
     
-    res.json({ 
+    const result = {
+      success: true,
       message: 'Ticket configuration updated successfully',
-      config 
-    });
+      data: { config }
+    };
+    
+    res.json(result);
   } catch (error) {
-    console.error('Update ticket config error:', error);
-    res.status(500).json({ message: 'Failed to update ticket configuration' });
+    console.error('Update ticket config API error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update ticket configuration',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
 // POST /api/ticket-config - Create new ticket configuration (admin only)
 router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
+    console.error('Create ticket config API called successfully');
     const config = await TicketConfig.create(req.body);
-    res.status(201).json({ 
+    
+    const result = {
+      success: true,
       message: 'Ticket configuration created successfully',
-      config 
-    });
+      data: { config }
+    };
+    
+    res.status(201).json(result);
   } catch (error) {
-    console.error('Create ticket config error:', error);
-    res.status(500).json({ message: 'Failed to create ticket configuration' });
+    console.error('Create ticket config API error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create ticket configuration',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 

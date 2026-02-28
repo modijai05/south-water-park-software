@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "npx tsx src/index.js",
     "build": "npx tsc --noEmit --strict",
-    "start": "NODE_ENV=production npx tsx src/index.js",
+    "start": "npx tsx src/index.js",
     "start:dev": "npx tsx src/index.js"
   },
   "dependencies": {

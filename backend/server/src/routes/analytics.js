@@ -1,6 +1,6 @@
-import { Router } from 'express';
-import { authenticate, requireAdmin } from '../middleware/auth';
-import { User } from '../models/User';
+const { Router } = require('express');
+const { authenticate, requireAdmin } = require('../middleware/auth.js');
+const { User } = require('../models/User.js');
 
 const router = Router();
 

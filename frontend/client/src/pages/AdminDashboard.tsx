@@ -1985,7 +1985,7 @@ export function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {recentEntries.slice(0, 5).length > 0 ? (
+                {Array.isArray(recentEntries) && recentEntries.length > 0 ? (
                   recentEntries.slice(0, 5).map((entry, index) => (
                     <tr key={entry._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 text-sm text-gray-900">

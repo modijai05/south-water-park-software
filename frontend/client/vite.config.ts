@@ -18,13 +18,16 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
           charts: ['chart.js', 'react-chartjs-2'],
-          utils: ['date-fns', 'dayjs']
+          utils: ['date-fns', 'dayjs'],
+          motion: ['framer-motion'],
+          forms: ['react-hook-form', '@hookform/resolvers', 'zod']
         }
       }
     }
