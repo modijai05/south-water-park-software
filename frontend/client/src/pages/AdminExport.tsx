@@ -997,10 +997,26 @@ export function AdminExport() {
               receiptNumber = receiptData.receiptNumber;
               console.log('🔍 AdminExport: Receipt number generated:', receiptNumber);
             } else {
-              console.error('🔍 AdminExport: Failed to generate receipt number');
+              console.error('🔍 AdminExport: Failed to generate receipt number, response:', receiptRes.status);
+              // Generate fallback receipt number locally
+              const today = new Date();
+              const dateStr = today.getFullYear().toString() +
+                              (today.getMonth() + 1).toString().padStart(2, '0') +
+                              today.getDate().toString().padStart(2, '0');
+              const timestamp = today.getTime().toString().slice(-4);
+              receiptNumber = `SWP-${dateStr}-${timestamp}`;
+              console.log('🔍 AdminExport: Using fallback receipt number:', receiptNumber);
             }
           } catch (error) {
             console.error('🔍 AdminExport: Error generating receipt number:', error);
+            // Generate fallback receipt number locally
+            const today = new Date();
+            const dateStr = today.getFullYear().toString() +
+                            (today.getMonth() + 1).toString().padStart(2, '0') +
+                            today.getDate().toString().padStart(2, '0');
+            const timestamp = today.getTime().toString().slice(-4);
+            receiptNumber = `SWP-${dateStr}-${timestamp}`;
+            console.log('🔍 AdminExport: Using fallback receipt number:', receiptNumber);
           }
         }
         
@@ -1058,30 +1074,44 @@ export function AdminExport() {
       }
 
       const batchReceiptData = {
-        entries: entries.map(entry => ({
-          name: entry.name,
-          mobile: entry.mobile,
-          ticketType: entry.ticketType,
-          adults: entry.adults,
-          kids: entry.kids,
-          upgrades: entry.upgrades || [],
-          baseAmount: entry.baseAmount,
-          kidDiscount: entry.kidDiscount,
-          additionalDiscount: entry.additionalDiscount,
-          finalAmount: entry.finalAmount,
-          totalPeople: entry.totalPeople,
-          cashAmount: entry.cashAmount,
-          upiAmount: entry.upiAmount,
-          advanceAmount: entry.advanceAmount || 0,
-          otherAmount: entry.otherAmount || 0,
-          filledBy: (entry as any).createdBy?.username || 'Unknown',
-          filledByFullName: (entry as any).filledByFullName || (entry as any).createdBy?.fullName || (entry as any).createdBy?.username || 'Unknown',
-          createdAt: entry.createdAt,
-          adultsFastFoodCoupon: (entry as any).adultsFastFoodCoupon,
-          kidsFastFoodCoupon: (entry as any).kidsFastFoodCoupon,
-          adultsMainFoodCoupon: (entry as any).adultsMainFoodCoupon,
-          kidsMainFoodCoupon: (entry as any).kidsMainFoodCoupon,
-        })),
+        entries: entries.map(entry => {
+          // Generate receipt number if it doesn't exist
+          let receiptNumber = entry.receiptNumber;
+          if (!receiptNumber) {
+            const today = new Date();
+            const dateStr = today.getFullYear().toString() +
+                            (today.getMonth() + 1).toString().padStart(2, '0') +
+                            today.getDate().toString().padStart(2, '0');
+            const timestamp = today.getTime().toString().slice(-4);
+            receiptNumber = `SWP-${dateStr}-${timestamp}`;
+          }
+          
+          return {
+            receiptNumber,
+            name: entry.name,
+            mobile: entry.mobile,
+            ticketType: entry.ticketType,
+            adults: entry.adults,
+            kids: entry.kids,
+            upgrades: entry.upgrades || [],
+            baseAmount: entry.baseAmount,
+            kidDiscount: entry.kidDiscount,
+            additionalDiscount: entry.additionalDiscount,
+            finalAmount: entry.finalAmount,
+            totalPeople: entry.totalPeople,
+            cashAmount: entry.cashAmount,
+            upiAmount: entry.upiAmount,
+            advanceAmount: entry.advanceAmount || 0,
+            otherAmount: entry.otherAmount || 0,
+            filledBy: (entry as any).createdBy?.username || 'Unknown',
+            filledByFullName: (entry as any).filledByFullName || (entry as any).createdBy?.fullName || (entry as any).createdBy?.username || 'Unknown',
+            createdAt: entry.createdAt,
+            adultsFastFoodCoupon: (entry as any).adultsFastFoodCoupon,
+            kidsFastFoodCoupon: (entry as any).kidsFastFoodCoupon,
+            adultsMainFoodCoupon: (entry as any).adultsMainFoodCoupon,
+            kidsMainFoodCoupon: (entry as any).kidsMainFoodCoupon,
+          };
+        }),
         dateRange: `${dayjs(f).format('DD MMMM YYYY')} - ${dayjs(t).format('DD MMMM YYYY')}`,
         totalEntries: entries.length,
         totalRevenue: entries.reduce((sum, e) => sum + (e.finalAmount || 0), 0),

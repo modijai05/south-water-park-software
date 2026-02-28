@@ -351,10 +351,26 @@ export function Staff() {
             receiptNumber = receiptData.receiptNumber;
             console.log('🔍 Staff: Receipt number generated:', receiptNumber);
           } else {
-            console.error('🔍 Staff: Failed to generate receipt number');
+            console.error('🔍 Staff: Failed to generate receipt number, response:', receiptRes.status);
+            // Generate fallback receipt number locally
+            const today = new Date();
+            const dateStr = today.getFullYear().toString() +
+                            (today.getMonth() + 1).toString().padStart(2, '0') +
+                            today.getDate().toString().padStart(2, '0');
+            const timestamp = today.getTime().toString().slice(-4);
+            receiptNumber = `SWP-${dateStr}-${timestamp}`;
+            console.log('🔍 Staff: Using fallback receipt number:', receiptNumber);
           }
         } catch (error) {
           console.error('🔍 Staff: Error generating receipt number:', error);
+          // Generate fallback receipt number locally
+          const today = new Date();
+          const dateStr = today.getFullYear().toString() +
+                          (today.getMonth() + 1).toString().padStart(2, '0') +
+                          today.getDate().toString().padStart(2, '0');
+          const timestamp = today.getTime().toString().slice(-4);
+          receiptNumber = `SWP-${dateStr}-${timestamp}`;
+          console.log('🔍 Staff: Using fallback receipt number:', receiptNumber);
         }
       }
       

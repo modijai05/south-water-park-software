@@ -90,6 +90,7 @@ export interface EntryRecord {
   kidsFastFoodCoupon?: string;
   adultsMainFoodCoupon?: string;
   kidsMainFoodCoupon?: string;
+  receiptNumber?: string;
   createdAt: string;
   createdBy?: { username: string; fullName?: string };
   filledByFullName?: string;

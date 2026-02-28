@@ -82,7 +82,7 @@ app.use(errorHandler);
 async function startServer() {
   try {
     // REQUIRE MongoDB URI for data persistence
-    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://southpark_user:SouthPark2024!@south-water-park-new.mongodb.net/south_water_park?retryWrites=true&w=majority';
+    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://jaimodi05bapa_db_user:npPqPhXwCMbiSIFS@tms.f2ekue9.mongodb.net/south_water_park?appName=TMS';
     
     if (!mongoUri) {
       console.error('❌ MONGODB_URI is required for data persistence');
