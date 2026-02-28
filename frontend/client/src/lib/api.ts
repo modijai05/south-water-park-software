@@ -37,11 +37,11 @@ export async function api<T>(
 
 export const authApi = {
   login: (username: string, password: string) =>
-    api<{ token: string; user: { id: string; username: string; fullName?: string; role: string } }>('/auth/login', {
+    api<{ token: string; user: { id: string; username: string; fullName?: string; role: string } }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
-  me: () => api<{ user: { id: string; username: string; fullName?: string; role: string } | null }>('/auth/me'),
+  me: () => api<{ user: { id: string; username: string; fullName?: string; role: string } | null }>('/api/auth/me'),
 };
 
 export const entriesApi = {
