@@ -128,4 +128,35 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/users/:id/logs - Get user login logs (admin only)
+router.get('/:id/logs', authenticate, requireAdmin, async (req, res) => {
+  try {
+    console.error('User logs API called successfully');
+    const user = await User.findById(req.params.id).select('loginLogs username fullName');
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
+    const result = {
+      success: true,
+      data: {
+        username: user.username,
+        logs: user.loginLogs || []
+      }
+    };
+    
+    res.json(result);
+  } catch (error) {
+    console.error('User logs API error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch user logs',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
 module.exports = router;
