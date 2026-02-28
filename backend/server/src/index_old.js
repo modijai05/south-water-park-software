@@ -130,12 +130,14 @@ async function startServer() {
         // Set up connection monitoring
         mongoose.connection.on('error', (err) => {
           console.error('❌ MongoDB connection error:', err);
-          // Don't exit immediately, let the connection retry
+          console.error('🚨 Database connection lost - Server will exit');
+          process.exit(1);
         });
         
         mongoose.connection.on('disconnected', () => {
           console.warn('⚠️ MongoDB disconnected');
-          // Don't exit immediately, let the connection retry
+          console.error('🚨 Database connection lost - Server will exit');
+          process.exit(1);
         });
         
         mongoose.connection.on('reconnected', () => {
@@ -154,17 +156,9 @@ async function startServer() {
           console.error('   2. Verify connection string format');
           console.error('   3. Check network connectivity');
           console.error('   4. Confirm database credentials');
-          
-          // In production, exit to prevent data loss
-          if (process.env.NODE_ENV === 'production') {
-            console.error('🚨 Cannot start without persistent database in production');
-            console.error('💥 Server exiting to prevent data loss');
-            process.exit(1);
-          } else {
-            // In development, continue with in-memory fallback
-            console.warn('⚠️ Continuing in development mode without database');
-            console.warn('🔄 Some features may not work properly');
-          }
+          console.error('🚨 Cannot start without persistent database');
+          console.error('💥 Server exiting to prevent data loss');
+          process.exit(1);
         } else {
           console.log(`⏳ Retrying in 5 seconds...`);
           await new Promise(resolve => setTimeout(resolve, 5000));
@@ -172,49 +166,26 @@ async function startServer() {
       }
     }
     
-    // Only start database monitoring and seeding if MongoDB is connected
-    if (mongoose.connection.readyState === 1) {
-      // Start database health monitoring
-      console.log('🏥 Starting database health monitoring...');
-      dbHealthMonitor.startMonitoring(30000); // Check every 30 seconds
+    // Start database health monitoring
+    console.log('🏥 Starting database health monitoring...');
+    dbHealthMonitor.startMonitoring(30000); // Check every 30 seconds
 
-      // Auto-seed database with default users
-      console.log('🌱 Seeding database with default users...');
-      await seedDatabase();
-    } else {
-      console.warn('⚠️ Skipping database monitoring and seeding due to connection failure');
-    }
+    // Auto-seed database with default users
+    console.log('🌱 Seeding database with default users...');
+    await seedDatabase();
 
     // Start the server
-    const server = app.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, () => {
       console.log('🚀 Server started successfully');
-      console.log('📍 Server URL:', `http://0.0.0.0:${PORT}`);
-      
-      if (mongoose.connection.readyState === 1) {
-        console.log('🗄️ Database Status: MongoDB Atlas (Connected)');
-        console.log('🔒 Data Persistence: ENABLED - Zero data loss guaranteed');
-        console.log('🛡️ Production Mode: All data persisted to MongoDB Atlas');
-        console.log('👥 Default Admins: admin1/admin1, admin2/admin2, admin3/admin3');
-        console.log('👥 Default Staff: staff1/staff1, staff2/staff2, staff3/staff3, staff4/staff4, staff5/staff5');
-        console.log('🏥 Health Monitoring: Active (30s intervals)');
-      } else {
-        console.log('⚠️ Database Status: Not Connected');
-        console.log('🔒 Data Persistence: DISABLED - Development Mode Only');
-        console.log('🛡️ Some features may not work properly');
-      }
-      
+      console.log('📍 Server URL:', `http://localhost:${PORT}`);
+      console.log('🗄️ Database Status: MongoDB Atlas (Persistent)');
+      console.log('🔒 Data Persistence: ENABLED - Zero data loss guaranteed');
+      console.log('🛡️ Production Mode: All data persisted to MongoDB Atlas');
+      console.log('👥 Default Admins: admin1/admin1, admin2/admin2, admin3/admin3');
+      console.log('👥 Default Staff: staff1/staff1, staff2/staff2, staff3/staff3, staff4/staff4, staff5/staff5');
       console.log('🔐 Environment:', process.env.NODE_ENV || 'development');
-      console.log('🔍 Health Check: http://0.0.0.0:' + PORT + '/api/health');
-    });
-
-    // Handle server errors
-    server.on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use`);
-      } else {
-        console.error('❌ Server error:', err);
-      }
-      process.exit(1);
+      console.log('🏥 Health Monitoring: Active (30s intervals)');
+      console.log('🔍 Health Check: http://localhost:' + PORT + '/api/health');
     });
     
   } catch (err) {
@@ -297,22 +268,12 @@ process.on('SIGTERM', async () => {
 
 process.on('uncaughtException', (error) => {
   console.error('💥 Uncaught Exception:', error);
-  // Log the error but don't exit immediately in production
-  if (process.env.NODE_ENV === 'production') {
-    console.error('🔄 Continuing in production mode...');
-  } else {
-    process.exit(1);
-  }
+  process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
-  // Log the error but don't exit immediately in production
-  if (process.env.NODE_ENV === 'production') {
-    console.error('🔄 Continuing in production mode...');
-  } else {
-    process.exit(1);
-  }
+  process.exit(1);
 });
 
 // Start the server
