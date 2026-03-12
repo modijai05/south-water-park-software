@@ -197,9 +197,10 @@ export function AdminTicketConfig() {
   // Quick price set function for any specific day
   const setDayPrice = (ticketType: string, day: DayWisePricing['day'], price: number) => {
     console.log('🔧 setDayPrice called:', { ticketType, day, price });
+    
+    // Force immediate state update
     setConfigs(prev => {
-      console.log('🔧 setDayPrice - prev configs:', prev.length);
-      const updated = prev.map(config => {
+      const newConfigs = prev.map(config => {
         if (config.ticketType === ticketType) {
           console.log('🔧 setDayPrice - updating config:', config.ticketType);
           const updatedDayWise = config.dayWisePricing.map(dp => 
@@ -215,8 +216,8 @@ export function AdminTicketConfig() {
         }
         return config;
       });
-      console.log('🔧 setDayPrice - new configs:', updated.length);
-      return updated;
+      console.log('🔧 setDayPrice - new configs:', newConfigs);
+      return newConfigs;
     });
   };
 
@@ -716,7 +717,7 @@ export function AdminTicketConfig() {
                                 value={currentPrice}
                                 onChange={(e) => {
                                   const newPrice = parseInt(e.target.value) || 0;
-                                  console.log('🔧 Quick price set:', { day, newPrice, ticketType: config.ticketType });
+                                  console.log('🔧 Quick price set:', { day, newPrice, ticketType: config.ticketType, currentPrice });
                                   setDayPrice(config.ticketType, day, newPrice);
                                 }}
                                 disabled={editingTicket === null}
