@@ -58,10 +58,57 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     }
     
     console.log('🔧 Found existing config:', existingConfig);
+    console.log('🔧 Mongoose connection state:', mongoose.connection.readyState);
     
     // Update the configuration
     const updateData = { $set: req.body };
     console.log('🔧 Update data:', updateData);
+    
+    // Check for dayWisePricing array and validate
+    if (updateData.dayWisePricing) {
+      console.log('🔧 Day-wise pricing data found:', updateData.dayWisePricing);
+      console.log('🔧 Day-wise pricing length:', updateData.dayWisePricing.length);
+      
+      // Validate each day object
+      for (let i = 0; i < updateData.dayWisePricing.length; i++) {
+        const dayPricing = updateData.dayWisePricing[i];
+        console.log(`🔧 Validating day ${i + 1}:`, dayPricing);
+        
+        if (!dayPricing.day || !dayPricing.day.trim()) {
+          console.log(`❌ Invalid day ${i + 1}: missing or empty day`);
+          return res.status(400).json({
+            success: false,
+            message: `Invalid day ${i + 1}: missing or empty day`
+          });
+        }
+        
+        if (dayPricing.fixedAmount !== undefined && dayPricing.fixedAmount < 0) {
+          console.log(`❌ Invalid fixed amount for day ${i + 1}:`, dayPricing.fixedAmount);
+          return res.status(400).json({
+            success: false,
+            message: `Invalid fixed amount for day ${i + 1}: must be positive`
+          });
+        }
+        
+        if (dayPricing.priceMultiplier !== undefined && (dayPricing.priceMultiplier < 0.5 || dayPricing.priceMultiplier > 3.0)) {
+          console.log(`❌ Invalid price multiplier for day ${i + 1}:`, dayPricing.priceMultiplier);
+          return res.status(400).json({
+            success: false,
+            message: `Invalid price multiplier for day ${i + 1}: must be between 0.5 and 3.0`
+          });
+        }
+        
+        if (dayPricing.enabled !== true && dayPricing.enabled !== false) {
+          console.log(`❌ Invalid enabled state for day ${i + 1}:`, dayPricing.enabled);
+          return res.status(400).json({
+            success: false,
+            message: `Invalid enabled state for day ${i + 1}: must be boolean`
+          });
+        }
+      }
+      
+      console.log('🔧 Day-wise pricing validation passed');
+    }
     
     const updateResult = await TicketConfig.updateOne(
       { ticketType },
@@ -69,6 +116,8 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     );
     
     console.log('📊 Update result:', updateResult);
+    console.log('🔧 Update result matchedCount:', updateResult.matchedCount);
+    console.log('🔧 Update result modifiedCount:', updateResult.modifiedCount);
     
     if (updateResult.matchedCount === 0) {
       console.log('❌ No ticket config was updated');
@@ -90,10 +139,21 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     
   } catch (error) {
     console.error('❌ Error updating ticket config:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Mongoose connection state:', mongoose.connection.readyState);
+    console.error('❌ Mongoose connection host:', mongoose.connection.host);
+    console.error('❌ Mongoose connection name:', mongoose.connection.name);
+    
     return res.status(500).json({ 
       success: false, 
       message: 'Failed to update ticket configuration',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? {
+        stack: error.stack,
+        mongooseState: mongoose.connection.readyState,
+        mongooseHost: mongoose.connection.host,
+        mongooseName: mongoose.connection.name
+      } : undefined
     });
   }
 });
