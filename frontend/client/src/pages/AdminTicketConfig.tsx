@@ -194,6 +194,42 @@ export function AdminTicketConfig() {
     }));
   };
 
+  // Quick price set function for any specific day
+  const setDayPrice = (ticketType: string, day: DayWisePricing['day'], price: number) => {
+    setConfigs(prev => prev.map(config => {
+      if (config.ticketType === ticketType) {
+        const updatedDayWise = config.dayWisePricing.map(dp => 
+          dp.day === day ? { 
+            ...dp, 
+            fixedAmount: price, 
+            priceMultiplier: 1,
+            enabled: true 
+          } : dp
+        );
+        return { ...config, dayWisePricing: updatedDayWise };
+      }
+      return config;
+    }));
+  };
+
+  // Quick multiplier set function for any specific day
+  const setDayMultiplier = (ticketType: string, day: DayWisePricing['day'], multiplier: number) => {
+    setConfigs(prev => prev.map(config => {
+      if (config.ticketType === ticketType) {
+        const updatedDayWise = config.dayWisePricing.map(dp => 
+          dp.day === day ? { 
+            ...dp, 
+            priceMultiplier: multiplier, 
+            fixedAmount: undefined,
+            enabled: true 
+          } : dp
+        );
+        return { ...config, dayWisePricing: updatedDayWise };
+      }
+      return config;
+    }));
+  };
+
   const resetToDefaults = (ticketType: string) => {
     setConfigs(prev => prev.map(config => {
       if (config.ticketType === ticketType) {
@@ -641,6 +677,70 @@ export function AdminTicketConfig() {
                       Debug: editingTicket={editingTicket}, config.ticketType={config.ticketType}, canEdit={editingTicket === config.ticketType}
                     </div>
                   )}
+                  
+                  {/* Quick Price Set Section */}
+                  {editingTicket === config.ticketType && (
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                      <h5 className="text-md font-semibold text-gray-800 mb-3">Quick Price Set</h5>
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+                        {days.map(day => {
+                          const dayPricing = config.dayWisePricing.find(dp => dp.day === day);
+                          const currentPrice = dayPricing?.fixedAmount !== undefined 
+                            ? dayPricing.fixedAmount 
+                            : Math.round(config.basePrice * (dayPricing?.priceMultiplier || 1));
+                          
+                          return (
+                            <div key={day} className="text-center">
+                              <div className="text-sm font-medium text-gray-700 mb-1 capitalize">
+                                {dayLabels[day].slice(0, 3)}
+                                {day === 'sunday' && ' 🎉'}
+                              </div>
+                              <input
+                                type="number"
+                                value={currentPrice}
+                                onChange={(e) => setDayPrice(config.ticketType, day, parseInt(e.target.value) || 0)}
+                                disabled={editingTicket === null}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="₹0"
+                              />
+                              <div className="text-xs text-gray-500 mt-1">₹{currentPrice}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          onClick={() => {
+                            days.forEach(day => setDayPrice(config.ticketType, day, config.basePrice));
+                          }}
+                          disabled={editingTicket === null}
+                          className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
+                        >
+                          Reset All to Base
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDayPrice(config.ticketType, 'saturday', Math.round(config.basePrice * 2));
+                            setDayPrice(config.ticketType, 'sunday', Math.round(config.basePrice * 2));
+                          }}
+                          disabled={editingTicket === null}
+                          className="px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50"
+                        >
+                          Weekend 2x
+                        </button>
+                        <button
+                          onClick={() => {
+                            days.forEach(day => setDayMultiplier(config.ticketType, day, 1));
+                          }}
+                          disabled={editingTicket === null}
+                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          Use Multipliers
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {config.dayWisePricing.map((dayPricing) => {
                       const finalPrice = dayPricing.fixedAmount !== undefined 
