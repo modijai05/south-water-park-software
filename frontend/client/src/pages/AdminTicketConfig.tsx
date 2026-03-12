@@ -635,6 +635,12 @@ export function AdminTicketConfig() {
                       Day-wise pricing is now editable for {config.label}
                     </div>
                   )}
+                  {/* Debug info */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="text-xs text-gray-500 mb-2">
+                      Debug: editingTicket={editingTicket}, config.ticketType={config.ticketType}, canEdit={editingTicket === config.ticketType}
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {config.dayWisePricing.map((dayPricing) => {
                       const finalPrice = dayPricing.fixedAmount !== undefined 
@@ -660,6 +666,7 @@ export function AdminTicketConfig() {
                                 onChange={(e) => updateDayPricing(config.ticketType, dayPricing.day, 'enabled', e.target.checked)}
                                 disabled={editingTicket !== config.ticketType}
                                 className="mr-2"
+                                title={editingTicket === config.ticketType ? "Enable day-wise pricing" : "Click Edit to enable day-wise pricing"}
                               />
                               <span className="text-sm text-gray-600">Enable</span>
                             </label>
