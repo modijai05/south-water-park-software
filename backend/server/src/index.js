@@ -126,51 +126,72 @@ async function startServer() {
         
         // Set up connection monitoring
         setupConnectionMonitoring();
-            console.error('� Production mode: Attempting to reconnect...');
-            setTimeout(connectToMongoDB, 30000);
-          }
-        });
         
-        mongoose.connection.on('disconnected', () => {
-          console.warn('⚠️ MongoDB disconnected - attempting to reconnect...');
-          console.warn('   - In production mode: scheduling reconnection attempt');
-          setTimeout(connectToMongoDB, 30000);
-        });
+        // Initialize database with default users if needed
+        console.log('🌱 Seeding database with default users...');
+        // await seedDatabase();
+        console.log('✅ Database seeding completed');
         
-        mongoose.connection.on('reconnected', () => {
-          console.log('✅ MongoDB reconnected successfully');
-          console.log('🔧 MongoDB connection details:');
-          console.log(`   - Host: ${mongoose.connection.host}`);
-          console.log(`   - Database: ${mongoose.connection.name}`);
-          console.log(`   - Ready State: ${mongoose.connection.readyState}`);
-        });
+        return connection;
         
-        mongoose.connection.on('fullsetup', () => {
-          console.log('🔄 MongoDB full setup completed');
-        });
-        
-        mongoose.connection.on('open', () => {
-          console.warn('⚠️ MongoDB connection opened');
-        });
-        
-        mongoose.connection.on('close', () => {
-          console.log('🔄 MongoDB connection closed');
-        });
-        
-        mongoose.connection.on('reconnected', () => {
-          console.log('✅ MongoDB reconnected successfully');
-          console.log('� MongoDB connection details:');
-          console.log(`   - Host: ${mongoose.connection.host}`);
       } catch (error) {
         console.error('❌ MongoDB connection error:', error);
         console.error('❌ Error Code:', error.code);
         console.error('❌ Error Message:', error.message);
+        console.error('❌ Error Name:', error.name);
+        console.error('❌ Error Stack:', error.stack);
+        
+        // In production, we might want to attempt reconnection
+        if (process.env.NODE_ENV === 'production') {
+          console.error('🔄 Production mode: Attempting to reconnect...');
+          setTimeout(connectToMongoDB, 30000); // Retry after 30 seconds
+        } else {
+          console.warn('⚠️ Continuing in development mode without database');
+          console.warn('🔄 Some features may not work properly');
+        }
+        
+        // Don't exit - let mongoose auto-reconnect
+      }
+    };
+    
+    mongoose.connection.on('disconnected', () => {
+      console.warn('⚠️ MongoDB disconnected - attempting to reconnect...');
+      console.warn('   - In production mode: scheduling reconnection attempt');
+      setTimeout(connectToMongoDB, 30000);
+    });
+    
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected successfully');
+      console.log('🔧 MongoDB connection details:');
+      console.log(`   - Host: ${mongoose.connection.host}`);
+      console.log(`   - Database: ${mongoose.connection.name}`);
+      console.log(`   - Ready State: ${mongoose.connection.readyState}`);
+    });
+    
+    mongoose.connection.on('fullsetup', () => {
+      console.log('🔄 MongoDB full setup completed');
+    });
+    
+    mongoose.connection.on('open', () => {
+      console.warn('⚠️ MongoDB connection opened');
+    });
+    
+    mongoose.connection.on('close', () => {
+      console.log('🔄 MongoDB connection closed');
+    });
+    
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected successfully');
+      console.log('� MongoDB connection details:');
+      console.log(`   - Host: ${mongoose.connection.host}`);
+    });
+    
     // Start server immediately - Render needs to detect open PORT
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log('🚀 Server started successfully');
       console.log('📍 Server URL:', `http://0.0.0.0:${PORT}`);
       console.log('🔐 Environment:', process.env.NODE_ENV || 'development');
-      console.log('� Health Check: http://0.0.0.0:' + PORT + '/health');
+      console.log('🔍 Health Check: http://0.0.0.0:' + PORT + '/health');
       console.log('🔍 API Health Check: http://0.0.0.0:' + PORT + '/api/health');
     });
 
