@@ -37,15 +37,19 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     console.log('🔧 Request body keys:', Object.keys(req.body));
     console.log('🔧 Request body:', JSON.stringify(req.body, null, 2));
     
-    // Simple direct update - minimal approach
-    const updateResult = await TicketConfig.updateOne(
-      { ticketType },
-      { $set: req.body }
-    );
+    // Validate request body
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.log('❌ Invalid request body');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid request body' 
+      });
+    }
     
-    console.log('📊 Update result:', updateResult);
+    // Find existing ticket config
+    const existingConfig = await TicketConfig.findOne({ ticketType });
     
-    if (updateResult.matchedCount === 0) {
+    if (!existingConfig) {
       console.log('❌ No ticket config found to update');
       return res.status(404).json({ 
         success: false, 
@@ -53,24 +57,40 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
       });
     }
     
-    // Simple success response
+    console.log('🔧 Found existing config:', existingConfig);
+    
+    // Update the configuration
+    const updateData = { $set: req.body };
+    console.log('🔧 Update data:', updateData);
+    
+    const updateResult = await TicketConfig.updateOne(
+      { ticketType },
+      updateData
+    );
+    
+    console.log('📊 Update result:', updateResult);
+    
+    if (updateResult.matchedCount === 0) {
+      console.log('❌ No ticket config was updated');
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No ticket configuration was updated' 
+      });
+    }
+    
+    // Return success response
     const result = {
       success: true,
-      message: 'Ticket configuration updated successfully'
+      message: 'Ticket configuration updated successfully',
+      data: updateResult
     };
     
-    console.log('✅ Update completed - sending success response');
-    res.json(result);
+    console.log('✅ Ticket config updated successfully:', result);
+    return res.json(result);
     
   } catch (error) {
-    console.error('❌ Update ticket config API error:', error);
-    console.error('❌ Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    });
-    
-    res.status(500).json({ 
+    console.error('❌ Error updating ticket config:', error);
+    return res.status(500).json({ 
       success: false, 
       message: 'Failed to update ticket configuration',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
