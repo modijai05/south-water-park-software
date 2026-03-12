@@ -5,7 +5,7 @@ publish = "dist"
 
 [build.environment]
 NODE_VERSION = "20"
-VITE_API_URL = "https://south-water-park-backend.onrender.com"
+VITE_API_URL = "https://south-water-park-backend.onrender.com/api"
 
 [[redirects]]
 from = "/*"
