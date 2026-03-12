@@ -222,20 +222,28 @@ export function AdminTicketConfig() {
 
   // Quick multiplier set function for any specific day
   const setDayMultiplier = (ticketType: string, day: DayWisePricing['day'], multiplier: number) => {
-    setConfigs(prev => prev.map(config => {
-      if (config.ticketType === ticketType) {
-        const updatedDayWise = config.dayWisePricing.map(dp => 
-          dp.day === day ? { 
-            ...dp, 
-            priceMultiplier: multiplier, 
-            fixedAmount: undefined,
-            enabled: true 
-          } : dp
-        );
-        return { ...config, dayWisePricing: updatedDayWise };
-      }
-      return config;
-    }));
+    console.log('🔧 setDayMultiplier called:', { ticketType, day, multiplier });
+    setConfigs(prev => {
+      console.log('🔧 setDayMultiplier - prev configs:', prev.length);
+      const updated = prev.map(config => {
+        if (config.ticketType === ticketType) {
+          console.log('🔧 setDayMultiplier - updating config:', config.ticketType);
+          const updatedDayWise = config.dayWisePricing.map(dp => 
+            dp.day === day ? { 
+              ...dp, 
+              priceMultiplier: multiplier, 
+              fixedAmount: undefined,
+              enabled: true 
+            } : dp
+          );
+          console.log('🔧 setDayMultiplier - updated dayWise for', day, ':', updatedDayWise.find(dp => dp.day === day));
+          return { ...config, dayWisePricing: updatedDayWise };
+        }
+        return config;
+      });
+      console.log('🔧 setDayMultiplier - new configs:', updated.length);
+      return updated;
+    });
   };
 
   const resetToDefaults = (ticketType: string) => {
@@ -724,29 +732,44 @@ export function AdminTicketConfig() {
                       <div className="mt-3 flex flex-wrap gap-2">
                         <button
                           onClick={() => {
-                            days.forEach(day => setDayPrice(config.ticketType, day, config.basePrice));
+                            console.log('🔧 Reset All to Base button clicked', { ticketType: config.ticketType, basePrice: config.basePrice });
+                            days.forEach(day => {
+                              console.log('🔧 Setting base price for day:', day);
+                              setDayPrice(config.ticketType, day, config.basePrice);
+                            });
                           }}
                           disabled={editingTicket === null}
                           className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
+                          title={editingTicket !== null ? "Reset all days to base price" : "Click Edit to enable"}
                         >
                           Reset All to Base
                         </button>
                         <button
                           onClick={() => {
-                            setDayPrice(config.ticketType, 'saturday', Math.round(config.basePrice * 2));
-                            setDayPrice(config.ticketType, 'sunday', Math.round(config.basePrice * 2));
+                            const weekendPrice = Math.round(config.basePrice * 2);
+                            console.log('🔧 Weekend 2x button clicked', { ticketType: config.ticketType, weekendPrice });
+                            console.log('🔧 Setting Saturday price:', weekendPrice);
+                            setDayPrice(config.ticketType, 'saturday', weekendPrice);
+                            console.log('🔧 Setting Sunday price:', weekendPrice);
+                            setDayPrice(config.ticketType, 'sunday', weekendPrice);
                           }}
                           disabled={editingTicket === null}
                           className="px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50"
+                          title={editingTicket !== null ? "Set weekend prices to 2x base" : "Click Edit to enable"}
                         >
                           Weekend 2x
                         </button>
                         <button
                           onClick={() => {
-                            days.forEach(day => setDayMultiplier(config.ticketType, day, 1));
+                            console.log('🔧 Use Multipliers button clicked', { ticketType: config.ticketType });
+                            days.forEach(day => {
+                              console.log('🔧 Setting multiplier for day:', day);
+                              setDayMultiplier(config.ticketType, day, 1);
+                            });
                           }}
                           disabled={editingTicket === null}
                           className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                          title={editingTicket !== null ? "Switch to multiplier mode" : "Click Edit to enable"}
                         >
                           Use Multipliers
                         </button>
