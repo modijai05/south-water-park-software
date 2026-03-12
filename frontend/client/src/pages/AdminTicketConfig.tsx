@@ -648,15 +648,23 @@ export function AdminTicketConfig() {
                     {editingTicket === config.ticketType ? (
                       <>
                         <button
-                          onClick={() => updateConfig(config.ticketType, config)}
+                          onClick={() => {
+                            console.log('🔧 Save button clicked for ticket:', config.ticketType);
+                            updateConfig(config.ticketType, config);
+                          }}
                           disabled={saving}
                           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                          title="Save ticket configuration"
                         >
                           {saving ? 'Saving...' : 'Save'}
                         </button>
                         <button
-                          onClick={() => setEditingTicket(null)}
+                          onClick={() => {
+                            console.log('🔧 Cancel button clicked for ticket:', config.ticketType);
+                            setEditingTicket(null);
+                          }}
                           className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                          title="Cancel editing"
                         >
                           Cancel
                         </button>
@@ -664,8 +672,12 @@ export function AdminTicketConfig() {
                     ) : (
                       <>
                         <button
-                          onClick={() => setEditingTicket(config.ticketType)}
+                          onClick={() => {
+                            console.log('🔧 Edit button clicked for ticket:', config.ticketType);
+                            setEditingTicket(config.ticketType);
+                          }}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                          title="Edit this ticket configuration"
                         >
                           Edit
                         </button>
