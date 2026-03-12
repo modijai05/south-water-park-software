@@ -27,12 +27,14 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// PUT /api/ticket-config/:id - Update ticket configuration (admin only)
-router.put('/:id', authenticate, requireAdmin, async (req, res) => {
+// PUT /api/ticket-config/:ticketType - Update ticket configuration (admin only)
+router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
   try {
     console.error('Update ticket config API called successfully');
-    const config = await TicketConfig.findByIdAndUpdate(
-      req.params.id,
+    const { ticketType } = req.params;
+    
+    const config = await TicketConfig.findOneAndUpdate(
+      { ticketType },
       req.body,
       { new: true, runValidators: true }
     );

@@ -70,6 +70,13 @@ router.put('/:id', authenticate, async (req, res) => {
       });
     }
     
+    // Handle password update with proper hashing
+    if (password) {
+      const bcrypt = require('bcryptjs');
+      const saltRounds = 10;
+      updateData.password = await bcrypt.hash(password, saltRounds);
+    }
+    
     const user = await User.findByIdAndUpdate(
       req.params.id,
       updateData,
