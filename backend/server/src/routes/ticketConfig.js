@@ -33,6 +33,18 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     console.error('Update ticket config API called successfully');
     const { ticketType } = req.params;
     
+    console.log('🔧 Update request body:', JSON.stringify(req.body, null, 2));
+    console.log('🔧 TicketType parameter:', ticketType);
+    
+    // Validate required fields
+    const { label, basePrice, description } = req.body;
+    if (!label || !basePrice || !description) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields: label, basePrice, description' 
+      });
+    }
+    
     const config = await TicketConfig.findOneAndUpdate(
       { ticketType },
       req.body,
@@ -46,6 +58,8 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
       });
     }
     
+    console.log('✅ Ticket config updated successfully:', JSON.stringify(config, null, 2));
+    
     const result = {
       success: true,
       message: 'Ticket configuration updated successfully',
@@ -54,7 +68,27 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     
     res.json(result);
   } catch (error) {
-    console.error('Update ticket config API error:', error);
+    console.error('❌ Update ticket config API error:', error);
+    console.error('❌ Error stack:', error.stack);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Validation failed',
+        errors: validationErrors
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Duplicate ticket type' 
+      });
+    }
+    
     res.status(500).json({ 
       success: false, 
       message: 'Failed to update ticket configuration',
