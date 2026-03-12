@@ -88,25 +88,89 @@ async function startServer() {
     // REQUIRE MongoDB URI for data persistence
     const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://jaimodi05bapa_db_user:SgKNnsz19WTuvHp3@cluster.nckewmo.mongodb.net/?appName=Cluster';
     
+    console.log('🔧 MongoDB URI from environment:', mongoUri);
+    
     if (!mongoUri) {
       console.error('❌ MONGODB_URI is required for data persistence');
-      console.error('💥 Server cannot start without database connection');
-      console.error('🔧 Please set MONGODB_URI in your environment variables');
+      console.error('🔧 Current environment variables:', Object.keys(process.env).filter(key => key.includes('MONGO')));
+      console.error('🔧 Available MONGO variables:', Object.keys(process.env).filter(key => key.includes('MONGO')));
       process.exit(1);
     }
     
-    console.log('🔗 MongoDB Connection Setup');
-    console.log('📋 MONGODB_URI: CONFIGURED');
+    console.log('🔗 MongoDB URI validated:', mongoUri);
+    console.log('🔗 MongoDB URI format check:', mongoUri.includes('mongodb+srv://'));
+    console.log('� MongoDB URI contains user credentials:', mongoUri.includes('jaimodi05bapa_db_user'));
     
-    // Start MongoDB connection in background - don't block server startup
-    connectToMongoDB(mongoUri);
-
+    // Enhanced connection function with detailed debugging
+    const connectToMongoDB = async () => {
+      try {
+        console.log('🔄 Connecting to MongoDB...');
+        
+        const connection = await mongoose.connect(mongoUri, {
+          serverSelectionTimeoutMS: 10000,
+          socketTimeoutMS: 45000,
+          maxPoolSize: 10,
+          connectTimeoutMS: 10000,
+          heartbeatFrequencyMS: 10000,
+          retryWrites: true,
+          w: 'majority',
+          readPreference: 'primary',
+          retryReads: true
+        });
+        
+        console.log('✅ MongoDB connected successfully');
+        console.log('🔧 MongoDB connection details:');
+        console.log(`   - Host: ${mongoose.connection.host}`);
+        console.log(`   - Database: ${mongoose.connection.name}`);
+        console.log(`   - Ready State: ${mongoose.connection.readyState}`);
+        
+        // Set up connection monitoring
+        setupConnectionMonitoring();
+            console.error('� Production mode: Attempting to reconnect...');
+            setTimeout(connectToMongoDB, 30000);
+          }
+        });
+        
+        mongoose.connection.on('disconnected', () => {
+          console.warn('⚠️ MongoDB disconnected - attempting to reconnect...');
+          console.warn('   - In production mode: scheduling reconnection attempt');
+          setTimeout(connectToMongoDB, 30000);
+        });
+        
+        mongoose.connection.on('reconnected', () => {
+          console.log('✅ MongoDB reconnected successfully');
+          console.log('🔧 MongoDB connection details:');
+          console.log(`   - Host: ${mongoose.connection.host}`);
+          console.log(`   - Database: ${mongoose.connection.name}`);
+          console.log(`   - Ready State: ${mongoose.connection.readyState}`);
+        });
+        
+        mongoose.connection.on('fullsetup', () => {
+          console.log('🔄 MongoDB full setup completed');
+        });
+        
+        mongoose.connection.on('open', () => {
+          console.warn('⚠️ MongoDB connection opened');
+        });
+        
+        mongoose.connection.on('close', () => {
+          console.log('🔄 MongoDB connection closed');
+        });
+        
+        mongoose.connection.on('reconnected', () => {
+          console.log('✅ MongoDB reconnected successfully');
+          console.log('� MongoDB connection details:');
+          console.log(`   - Host: ${mongoose.connection.host}`);
+      } catch (error) {
+        console.error('❌ MongoDB connection error:', error);
+        console.error('❌ Error Code:', error.code);
+        console.error('❌ Error Message:', error.message);
     // Start server immediately - Render needs to detect open PORT
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log('🚀 Server started successfully');
       console.log('📍 Server URL:', `http://0.0.0.0:${PORT}`);
       console.log('🔐 Environment:', process.env.NODE_ENV || 'development');
-      console.log('🔍 Health Check: http://0.0.0.0:' + PORT + '/health');
+      console.log('� Health Check: http://0.0.0.0:' + PORT + '/health');
       console.log('🔍 API Health Check: http://0.0.0.0:' + PORT + '/api/health');
     });
 
@@ -134,7 +198,7 @@ async function connectToMongoDB(mongoUri) {
   const attemptConnection = async () => {
     try {
       connectionAttempts++;
-      console.log(`🔄 MongoDB connection attempt ${connectionAttempts}/${maxAttempts}...`);
+      console.log(`� MongoDB connection attempt ${connectionAttempts}/${maxAttempts}...`);
       
       await mongoose.connect(mongoUri, {
         serverSelectionTimeoutMS: 10000,
@@ -179,7 +243,7 @@ async function connectToMongoDB(mongoUri) {
         
         // In production, schedule retry attempts
         if (process.env.NODE_ENV === 'production') {
-          console.error('� Will retry connection in background...');
+          console.error('🔄 Will retry connection in background...');
           setTimeout(attemptConnection, 30000); // Retry after 30 seconds
         } else {
           console.warn('⚠️ Continuing in development mode without database');
@@ -208,7 +272,7 @@ function setupConnectionMonitoring() {
   });
   
   mongoose.connection.on('reconnected', () => {
-    console.log('� MongoDB reconnected successfully');
+    console.log('✅ MongoDB reconnected successfully');
   });
   
   mongoose.connection.on('connecting', () => {
