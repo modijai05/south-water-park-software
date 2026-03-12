@@ -37,29 +37,65 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     console.log('🔧 Request body keys:', Object.keys(req.body));
     console.log('🔧 Request body:', JSON.stringify(req.body, null, 2));
     
-    // Simple direct update - minimal approach
-    const updateResult = await TicketConfig.updateOne(
-      { ticketType },
-      { $set: req.body }
-    );
-    
-    console.log('📊 Update result:', updateResult);
-    
-    if (updateResult.matchedCount === 0) {
-      console.log('❌ No ticket config found to update');
+    // Find the existing ticket config first
+    const existingConfig = await TicketConfig.findOne({ ticketType });
+    if (!existingConfig) {
+      console.log('❌ No ticket config found for type:', ticketType);
       return res.status(404).json({ 
         success: false, 
         message: 'Ticket configuration not found' 
       });
     }
     
-    // Simple success response
+    console.log('✅ Found existing config:', existingConfig._id);
+    
+    // Prepare update data with only the fields that were sent
+    const updateData = {};
+    
+    // Only update fields that are provided in the request
+    if (req.body.label !== undefined) updateData.label = req.body.label;
+    if (req.body.description !== undefined) updateData.description = req.body.description;
+    if (req.body.basePrice !== undefined) updateData.basePrice = parseInt(req.body.basePrice) || 0;
+    if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
+    if (req.body.hasKids !== undefined) updateData.hasKids = req.body.hasKids;
+    if (req.body.foodIncluded !== undefined) updateData.foodIncluded = req.body.foodIncluded;
+    if (req.body.maxAdults !== undefined) updateData.maxAdults = req.body.maxAdults;
+    if (req.body.maxKids !== undefined) updateData.maxKids = req.body.maxKids;
+    if (req.body.timeLimit !== undefined) updateData.timeLimit = req.body.timeLimit;
+    
+    // Handle day-wise pricing if provided
+    if (req.body.dayWisePricing && Array.isArray(req.body.dayWisePricing)) {
+      updateData.dayWisePricing = req.body.dayWisePricing;
+    }
+    
+    console.log('🔧 Update data prepared:', JSON.stringify(updateData, null, 2));
+    
+    // Update using the document ID for reliability
+    const updateResult = await TicketConfig.updateOne(
+      { _id: existingConfig._id },
+      { $set: updateData }
+    );
+    
+    console.log('📊 Update result:', updateResult);
+    
+    if (updateResult.matchedCount === 0) {
+      console.log('❌ Update failed - no documents matched');
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to update ticket configuration' 
+      });
+    }
+    
+    // Fetch the updated document to return
+    const updatedConfig = await TicketConfig.findOne({ ticketType });
+    
     const result = {
       success: true,
-      message: 'Ticket configuration updated successfully'
+      message: 'Ticket configuration updated successfully',
+      data: { config: updatedConfig }
     };
     
-    console.log('✅ Update completed - sending success response');
+    console.log('✅ Update completed successfully');
     res.json(result);
     
   } catch (error) {
