@@ -54,7 +54,11 @@ export const ticketConfigApi = {
 
   // Get pricing for specific day
   getPricing: async (day: string): Promise<any[]> => {
-    const response = await fetch(`${API_BASE}/ticket-config/pricing/${day}`);
+    const response = await fetch(`${API_BASE}/ticket-config/pricing/${day}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
     if (!response.ok) throw new Error('Failed to fetch pricing');
     const result = await response.json();
     return Array.isArray(result) ? result : [];
