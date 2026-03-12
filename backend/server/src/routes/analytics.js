@@ -81,4 +81,36 @@ router.get('/top-performers', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/analytics/demand - Get demand analysis
+router.get('/demand', authenticate, async (req, res) => {
+  try {
+    const { timeRange } = req.query;
+    console.log('Analytics demand request for timeRange:', timeRange);
+    
+    // Mock demand data based on time range
+    const demandData = {
+      timeRange: timeRange || 'week',
+      data: [
+        { ticketType: '100', demand: 45, trend: 'increasing' },
+        { ticketType: '150', demand: 32, trend: 'stable' },
+        { ticketType: '300', demand: 78, trend: 'increasing' },
+        { ticketType: '450', demand: 25, trend: 'decreasing' },
+        { ticketType: '600', demand: 15, trend: 'stable' }
+      ],
+      summary: {
+        totalDemand: 195,
+        averageDemand: 32.5,
+        highestDemand: { ticketType: '300', count: 78 },
+        lowestDemand: { ticketType: '600', count: 15 }
+      }
+    };
+    
+    console.log('✅ Demand analytics data sent:', JSON.stringify(demandData, null, 2));
+    res.json({ success: true, data: demandData });
+  } catch (error) {
+    console.error('Get demand analytics error:', error);
+    res.status(500).json({ message: 'Failed to fetch demand analytics' });
+  }
+});
+
 module.exports = { analyticsRouter: router };
