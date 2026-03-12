@@ -479,29 +479,101 @@ export function AdminTicketConfig() {
                 className="bg-white rounded-xl shadow-lg border border-gray-200 p-6"
               >
                 <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">{config.label}</h3>
-                    <p className="text-gray-600 mt-1">{config.description}</p>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <span className="text-sm font-medium text-gray-500">
-                        Base Price: ₹{config.basePrice}
-                      </span>
-                      <span className={`text-sm px-2 py-1 rounded-full ${
-                        config.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {config.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                      {config.hasKids && (
-                        <span className="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-                          Kids Allowed
-                        </span>
-                      )}
-                      {config.foodIncluded && (
-                        <span className="text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
-                          Food Included
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex-1">
+                    {editingTicket === config.ticketType ? (
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          value={config.label}
+                          onChange={(e) => setConfigs(prev => prev.map(c => 
+                            c.ticketType === config.ticketType ? { ...c, label: e.target.value } : c
+                          ))}
+                          className="text-xl font-bold text-gray-900 border border-gray-300 rounded px-3 py-2 w-full"
+                          placeholder="Ticket Label"
+                        />
+                        <textarea
+                          value={config.description}
+                          onChange={(e) => setConfigs(prev => prev.map(c => 
+                            c.ticketType === config.ticketType ? { ...c, description: e.target.value } : c
+                          ))}
+                          className="text-gray-600 border border-gray-300 rounded px-3 py-2 w-full"
+                          rows={2}
+                          placeholder="Description"
+                        />
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-gray-500">Base Price:</span>
+                            <input
+                              type="number"
+                              value={config.basePrice}
+                              onChange={(e) => setConfigs(prev => prev.map(c => 
+                                c.ticketType === config.ticketType ? { ...c, basePrice: parseInt(e.target.value) || 0 } : c
+                              ))}
+                              className="border border-gray-300 rounded px-3 py-2 w-24"
+                              min="0"
+                            />
+                          </div>
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={config.isActive}
+                              onChange={(e) => setConfigs(prev => prev.map(c => 
+                                c.ticketType === config.ticketType ? { ...c, isActive: e.target.checked } : c
+                              ))}
+                              className="rounded"
+                            />
+                            <span className="text-sm">Active</span>
+                          </label>
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={config.hasKids}
+                              onChange={(e) => setConfigs(prev => prev.map(c => 
+                                c.ticketType === config.ticketType ? { ...c, hasKids: e.target.checked } : c
+                              ))}
+                              className="rounded"
+                            />
+                            <span className="text-sm">Kids Allowed</span>
+                          </label>
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={config.foodIncluded}
+                              onChange={(e) => setConfigs(prev => prev.map(c => 
+                                c.ticketType === config.ticketType ? { ...c, foodIncluded: e.target.checked } : c
+                              ))}
+                              className="rounded"
+                            />
+                            <span className="text-sm">Food Included</span>
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <h3 className="text-xl font-bold text-gray-900">{config.label}</h3>
+                        <p className="text-gray-600 mt-1">{config.description}</p>
+                        <div className="flex items-center space-x-4 mt-2">
+                          <span className="text-sm font-medium text-gray-500">
+                            Base Price: ₹{config.basePrice}
+                          </span>
+                          <span className={`text-sm px-2 py-1 rounded-full ${
+                            config.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {config.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                          {config.hasKids && (
+                            <span className="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                              Kids Allowed
+                            </span>
+                          )}
+                          {config.foodIncluded && (
+                            <span className="text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+                              Food Included
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="flex space-x-2">
                     {editingTicket === config.ticketType ? (
