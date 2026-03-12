@@ -53,17 +53,16 @@ export const entriesApi = {
     if (params?.page != null) q.set('page', String(params.page));
     if (params?.limit != null) q.set('limit', String(params.limit));
     const query = q.toString();
-    return api<{ success: boolean; data: { entries: unknown[]; total: number; page: number; limit: number; totalPages: number } }>(`/entries${query ? `?${query}` : ''}`)
+    return api<{ success: boolean; data: { entries: unknown[]; total: number; page: number; limit: number; totalPages: number } }>(`/api/entries${query ? `?${query}` : ''}`)
       .then(response => response.data);
   },
   searchAll: (params?: { search?: string; limit?: number }) => {
-    console.log('🔍 API: searchAll called with params:', params);
     const q = new URLSearchParams();
     if (params?.search) q.set('search', params.search);
     if (params?.limit != null) q.set('limit', String(params.limit));
     q.set('crossUser', 'true'); // Enable cross-user search for staff
     const query = q.toString();
-    const url = `/entries${query ? `?${query}` : ''}`;
+    const url = `/api/entries${query ? `?${query}` : ''}`;
     console.log('🔍 API: Making cross-user search request to:', url);
     console.log('🔍 API: Current user token:', localStorage.getItem('token')?.substring(0, 20) + '...');
     
@@ -74,26 +73,25 @@ export const entriesApi = {
         return response.data;
       })
       .catch(error => {
-        console.error('🔍 API: Request failed:', error);
+        console.error('🔍 API: Search error:', error);
         throw error;
       });
   },
-  create: (body: unknown) => api<{ success: boolean; data: unknown }>('/entries', { method: 'POST', body: JSON.stringify(body) })
+  create: (body: unknown) => api<{ success: boolean; data: unknown }>('/api/entries', { method: 'POST', body: JSON.stringify(body) })
     .then(response => response.data),
-  get: (id: string) => api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`)
+  get: (id: string) => api<{ success: boolean; data: { entry: unknown } }>(`/api/entries/${id}`)
     .then(response => response.data),
-  update: (id: string, body: unknown) => api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+  update: (id: string, body: unknown) => api<{ success: boolean; data: { entry: unknown } }>(`/api/entries/${id}`, { method: 'PUT', body: JSON.stringify(body) })
     .then(response => response.data),
-  delete: (id: string) => api<{ success: boolean; message: string }>(`/entries/${id}`, { method: 'DELETE' })
+  delete: (id: string) => api<{ success: boolean; message: string }>(`/api/entries/${id}`, { method: 'DELETE' })
     .then(response => response),
-  clearAll: () => api<{ success: boolean; message: string }>('/entries/clear-all', { method: 'DELETE' })
+  clearAll: () => api<{ success: boolean; message: string }>('/api/entries/clear-all', { method: 'DELETE' })
     .then(response => response),
-  stats: () => api<{ success: boolean; data: Record<string, number> }>('/entries/stats')
+  stats: () => api<{ success: boolean; data: Record<string, number> }>('/api/entries/stats')
     .then(response => response.data),
   charts: () =>
-    api<{ success: boolean; data: { last7Days: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number }[]; monthly: { _id: string; count: number; amount: number }[] } }>(
-      '/entries/charts'
-    ).then(response => response.data),
+    api<{ success: boolean; data: { last7Days: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number }[]; monthly: { _id: string; count: number; amount: number }[] } }>(`/api/entries/charts`)
+    .then(response => response.data),
 };
 
 export const usersApi = {
