@@ -35,8 +35,9 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     
     console.log('🔧 Update request for ticketType:', ticketType);
     console.log('🔧 Request body keys:', Object.keys(req.body));
+    console.log('🔧 Request body:', JSON.stringify(req.body, null, 2));
     
-    // Simple direct update approach
+    // Minimal update approach - bypass all validation
     const updateResult = await TicketConfig.updateOne(
       { ticketType },
       { $set: req.body }
@@ -52,26 +53,15 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
       });
     }
     
-    // Fetch the updated document
-    const updatedConfig = await TicketConfig.findOne({ ticketType });
-    
-    if (!updatedConfig) {
-      console.log('❌ Failed to fetch updated config');
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Failed to retrieve updated configuration' 
-      });
-    }
-    
-    console.log('✅ Ticket config updated successfully:', JSON.stringify(updatedConfig, null, 2));
-    
+    // Simple success response
     const result = {
       success: true,
-      message: 'Ticket configuration updated successfully',
-      data: { config: updatedConfig }
+      message: 'Ticket configuration updated successfully'
     };
     
+    console.log('✅ Update completed - sending success response');
     res.json(result);
+    
   } catch (error) {
     console.error('❌ Update ticket config API error:', error);
     console.error('❌ Error details:', {
