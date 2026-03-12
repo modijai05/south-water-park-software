@@ -74,6 +74,7 @@ export function AdminTicketConfig() {
         }))
       }));
       
+      console.log('🔧 AdminTicketConfig: Processed configs:', processedData);
       setConfigs(processedData);
     } catch (error) {
       console.error('❌ AdminTicketConfig: Error fetching ticket configs:', error);
@@ -198,14 +199,20 @@ export function AdminTicketConfig() {
   const setDayPrice = (ticketType: string, day: DayWisePricing['day'], price: number) => {
     console.log('🔧 setDayPrice called:', { ticketType, day, price });
     
-    // Force immediate state update
+    // Force immediate state update with proper data structure
     setConfigs(prev => {
+      console.log('🔧 setDayPrice - prev configs:', prev.map(c => ({ ticketType: c.ticketType, dayCount: c.dayWisePricing?.length || 0 })));
+      
       const newConfigs = prev.map(config => {
         if (config.ticketType === ticketType) {
           console.log('🔧 setDayPrice - updating config:', config.ticketType);
           console.log('🔧 setDayPrice - current dayWisePricing:', config.dayWisePricing);
           
-          const updatedDayWise = config.dayWisePricing.map(dp => {
+          // Ensure we have a proper dayWisePricing array
+          const currentDayWise = config.dayWisePricing || [];
+          console.log('🔧 setDayPrice - currentDayWise length:', currentDayWise.length);
+          
+          const updatedDayWise = currentDayWise.map(dp => {
             if (dp.day === day) {
               const updated = { 
                 ...dp, 
@@ -221,12 +228,14 @@ export function AdminTicketConfig() {
           
           console.log('🔧 setDayPrice - updated dayWisePricing:', updatedDayWise);
           console.log('🔧 setDayPrice - find result:', updatedDayWise.find(dp => dp.day === day));
+          console.log('🔧 setDayPrice - find result length:', updatedDayWise.filter(dp => dp.day === day).length);
           
           return { ...config, dayWisePricing: updatedDayWise };
         }
         return config;
       });
-      console.log('🔧 setDayPrice - new configs:', newConfigs);
+      
+      console.log('🔧 setDayPrice - new configs:', newConfigs.map(c => ({ ticketType: c.ticketType, dayCount: c.dayWisePricing?.length || 0 })));
       return newConfigs;
     });
   };
