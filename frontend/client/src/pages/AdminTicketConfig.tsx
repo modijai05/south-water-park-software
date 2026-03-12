@@ -196,20 +196,28 @@ export function AdminTicketConfig() {
 
   // Quick price set function for any specific day
   const setDayPrice = (ticketType: string, day: DayWisePricing['day'], price: number) => {
-    setConfigs(prev => prev.map(config => {
-      if (config.ticketType === ticketType) {
-        const updatedDayWise = config.dayWisePricing.map(dp => 
-          dp.day === day ? { 
-            ...dp, 
-            fixedAmount: price, 
-            priceMultiplier: 1,
-            enabled: true 
-          } : dp
-        );
-        return { ...config, dayWisePricing: updatedDayWise };
-      }
-      return config;
-    }));
+    console.log('🔧 setDayPrice called:', { ticketType, day, price });
+    setConfigs(prev => {
+      console.log('🔧 setDayPrice - prev configs:', prev.length);
+      const updated = prev.map(config => {
+        if (config.ticketType === ticketType) {
+          console.log('🔧 setDayPrice - updating config:', config.ticketType);
+          const updatedDayWise = config.dayWisePricing.map(dp => 
+            dp.day === day ? { 
+              ...dp, 
+              fixedAmount: price, 
+              priceMultiplier: 1,
+              enabled: true 
+            } : dp
+          );
+          console.log('🔧 setDayPrice - updated dayWise for', day, ':', updatedDayWise.find(dp => dp.day === day));
+          return { ...config, dayWisePricing: updatedDayWise };
+        }
+        return config;
+      });
+      console.log('🔧 setDayPrice - new configs:', updated.length);
+      return updated;
+    });
   };
 
   // Quick multiplier set function for any specific day
@@ -698,10 +706,15 @@ export function AdminTicketConfig() {
                               <input
                                 type="number"
                                 value={currentPrice}
-                                onChange={(e) => setDayPrice(config.ticketType, day, parseInt(e.target.value) || 0)}
+                                onChange={(e) => {
+                                  const newPrice = parseInt(e.target.value) || 0;
+                                  console.log('🔧 Quick price set:', { day, newPrice, ticketType: config.ticketType });
+                                  setDayPrice(config.ticketType, day, newPrice);
+                                }}
                                 disabled={editingTicket === null}
                                 className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 placeholder="₹0"
+                                title={editingTicket !== null ? "Set price for this day" : "Click Edit to enable price editing"}
                               />
                               <div className="text-xs text-gray-500 mt-1">₹{currentPrice}</div>
                             </div>
