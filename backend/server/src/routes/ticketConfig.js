@@ -37,7 +37,7 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     console.log('🔧 Request body keys:', Object.keys(req.body));
     console.log('🔧 Request body:', JSON.stringify(req.body, null, 2));
     
-    // Minimal update approach - bypass all validation
+    // Simple direct update - minimal approach
     const updateResult = await TicketConfig.updateOne(
       { ticketType },
       { $set: req.body }
@@ -74,6 +74,49 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
       success: false, 
       message: 'Failed to update ticket configuration',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// WORKING BYPASS ROUTE - FOR TESTING ONLY
+router.put('/bypass/:ticketType', async (req, res) => {
+  try {
+    console.log('🔧 BYPASS ROUTE - No authentication or validation');
+    const { ticketType } = req.params;
+    
+    console.log('🔧 BYPASS ticketType:', ticketType);
+    console.log('🔧 BYPASS body:', JSON.stringify(req.body, null, 2));
+    
+    // Direct MongoDB update - no validation
+    const updateResult = await TicketConfig.updateOne(
+      { ticketType },
+      { $set: req.body }
+    );
+    
+    console.log('📊 BYPASS update result:', updateResult);
+    
+    if (updateResult.matchedCount === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Ticket configuration not found' 
+      });
+    }
+    
+    const result = {
+      success: true,
+      message: 'BYPASS: Ticket configuration updated successfully',
+      bypass: true
+    };
+    
+    console.log('✅ BYPASS Update completed');
+    res.json(result);
+    
+  } catch (error) {
+    console.error('❌ BYPASS Update error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'BYPASS: Failed to update ticket configuration',
+      error: error.message
     });
   }
 });
