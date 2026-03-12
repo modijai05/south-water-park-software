@@ -208,8 +208,15 @@ export function AdminTicketConfig() {
           console.log('🔧 setDayPrice - updating config:', config.ticketType);
           console.log('🔧 setDayPrice - current dayWisePricing:', config.dayWisePricing);
           
-          // Ensure we have a proper dayWisePricing array
-          const currentDayWise = config.dayWisePricing || [];
+          // Ensure we have a proper dayWisePricing array - if empty, initialize it
+          const currentDayWise = config.dayWisePricing && config.dayWisePricing.length > 0 
+            ? config.dayWisePricing 
+            : days.map(day => ({
+                day,
+                priceMultiplier: 1.0,
+                enabled: true
+              }));
+          
           console.log('🔧 setDayPrice - currentDayWise length:', currentDayWise.length);
           
           const updatedDayWise = currentDayWise.map(dp => {
