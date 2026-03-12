@@ -612,8 +612,13 @@ export function AdminTicketConfig() {
                 </div>
 
                 {/* Day-wise Pricing */}
-                <div className="space-y-4">
+                <div className={`space-y-4 mt-6 ${editingTicket === config.ticketType ? 'ring-2 ring-blue-500 rounded-lg p-4' : ''}`}>
                   <h4 className="text-lg font-semibold text-gray-900">Day-wise Pricing</h4>
+                  {editingTicket === config.ticketType && (
+                    <div className="text-sm text-blue-600 mb-2">
+                      Day-wise pricing is now editable for {config.label}
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {config.dayWisePricing.map((dayPricing) => {
                       const finalPrice = dayPricing.fixedAmount !== undefined 
