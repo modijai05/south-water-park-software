@@ -58,7 +58,23 @@ export function AdminTicketConfig() {
       console.log('🔄 AdminTicketConfig: Fetching configs...');
       const data = await ticketConfigApi.getAll();
       console.log('✅ AdminTicketConfig: Fetched configs:', data);
-      setConfigs(data);
+      
+      // Ensure day-wise pricing has all required fields
+      const processedData = data.map(config => ({
+        ...config,
+        dayWisePricing: config.dayWisePricing ? config.dayWisePricing.map(dp => ({
+          day: dp.day,
+          priceMultiplier: dp.priceMultiplier || 1.0,
+          fixedAmount: dp.fixedAmount,
+          enabled: dp.enabled !== undefined ? dp.enabled : true
+        })) : days.map(day => ({
+          day,
+          priceMultiplier: 1.0,
+          enabled: true
+        }))
+      }));
+      
+      setConfigs(processedData);
     } catch (error) {
       console.error('❌ AdminTicketConfig: Error fetching ticket configs:', error);
     } finally {
