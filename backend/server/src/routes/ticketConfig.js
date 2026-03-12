@@ -78,6 +78,47 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+// TEMPORARY BYPASS ROUTE - FOR DEBUGGING ONLY
+router.put('/debug/:ticketType', async (req, res) => {
+  try {
+    console.log('🔧 DEBUG BYPASS ROUTE - No authentication');
+    const { ticketType } = req.params;
+    
+    console.log('🔧 DEBUG ticketType:', ticketType);
+    console.log('🔧 DEBUG body:', JSON.stringify(req.body, null, 2));
+    
+    // Try with hardcoded data
+    const hardcodedData = {
+      label: 'Debug Updated Label',
+      basePrice: 999,
+      description: 'Debug Updated Description'
+    };
+    
+    const updateResult = await TicketConfig.updateOne(
+      { ticketType },
+      { $set: hardcodedData }
+    );
+    
+    console.log('📊 DEBUG update result:', updateResult);
+    
+    const result = {
+      success: true,
+      message: 'DEBUG: Ticket configuration updated successfully',
+      debug: true
+    };
+    
+    res.json(result);
+    
+  } catch (error) {
+    console.error('❌ DEBUG Update error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'DEBUG: Failed to update ticket configuration',
+      error: error.message
+    });
+  }
+});
+
 // POST /api/ticket-config - Create new ticket configuration (admin only)
 router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
