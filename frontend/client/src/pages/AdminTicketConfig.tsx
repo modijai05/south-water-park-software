@@ -664,9 +664,9 @@ export function AdminTicketConfig() {
                                 type="checkbox"
                                 checked={dayPricing.enabled}
                                 onChange={(e) => updateDayPricing(config.ticketType, dayPricing.day, 'enabled', e.target.checked)}
-                                disabled={editingTicket !== config.ticketType}
+                                disabled={editingTicket === null}
                                 className="mr-2"
-                                title={editingTicket === config.ticketType ? "Enable day-wise pricing" : "Click Edit to enable day-wise pricing"}
+                                title={editingTicket !== null ? "Enable day-wise pricing" : "Click Edit to enable day-wise pricing"}
                               />
                               <span className="text-sm text-gray-600">Enable</span>
                             </label>
@@ -689,7 +689,7 @@ export function AdminTicketConfig() {
                                       updateDayPricing(config.ticketType, dayPricing.day, 'priceMultiplier', 1);
                                     }
                                   }}
-                                  disabled={editingTicket !== config.ticketType}
+                                  disabled={editingTicket === null}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                   <option value="multiplier">Multiplier</option>
@@ -706,7 +706,7 @@ export function AdminTicketConfig() {
                                     type="number"
                                     value={dayPricing.fixedAmount}
                                     onChange={(e) => updateDayPricing(config.ticketType, dayPricing.day, 'fixedAmount', parseInt(e.target.value) || 0)}
-                                    disabled={editingTicket !== config.ticketType}
+                                    disabled={editingTicket === null}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                   />
                                 </div>
@@ -722,7 +722,7 @@ export function AdminTicketConfig() {
                                     step="0.1"
                                     value={dayPricing.priceMultiplier}
                                     onChange={(e) => updateDayPricing(config.ticketType, dayPricing.day, 'priceMultiplier', parseFloat(e.target.value))}
-                                    disabled={editingTicket !== config.ticketType}
+                                    disabled={editingTicket === null}
                                     className="w-full"
                                   />
                                   <div className="flex justify-between text-xs text-gray-500">
