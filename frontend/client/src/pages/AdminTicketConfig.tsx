@@ -203,15 +203,25 @@ export function AdminTicketConfig() {
       const newConfigs = prev.map(config => {
         if (config.ticketType === ticketType) {
           console.log('🔧 setDayPrice - updating config:', config.ticketType);
-          const updatedDayWise = config.dayWisePricing.map(dp => 
-            dp.day === day ? { 
-              ...dp, 
-              fixedAmount: price, 
-              priceMultiplier: 1,
-              enabled: true 
-            } : dp
-          );
-          console.log('🔧 setDayPrice - updated dayWise for', day, ':', updatedDayWise.find(dp => dp.day === day));
+          console.log('🔧 setDayPrice - current dayWisePricing:', config.dayWisePricing);
+          
+          const updatedDayWise = config.dayWisePricing.map(dp => {
+            if (dp.day === day) {
+              const updated = { 
+                ...dp, 
+                fixedAmount: price, 
+                priceMultiplier: 1,
+                enabled: true 
+              };
+              console.log('🔧 setDayPrice - updated day for', day, ':', updated);
+              return updated;
+            }
+            return dp;
+          });
+          
+          console.log('🔧 setDayPrice - updated dayWisePricing:', updatedDayWise);
+          console.log('🔧 setDayPrice - find result:', updatedDayWise.find(dp => dp.day === day));
+          
           return { ...config, dayWisePricing: updatedDayWise };
         }
         return config;
