@@ -20,7 +20,14 @@ const PORT = process.env.PORT ?? 5000;
 
 // Configure Express for scalability with enhanced CORS
 app.use(cors({ 
-  origin: '*', // Allow all origins
+  origin: [
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://ticketmanagementthesouth.netlify.app',
+    'https://thesouthticketmanagement.netlify.app',
+    'https://south-water-park-backend.onrender.com'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
