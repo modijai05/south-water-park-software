@@ -37,6 +37,12 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     console.log('🔧 Update data:', req.body);
     console.log('🔧 Mongoose connection state:', mongoose.connection.readyState);
     
+    // Set CORS headers manually for this specific endpoint
+    res.header('Access-Control-Allow-Origin', 'https://thesouthticketmanagement.netlify.app');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
     // Check database connection
     if (mongoose.connection.readyState !== 1) {
       console.log('⚠️ Database not connected, using fallback update');
