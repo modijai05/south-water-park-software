@@ -29,6 +29,7 @@ export const ticketConfigApi = {
   // Update ticket configuration
   update: async (ticketType: string, config: Partial<TicketConfig>): Promise<TicketConfig> => {
     // Use debug endpoint temporarily to bypass CORS and database issues
+    console.log('🔧 Using debug endpoint for ticket config update');
     const response = await fetch(`${API_BASE}/ticket-config/debug/${ticketType}`, {
       method: 'PUT',
       headers: {
