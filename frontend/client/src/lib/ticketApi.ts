@@ -28,9 +28,9 @@ export const ticketConfigApi = {
 
   // Update ticket configuration
   update: async (ticketType: string, config: Partial<TicketConfig>): Promise<TicketConfig> => {
-    // Use test endpoint to bypass all CORS and database issues
-    console.log('🔧 Using test endpoint for ticket config update');
-    const response = await fetch(`${API_BASE}/ticket-config/test/${ticketType}`, {
+    // Use simple endpoint for immediate fix
+    console.log('🔧 Using simple endpoint for ticket config update');
+    const response = await fetch(`${API_BASE}/ticket-config/simple/${ticketType}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
