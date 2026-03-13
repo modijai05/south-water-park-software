@@ -439,4 +439,35 @@ router.post('/initialize', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+// SIMPLE TEST ENDPOINT - No database dependency
+router.put('/test/:ticketType', async (req, res) => {
+  try {
+    console.log('🔧 TEST ENDPOINT - No database, no authentication');
+    const { ticketType } = req.params;
+    
+    console.log('🔧 Test update for ticket type:', ticketType);
+    console.log('🔧 Test update data:', req.body);
+    
+    // Simple response without any database operations
+    res.json({
+      success: true,
+      message: 'Test update successful (no database mode)',
+      data: {
+        ticketType: ticketType,
+        updateData: req.body,
+        timestamp: new Date().toISOString(),
+        testMode: true
+      }
+    });
+    
+  } catch (error) {
+    console.error('🔧 Test update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Test update failed',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
