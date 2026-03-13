@@ -11,10 +11,18 @@ router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body ?? {};
     console.log('Login attempt:', { username, passwordProvided: !!password });
+    console.log('Database connection state:', mongoose.connection.readyState);
     
     if (!username || !password) {
       console.log('Login: Missing username or password');
       res.status(400).json({ message: 'Username and password required' });
+      return;
+    }
+    
+    // Check database connection
+    if (mongoose.connection.readyState !== 1) {
+      console.log('Login: Database not connected');
+      res.status(500).json({ message: 'Database connection error' });
       return;
     }
     
@@ -64,6 +72,8 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Login failed';
     console.error('Login error:', err);
+    console.error('Login error stack:', err.stack);
+    console.error('Database connection state:', mongoose.connection.readyState);
     res.status(500).json({ message: 'Login failed. Please try again.' });
   }
 });
