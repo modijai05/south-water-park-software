@@ -19,21 +19,8 @@ const app = express();
 const PORT = process.env.PORT ?? 5000;
 
 // Configure Express for scalability with enhanced CORS
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-});
-
 app.use(cors({ 
-  origin: true, // Allow all origins for debugging
+  origin: '*', // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -54,6 +41,16 @@ app.use((req, res, next) => {
   requestCounts.set(key, (requestCounts.get(key) || 0) + 1);
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - IP: ${req.ip}`);
   next();
+});
+
+// Root endpoint for basic connectivity test
+app.get('/', (req, res) => {
+  res.json({ 
+    message: "South Water Park Backend API",
+    status: "Running",
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin
+  });
 });
 
 // Health check endpoints
