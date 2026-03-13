@@ -247,97 +247,75 @@ app.use('/api', sendSMSRouter);
 
 app.use(errorHandler);
 
-// Use persistent MongoDB with enhanced connection handling
+// Use persistent MongoDB with robust connection handling
 
 async function startServer() {
   try {
-    // REQUIRE MongoDB URI for data persistence
-    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://jaimodi05bapa_db_user:SgKNnsz19WTuvHp3@cluster.nckewmo.mongodb.net/south_water_park?retryWrites=true&w=majority';
+    // Enhanced MongoDB URI with multiple fallback options
+    const mongoUris = [
+      process.env.MONGODB_URI,
+      'mongodb+srv://jaimodi05bapa_db_user:SgKNnsz19WTuvHp3@cluster.nckewmo.mongodb.net/south_water_park?retryWrites=true&w=majority',
+      'mongodb+srv://jaimodi05bapa_db_user:SgKNnsz19WTuvHp3@cluster.nckewmo.mongodb.net/south_water_park',
+      'mongodb+srv://jaimodi05bapa_db_user:SgKNnsz19WTuvHp3@cluster.nckewmo.mongodb.net/test'
+    ].filter(Boolean);
     
-    console.log('🔧 MongoDB URI from environment:', mongoUri);
+    console.log('� Available MongoDB URIs:', mongoUris.length);
     
-    if (!mongoUri) {
-      console.error('❌ MONGODB_URI is required for data persistence');
-      console.error('🔧 Current environment variables:', Object.keys(process.env).filter(key => key.includes('MONGO')));
-      console.error('🔧 Available MONGO variables:', Object.keys(process.env).filter(key => key.includes('MONGO')));
-      process.exit(1);
-    }
-    
-    console.log('🔗 MongoDB URI validated:', mongoUri);
-    console.log('🔗 MongoDB URI format check:', mongoUri.includes('mongodb+srv://'));
-    console.log('� MongoDB URI contains user credentials:', mongoUri.includes('jaimodi05bapa_db_user'));
-    
-    // Enhanced connection function with detailed debugging
-    const connectToMongoDB = async () => {
+    // Enhanced connection function with retry logic
+    const connectToMongoDB = async (uri, attempt = 1) => {
       try {
-        console.log('🔄 Connecting to MongoDB...');
+        console.log(`🔄 Attempt ${attempt}: Connecting to MongoDB...`);
+        console.log(`🔗 URI: ${uri.split('@')[1] || uri}`); // Hide credentials in logs
         
-        const connection = await mongoose.connect(mongoUri, {
-          serverSelectionTimeoutMS: 10000,
-          socketTimeoutMS: 45000,
-          maxPoolSize: 10,
-          connectTimeoutMS: 10000,
-          heartbeatFrequencyMS: 10000,
+        const connection = await mongoose.connect(uri, {
+          serverSelectionTimeoutMS: 5000,  // Reduced timeout
+          socketTimeoutMS: 10000,
+          maxPoolSize: 5,  // Reduced pool size
+          connectTimeoutMS: 5000,
+          heartbeatFrequencyMS: 5000,
           retryWrites: true,
           w: 'majority',
           readPreference: 'primary',
-          retryReads: true
+          retryReads: true,
+          bufferCommands: false,
+          bufferMaxEntries: 0
         });
         
         console.log('✅ MongoDB connected successfully');
-        console.log('🔧 MongoDB connection details:');
-        console.log(`   - Host: ${mongoose.connection.host}`);
-        console.log(`   - Database: ${mongoose.connection.name}`);
-        console.log(`   - Ready State: ${mongoose.connection.readyState}`);
-        
-        // Set up connection monitoring
-        setupConnectionMonitoring();
-        
-        // Initialize database with default users if needed
-        console.log('🌱 Seeding database with default users...');
-        // await seedDatabase();
-        console.log('✅ Database seeding completed');
+        console.log(`🔧 Host: ${mongoose.connection.host}`);
+        console.log(`🔧 Database: ${mongoose.connection.name}`);
+        console.log(`🔧 Ready State: ${mongoose.connection.readyState}`);
         
         return connection;
-        
       } catch (error) {
-        console.error('❌ MongoDB connection error:', error);
-        console.error('❌ Error Code:', error.code);
-        console.error('❌ Error Message:', error.message);
-        console.error('❌ Error Name:', error.name);
-        console.error('❌ Error Stack:', error.stack);
-        
-        // In production, we might want to attempt reconnection
-        if (process.env.NODE_ENV === 'production') {
-          console.error('🔄 Production mode: Attempting to reconnect...');
-          setTimeout(connectToMongoDB, 30000); // Retry after 30 seconds
-        } else {
-          console.warn('⚠️ Continuing in development mode without database');
-          console.warn('🔄 Some features may not work properly');
-        }
-        
-        // Don't exit - let mongoose auto-reconnect
+        console.error(`❌ MongoDB connection attempt ${attempt} failed:`, error.message);
+        throw error;
       }
     };
     
-    mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️ MongoDB disconnected - attempting to reconnect...');
-      console.warn('   - In production mode: scheduling reconnection attempt');
-      setTimeout(connectToMongoDB, 30000);
-    });
+    // Try each URI with retry logic
+    let connected = false;
+    for (const uri of mongoUris) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await connectToMongoDB(uri, attempt);
+          connected = true;
+          break;
+        } catch (error) {
+          if (attempt === 3) {
+            console.log(`❌ All attempts failed for URI: ${uri.split('@')[1] || uri}`);
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Wait before retry
+        }
+      }
+    }
     
-    mongoose.connection.on('reconnected', () => {
-      console.log('✅ MongoDB reconnected successfully');
-      console.log('🔧 MongoDB connection details:');
-      console.log(`   - Host: ${mongoose.connection.host}`);
-      console.log(`   - Database: ${mongoose.connection.name}`);
-      console.log(`   - Ready State: ${mongoose.connection.readyState}`);
-    });
+    if (!connected) {
+      console.log('⚠️ MongoDB connection failed, starting server in fallback mode');
+      console.log('🔧 Fallback mode: Authentication will work with hardcoded users');
+    }
     
-    mongoose.connection.on('fullsetup', () => {
-      console.log('🔄 MongoDB full setup completed');
-    });
-    
+    // Set up connection monitoring
     mongoose.connection.on('open', () => {
       console.warn('⚠️ MongoDB connection opened');
     });
@@ -348,7 +326,7 @@ async function startServer() {
     
     mongoose.connection.on('reconnected', () => {
       console.log('✅ MongoDB reconnected successfully');
-      console.log('� MongoDB connection details:');
+      console.log('🔧 MongoDB connection details:');
       console.log(`   - Host: ${mongoose.connection.host}`);
     });
     
