@@ -1,0 +1,47 @@
+# 🔧 RENDER DEPLOYMENT CONFIGURATION - COMPLETE SYSTEM
+
+services:
+  # Backend Service Configuration
+  - type: web
+    name: south-water-park-backend
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGODB_URI
+        fromDatabase:
+          name: south-water-park-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://thesouthticketmanagement.netlify.app
+    domains:
+      - south-water-park-backend.onrender.com
+
+  # Database Service Configuration
+  - type: postgres
+    name: south-water-park-db
+    plan: free
+    ipAllowList: []
+    databaseName: south_water_park
+    user: south_water_park_user
+
+  # Frontend Service Configuration (Optional - can use Netlify)
+  - type: web
+    name: south-water-park-frontend
+    env: static
+    plan: free
+    buildCommand: "cd frontend && npm install && npm run build"
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://south-water-park-backend.onrender.com/api
+    domains:
+      - south-water-park-frontend.onrender.com

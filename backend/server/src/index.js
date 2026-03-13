@@ -18,7 +18,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT ?? 5000;
 
-// Configure Express for scalability with enhanced CORS
+// Configure Express for Render deployment with enhanced CORS
 app.use(cors({ 
   origin: [
     'http://localhost:5174',
@@ -26,7 +26,8 @@ app.use(cors({
     'http://localhost:5173',
     'https://ticketmanagementthesouth.netlify.app',
     'https://thesouthticketmanagement.netlify.app',
-    'https://south-water-park-backend.onrender.com'
+    'https://south-water-park-backend.onrender.com',
+    'https://south-water-park-frontend.onrender.com'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -38,14 +39,17 @@ app.use(cors({
 // Additional CORS preflight handling
 app.options('*', cors());
 
-// Enhanced security and performance middleware
+// Enhanced security and performance middleware for Render
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Trust proxy for Render deployment
+app.set('trust proxy', 1);
 
 // Rate limiting middleware
 const rateLimit = new Map();
 app.use((req, res, next) => {
-  const key = req.ip;
+  const key = req.ip || req.connection.remoteAddress;
   const now = Date.now();
   const windowStart = now - 60000; // 1 minute window
   
@@ -66,7 +70,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Request logging middleware with enhanced tracking
+// Request logging middleware with enhanced tracking for Render
 const requestCounts = new Map();
 app.use((req, res, next) => {
   const key = `${req.method}:${req.path}`;
