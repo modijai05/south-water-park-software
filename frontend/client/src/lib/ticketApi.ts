@@ -28,9 +28,9 @@ export const ticketConfigApi = {
 
   // Update ticket configuration
   update: async (ticketType: string, config: Partial<TicketConfig>): Promise<TicketConfig> => {
-    // Use ultra-simple endpoint for immediate fix
-    console.log('🔧 Using ultra-simple endpoint for ticket config update');
-    const response = await fetch(`${API_BASE}/ticket-config/fix/${ticketType}`, {
+    // Use super simple endpoint guaranteed to work
+    console.log('🔧 Using super simple endpoint for ticket config save');
+    const response = await fetch(`${API_BASE}/ticket-config/save/${ticketType}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -40,7 +40,7 @@ export const ticketConfigApi = {
     });
     if (!response.ok) throw new Error('Failed to update ticket configuration');
     const result = await response.json();
-    console.log('🔧 Ticket config update response:', result);
+    console.log('🔧 Ticket config save response:', result);
     return result.success ? result.data : null;
   },
 
