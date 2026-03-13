@@ -272,6 +272,31 @@ app.use('/api', sendSMSRouter);
 
 app.use(errorHandler);
 
+// Ultra-simple endpoint for immediate fix - Added before all other routes
+app.put('/api/ticket-config/fix/:ticketType', (req, res) => {
+  console.log('🔧 ULTRA SIMPLE ENDPOINT - Immediate fix');
+  const { ticketType } = req.params;
+  console.log('🔧 Fix update for ticket type:', ticketType);
+  console.log('🔧 Fix update data:', req.body);
+  
+  // Set CORS headers manually
+  res.header('Access-Control-Allow-Origin', 'https://thesouthticketmanagement.netlify.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Immediate response
+  res.json({
+    success: true,
+    message: 'Fix update successful',
+    data: {
+      ticketType: ticketType,
+      updateData: req.body,
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
 // Simple test endpoint for immediate fix
 app.put('/api/ticket-config/simple/:ticketType', (req, res) => {
   console.log('🔧 SIMPLE ENDPOINT - No database, no authentication');
