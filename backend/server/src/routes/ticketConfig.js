@@ -60,18 +60,14 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     console.log('🔧 Found existing config:', existingConfig);
     console.log('🔧 Mongoose connection state:', mongoose.connection.readyState);
     
-    // Update the configuration
-    const updateData = { $set: req.body };
-    console.log('🔧 Update data:', updateData);
-    
-    // Check for dayWisePricing array and validate
-    if (updateData.dayWisePricing) {
-      console.log('🔧 Day-wise pricing data found:', updateData.dayWisePricing);
-      console.log('🔧 Day-wise pricing length:', updateData.dayWisePricing.length);
+    // Check for dayWisePricing array and validate before creating update data
+    if (req.body.dayWisePricing) {
+      console.log('🔧 Day-wise pricing data found:', req.body.dayWisePricing);
+      console.log('🔧 Day-wise pricing length:', req.body.dayWisePricing.length);
       
       // Validate each day object
-      for (let i = 0; i < updateData.dayWisePricing.length; i++) {
-        const dayPricing = updateData.dayWisePricing[i];
+      for (let i = 0; i < req.body.dayWisePricing.length; i++) {
+        const dayPricing = req.body.dayWisePricing[i];
         console.log(`🔧 Validating day ${i + 1}:`, dayPricing);
         
         if (!dayPricing.day || !dayPricing.day.trim()) {
@@ -109,6 +105,10 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
       
       console.log('🔧 Day-wise pricing validation passed');
     }
+    
+    // Update the configuration
+    const updateData = { $set: req.body };
+    console.log('🔧 Update data:', updateData);
     
     const updateResult = await TicketConfig.updateOne(
       { ticketType },
