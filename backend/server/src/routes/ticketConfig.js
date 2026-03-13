@@ -208,36 +208,26 @@ router.put('/debug/:ticketType', async (req, res) => {
     console.log('🔧 DEBUG BYPASS ROUTE - No authentication');
     const { ticketType } = req.params;
     
-    console.log('🔧 DEBUG ticketType:', ticketType);
-    console.log('🔧 DEBUG body:', JSON.stringify(req.body, null, 2));
+    console.log('🔧 Debug update for ticket type:', ticketType);
+    console.log('🔧 Debug update data:', req.body);
+    console.log('🔧 Mongoose connection state:', mongoose.connection.readyState);
     
-    // Try with hardcoded data
-    const hardcodedData = {
-      label: 'Debug Updated Label',
-      basePrice: 999,
-      description: 'Debug Updated Description'
-    };
-    
-    const updateResult = await TicketConfig.updateOne(
-      { ticketType },
-      { $set: hardcodedData }
-    );
-    
-    console.log('📊 DEBUG update result:', updateResult);
-    
-    const result = {
+    // Simple update without database dependency for testing
+    res.json({
       success: true,
-      message: 'DEBUG: Ticket configuration updated successfully',
-      debug: true
-    };
-    
-    res.json(result);
+      message: 'Debug update successful (bypass mode)',
+      data: {
+        ticketType: ticketType,
+        updateData: req.body,
+        timestamp: new Date().toISOString()
+      }
+    });
     
   } catch (error) {
-    console.error('❌ DEBUG Update error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'DEBUG: Failed to update ticket configuration',
+    console.error('🔧 Debug update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Debug update failed',
       error: error.message
     });
   }
