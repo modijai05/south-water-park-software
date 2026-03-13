@@ -36,7 +36,7 @@ app.use(cors({
   maxAge: 86400 // Cache preflight for 24 hours
 }));
 
-// Additional CORS preflight handling
+// Additional CORS preflight handling for all routes
 app.options('*', cors());
 
 // Enhanced security and performance middleware for Render
