@@ -1,4 +1,5 @@
 const { Router } = require('express');
+const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models/User.js');
 const { authenticate } = require('../middleware/auth.js');
