@@ -16,7 +16,7 @@ type FormData = z.infer<typeof schema>;
 
 export function Login() {
   const navigate = useNavigate();
-  const { setAuth, user, forceLogout } = useAuthStore();
+  const { setAuth, user, forceLogout, fetchUser } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { username: '', password: '' } });
@@ -54,16 +54,25 @@ export function Login() {
   }, [user, setAuth, forceLogout]);
 
   const onSubmit = async (data: FormData) => {
-    setError('');
     try {
-      const res = await authApi.login(data.username.trim(), data.password);
-      setAuth(
-        { id: res.user.id, username: res.user.username, fullName: res.user.fullName, role: res.user.role as 'admin' | 'staff' },
-        res.token
-      );
-      navigate(res.user.role === 'admin' ? '/admin' : '/staff', { replace: true });
-    } catch (e) {
-      setError((e as Error).message ?? 'Login failed');
+      setError('');
+      const response = await authApi.login(data.username, data.password);
+      
+      // Set auth state with user details - properly cast role
+      setAuth({
+        id: response.user.id,
+        username: response.user.username,
+        fullName: response.user.fullName,
+        role: response.user.role as 'admin' | 'staff'
+      }, response.token);
+      
+      // Fetch fresh user details to ensure latest data
+      await fetchUser();
+      
+      console.log('Login successful, user details:', response.user);
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
     }
   };
 
