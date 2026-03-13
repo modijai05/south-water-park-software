@@ -20,23 +20,31 @@ const authenticate = async (req, res, next) => {
     
     const user = await User.findById(decoded.userId);
     if (!user) {
-      console.log('Auth: User not found');
-      res.status(401).json({ message: 'Invalid token' });
+      console.log('Auth: User not found for userId:', decoded.userId);
+      res.status(401).json({ message: 'Invalid token - user not found' });
       return;
     }
     
     if (!user.active) {
-      console.log('Auth: User is inactive');
+      console.log('Auth: User is inactive for userId:', decoded.userId);
       res.status(401).json({ message: 'Account is inactive' });
       return;
     }
     
-    console.log('Auth: User authenticated successfully');
+    console.log('Auth: User authenticated successfully for userId:', decoded.userId, 'username:', user.username);
     req.user = user;
     next();
   } catch (error) {
     console.error('Auth: Authentication error:', error);
-    res.status(401).json({ message: 'Invalid token' });
+    console.error('Auth: Error name:', error.name);
+    console.error('Auth: Error message:', error.message);
+    if (error.name === 'TokenExpiredError') {
+      res.status(401).json({ message: 'Token expired' });
+    } else if (error.name === 'JsonWebTokenError') {
+      res.status(401).json({ message: 'Invalid token' });
+    } else {
+      res.status(401).json({ message: 'Authentication failed' });
+    }
   }
 };
 
