@@ -28,9 +28,9 @@ export const ticketConfigApi = {
 
   // Update ticket configuration
   update: async (ticketType: string, config: Partial<TicketConfig>): Promise<TicketConfig> => {
-    // Use simple endpoint for immediate fix
-    console.log('🔧 Using simple endpoint for ticket config update');
-    const response = await fetch(`${API_BASE}/ticket-config/simple/${ticketType}`, {
+    // Use ultra-simple endpoint for immediate fix
+    console.log('🔧 Using ultra-simple endpoint for ticket config update');
+    const response = await fetch(`${API_BASE}/ticket-config/fix/${ticketType}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
