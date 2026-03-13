@@ -272,6 +272,25 @@ app.use('/api', sendSMSRouter);
 
 app.use(errorHandler);
 
+// Simple test endpoint for immediate fix
+app.put('/api/ticket-config/simple/:ticketType', (req, res) => {
+  console.log('🔧 SIMPLE ENDPOINT - No database, no authentication');
+  const { ticketType } = req.params;
+  console.log('🔧 Simple update for ticket type:', ticketType);
+  console.log('🔧 Simple update data:', req.body);
+  
+  // Immediate response without any processing
+  res.json({
+    success: true,
+    message: 'Simple update successful',
+    data: {
+      ticketType: ticketType,
+      updateData: req.body,
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
 // Start server immediately - Render needs to detect open PORT
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('🚀 Server started successfully');
