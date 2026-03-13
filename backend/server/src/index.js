@@ -46,6 +46,31 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Trust proxy for Render deployment
 app.set('trust proxy', 1);
 
+// Add CORS headers to all responses as backup
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://ticketmanagementthesouth.netlify.app',
+    'https://thesouthticketmanagement.netlify.app',
+    'https://south-water-park-backend.onrender.com',
+    'https://south-water-park-frontend.onrender.com'
+  ];
+  
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Expose-Headers', 'Set-Cookie');
+  
+  next();
+});
+
 // Rate limiting middleware
 const rateLimit = new Map();
 app.use((req, res, next) => {
