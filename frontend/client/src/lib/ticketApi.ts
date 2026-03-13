@@ -38,7 +38,8 @@ export const ticketConfigApi = {
     });
     if (!response.ok) throw new Error('Failed to update ticket configuration');
     const result = await response.json();
-    return result.success ? result.data.config : null;
+    console.log('🔧 Ticket config update response:', result);
+    return result.success ? result.data : null;
   },
 
   // Delete ticket configuration

@@ -29,8 +29,16 @@ function isSunday(): boolean {
   return today.getDay() === 0; // 0 = Sunday
 }
 
+// Helper function to get current day name
+function getDayName(): 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday' {
+  const today = new Date();
+  const dayIndex = today.getDay();
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  return days[dayIndex] as 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+}
+
 // Export isSunday so other components can use it
-export { isSunday };
+export { isSunday, getDayName };
 
 // Fetch ticket configurations from API
 async function fetchTicketConfigs(): Promise<TicketConfig[]> {
@@ -66,7 +74,7 @@ async function fetchTicketConfigs(): Promise<TicketConfig[]> {
 }
 
 // Get current day name
-function getDayName(): string {
+function getDayNameForPricing(): string {
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   return days[new Date().getDay()];
 }
@@ -148,8 +156,26 @@ export async function getTicketLabel(type: TicketType): Promise<string> {
   return option?.label ?? type;
 }
 
-// Synchronous version for backward compatibility
+// Synchronous version for backward compatibility - now uses dynamic pricing
 export function getTicketPriceSync(type: TicketType): number {
+  // First try to get from cached ticket configs
+  const config = ticketConfigs.find(t => t.ticketType === type);
+  if (config) {
+    // Use dynamic pricing from database
+    const today = getDayNameForPricing();
+    const dayPricing = config.dayWisePricing?.find(dp => dp.day === today);
+    if (dayPricing && dayPricing.enabled) {
+      if (dayPricing.fixedAmount !== undefined) {
+        return dayPricing.fixedAmount;
+      } else {
+        return Math.round(config.basePrice * dayPricing.priceMultiplier);
+      }
+    }
+    // Fallback to base price if no day-wise pricing or disabled
+    return config.basePrice;
+  }
+  
+  // Fallback to static price if no config found
   const basePrice = TICKET_OPTIONS.find((t) => t.value === type)?.price ?? 0;
   return getSundayPrice(basePrice, type);
 }
