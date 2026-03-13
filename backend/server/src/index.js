@@ -344,7 +344,7 @@ async function startServer() {
         
         // Initialize database with default users if needed
         console.log('🌱 Seeding database with default users...');
-        // await seedDatabase();
+        await seedDatabase();
         console.log('✅ Database seeding completed');
         
         return connection;
