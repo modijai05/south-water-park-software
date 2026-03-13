@@ -262,11 +262,6 @@ app.get('/api/database-health', (req, res) => {
 });
 
 // SUPER SIMPLE ENDPOINT - Guaranteed to work - MUST be before route mounting
-app.use('/api', sendSMSRouter);
-
-app.use(errorHandler);
-
-// SUPER SIMPLE ENDPOINT - Guaranteed to work
 app.put('/api/ticket-config/save/:ticketType', (req, res) => {
   console.log('🔧 SUPER SIMPLE ENDPOINT - Guaranteed to work');
   const { ticketType } = req.params;
@@ -291,6 +286,17 @@ app.put('/api/ticket-config/save/:ticketType', (req, res) => {
     }
   });
 });
+
+// Mount ALL routes - CRITICAL FIX
+app.use('/api/auth', authRoutes);
+app.use('/api/entries', entryRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/ticket-config', ticketConfigRoutes);
+app.use('/api/ticket-demand-analysis', ticketDemandAnalysisRoutes);
+app.use('/api/analytics', analyticsRouter);
+app.use('/api', sendSMSRouter);
+
+app.use(errorHandler);
 
 // Ultra-simple endpoint for immediate fix - Added before all other routes
 app.put('/api/ticket-config/fix/:ticketType', (req, res) => {
