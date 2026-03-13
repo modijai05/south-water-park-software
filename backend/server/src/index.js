@@ -87,6 +87,55 @@ app.use((req, res, next) => {
   next();
 });
 
+// Simple user check endpoint
+app.get('/api/check-users', async (req, res) => {
+  try {
+    console.log('🔐 Checking users in database...');
+    console.log('🔐 Database connection state:', mongoose.connection.readyState);
+    
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(500).json({ 
+        success: false,
+        message: "Database not connected",
+        connectionState: mongoose.connection.readyState
+      });
+    }
+    
+    // Count users
+    const userCount = await User.countDocuments();
+    console.log('🔐 User count:', userCount);
+    
+    // Find all users (without passwords)
+    const users = await User.find({}, { password: 0 });
+    console.log('🔐 Users found:', users.length);
+    
+    res.json({ 
+      success: true,
+      message: "Users check successful",
+      data: {
+        connectionState: mongoose.connection.readyState,
+        userCount: userCount,
+        users: users.map(u => ({
+          username: u.username,
+          role: u.role,
+          active: u.active,
+          fullName: u.fullName
+        }))
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('🔐 Users check error:', error);
+    console.error('🔐 Users check error stack:', error.stack);
+    res.status(500).json({ 
+      success: false,
+      message: "Users check failed",
+      error: error.message,
+      connectionState: mongoose.connection.readyState
+    });
+  }
+});
+
 // Simple test endpoint for debugging
 app.get('/api/test-db', async (req, res) => {
   try {
