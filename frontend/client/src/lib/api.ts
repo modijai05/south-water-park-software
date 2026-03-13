@@ -1,14 +1,13 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-// If VITE_API_URL already includes /api, use it as is
-// Otherwise, add /api prefix for local development
-
+// Enhanced API configuration with retry logic and error handling
 export { API_BASE };
 
 function getToken(): string | null {
   return localStorage.getItem('token') || sessionStorage.getItem('token');
 }
 
+// Enhanced API function with retry logic and better error handling
 export async function api<T>(
   path: string,
   options: RequestInit = {}
@@ -20,22 +19,37 @@ export async function api<T>(
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}${path}`, { 
-      ...options, 
-      headers,
-      credentials: 'include'
-    });
-  } catch (err) {
-    throw new Error('Cannot reach server. Make sure the backend is running (npm run dev in server folder).');
+
+  const config: RequestInit = {
+    ...options,
+    headers,
+  };
+
+  // Retry logic for failed requests
+  let retries = 0;
+  const maxRetries = 3;
+  
+  while (retries < maxRetries) {
+    try {
+      const response = await fetch(`${API_BASE}${path}`, config);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      retries++;
+      if (retries >= maxRetries) {
+        throw error;
+      }
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+    }
   }
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    const errorMessage = errorData.message || res.statusText || 'API error';
-    throw new Error(errorMessage);
-  }
-  return res.json();
+  
+  throw new Error('Max retries exceeded');
 }
 
 export const authApi = {

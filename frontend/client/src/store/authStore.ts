@@ -6,17 +6,22 @@ import { authApi } from '@/lib/api';
 interface AuthState {
   user: User | null;
   token: string | null;
+  isLoading: boolean;
+  error: string | null;
   setAuth: (user: User | null, token: string | null) => void;
   logout: () => void;
   forceLogout: (reason?: string) => void;
   fetchUser: () => Promise<void>;
+  clearError: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
+      isLoading: false,
+      error: null,
       setAuth: (user, token) => {
         if (token) {
           localStorage.setItem('token', token);
@@ -25,51 +30,48 @@ export const useAuthStore = create<AuthState>()(
           localStorage.removeItem('token');
           sessionStorage.removeItem('token');
         }
-        set({ user, token });
+        set({ user, token, error: null });
       },
       logout: () => {
         localStorage.removeItem('token');
         sessionStorage.removeItem('token');
-        set({ user: null, token: null });
+        set({ user: null, token: null, error: null });
       },
-      forceLogout: (reason?: string) => {
-        console.log('Force logout called:', reason);
+      forceLogout: (reason) => {
+        console.log('Force logout:', reason);
         localStorage.removeItem('token');
         sessionStorage.removeItem('token');
-        set({ user: null, token: null });
-        // Trigger a global event to notify all components
-        window.dispatchEvent(new CustomEvent('force-logout', { 
-          detail: { reason: reason || 'Session expired' } 
-        }));
+        set({ user: null, token: null, error: reason || 'Session expired' });
       },
       fetchUser: async () => {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        if (!token) {
-          set({ user: null, token: null });
-          return;
-        }
-        // Store token in both storages for redundancy
-        localStorage.setItem('token', token);
-        sessionStorage.setItem('token', token);
+        const { token, setAuth, logout } = get();
+        if (!token) return;
+
+        set({ isLoading: true, error: null });
+        
         try {
-          const { user } = await authApi.me();
-          if (user) set({ user: { id: user.id, username: user.username, fullName: user.fullName, role: user.role as User['role'] }, token });
-          else {
-            localStorage.removeItem('token');
-            sessionStorage.removeItem('token');
-            set({ user: null, token: null });
+          const response = await authApi.me();
+          if (response.user) {
+            setAuth({
+              ...response.user,
+              role: response.user.role as 'admin' | 'staff'
+            }, token);
+          } else {
+            logout();
           }
         } catch (error) {
-          console.error('Auth check failed:', error);
-          localStorage.removeItem('token');
-          sessionStorage.removeItem('token');
-          set({ user: null, token: null });
+          console.error('Failed to fetch user:', error);
+          set({ error: 'Failed to fetch user data' });
+          logout();
+        } finally {
+          set({ isLoading: false });
         }
       },
+      clearError: () => set({ error: null }),
     }),
-    { 
-      name: 'auth', 
-      partialize: (s) => ({ token: s.token })
+    {
+      name: 'auth-storage',
+      partialize: (state) => ({ user: state.user, token: state.token }),
     }
   )
 );
