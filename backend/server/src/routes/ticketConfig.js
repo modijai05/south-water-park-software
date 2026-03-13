@@ -131,7 +131,7 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     const result = {
       success: true,
       message: 'Ticket configuration updated successfully',
-      data: updateResult
+      data: await TicketConfig.findOne({ ticketType })
     };
     
     console.log('✅ Ticket config updated successfully:', result);
