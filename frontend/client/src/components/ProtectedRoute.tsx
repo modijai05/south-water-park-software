@@ -9,22 +9,43 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, token, fetchUser } = useAuthStore();
+  const { user, token, fetchUser, isLoading } = useAuthStore();
   const location = useLocation();
 
   useEffect(() => {
-    if (token && !user) fetchUser();
-  }, [token, user, fetchUser]);
+    if (token && !user && !isLoading) fetchUser();
+  }, [token, user, fetchUser, isLoading]);
 
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no token, redirect to login
   if (!token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (user === undefined) return null;
+  // If token exists but user data is still loading, wait
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading user data...</p>
+        </div>
+      </div>
+    );
   }
 
+  // Check role-based access
   if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     return <Navigate to={user.role === 'admin' ? '/admin' : '/staff'} replace />;
   }
