@@ -83,6 +83,101 @@ app.use((req, res, next) => {
   next();
 });
 
+// Simple test endpoint for debugging
+app.get('/api/test-db', async (req, res) => {
+  try {
+    console.log('🔐 Database test endpoint called');
+    console.log('🔐 Database connection state:', mongoose.connection.readyState);
+    
+    // Test basic database operation
+    const userCount = await User.countDocuments();
+    console.log('🔐 User count:', userCount);
+    
+    // Test user lookup
+    const testUser = await User.findOne({ username: 'admin1' });
+    console.log('🔐 Test user found:', !!testUser);
+    
+    res.json({ 
+      success: true,
+      message: "Database test successful",
+      data: {
+        connectionState: mongoose.connection.readyState,
+        userCount: userCount,
+        testUserFound: !!testUser,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('🔐 Database test error:', error);
+    console.error('🔐 Database test error stack:', error.stack);
+    res.status(500).json({ 
+      success: false,
+      message: "Database test failed",
+      error: error.message,
+      connectionState: mongoose.connection.readyState
+    });
+  }
+});
+
+// Simple auth test endpoint
+app.post('/api/test-auth', async (req, res) => {
+  try {
+    console.log('🔐 Auth test endpoint called');
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password required' });
+    }
+    
+    console.log('🔐 Database connection state:', mongoose.connection.readyState);
+    
+    // Test user lookup
+    const user = await User.findOne({ username: String(username).trim() });
+    console.log('🔐 User found:', !!user);
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+    
+    // Test password comparison
+    const match = await user.comparePassword(String(password));
+    console.log('🔐 Password match result:', match);
+    
+    if (!match) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+    
+    // Generate test token
+    const token = jwt.sign(
+      { userId: user._id, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    res.json({ 
+      success: true,
+      message: "Auth test successful",
+      token: token,
+      user: {
+        id: user._id,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+        active: user.active
+      }
+    });
+  } catch (error) {
+    console.error('🔐 Auth test error:', error);
+    console.error('🔐 Auth test error stack:', error.stack);
+    res.status(500).json({ 
+      success: false,
+      message: "Auth test failed",
+      error: error.message,
+      connectionState: mongoose.connection.readyState
+    });
+  }
+});
+
 // Root endpoint for basic connectivity test
 app.get('/', (req, res) => {
   res.json({ 
