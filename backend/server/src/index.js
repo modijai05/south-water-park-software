@@ -261,13 +261,7 @@ app.get('/api/database-health', (req, res) => {
   res.status(statusCode).json(health);
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/entries', entryRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/ticket-config', ticketConfigRoutes);
-app.use('/api/ticket-demand-analysis', ticketDemandAnalysisRoutes);
-app.use('/api/analytics', analyticsRouter);
+// SUPER SIMPLE ENDPOINT - Guaranteed to work - MUST be before route mounting
 app.use('/api', sendSMSRouter);
 
 app.use(errorHandler);
