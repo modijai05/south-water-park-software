@@ -38,15 +38,48 @@ app.use(cors({
 // Additional CORS preflight handling
 app.options('*', cors());
 
+// Enhanced security and performance middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request logging middleware
+// Rate limiting middleware
+const rateLimit = new Map();
+app.use((req, res, next) => {
+  const key = req.ip;
+  const now = Date.now();
+  const windowStart = now - 60000; // 1 minute window
+  
+  if (!rateLimit.has(key)) {
+    rateLimit.set(key, { count: 1, windowStart });
+  } else {
+    const data = rateLimit.get(key);
+    if (now - data.windowStart > 60000) {
+      data.count = 1;
+      data.windowStart = now;
+    } else {
+      data.count++;
+      if (data.count > 100) { // 100 requests per minute
+        return res.status(429).json({ message: 'Too many requests' });
+      }
+    }
+  }
+  next();
+});
+
+// Request logging middleware with enhanced tracking
 const requestCounts = new Map();
 app.use((req, res, next) => {
   const key = `${req.method}:${req.path}`;
   requestCounts.set(key, (requestCounts.get(key) || 0) + 1);
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - IP: ${req.ip}`);
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - IP: ${req.ip} - Count: ${requestCounts.get(key)}`);
+  
+  // Add response time tracking
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Status: ${res.statusCode} - Duration: ${duration}ms`);
+  });
+  
   next();
 });
 
