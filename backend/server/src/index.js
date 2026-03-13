@@ -300,9 +300,14 @@ setTimeout(async () => {
     console.log(`🔧 Host: ${mongoose.connection.host}`);
     console.log(`🔧 Database: ${mongoose.connection.name}`);
     
+    // Test the connection
+    await mongoose.connection.db.admin().ping();
+    console.log('✅ MongoDB connection verified with ping');
+    
   } catch (error) {
     console.log('⚠️ MongoDB connection failed, server running in fallback mode');
     console.log('🔧 Authentication will work with hardcoded users');
+    console.log('🔧 Database error:', error.message);
   }
 }, 2000); // Start connection attempt after 2 seconds
 
