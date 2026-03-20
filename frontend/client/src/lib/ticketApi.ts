@@ -1,17 +1,11 @@
 import { TicketConfig } from '@/types';
-import { API_BASE } from './api';
+import { API_BASE, api } from './api';
 
 export const ticketConfigApi = {
   // Get all ticket configurations
   getAll: async (): Promise<TicketConfig[]> => {
-    const response = await fetch(`${API_BASE}/ticket-config`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
-    if (!response.ok) throw new Error('Failed to fetch ticket configurations');
-    const result = await response.json();
-    return result.success ? result.data : [];
+    const response = await api<{ success: boolean; data: TicketConfig[] }>('/ticket-config');
+    return response.success ? response.data : [];
   },
 
   // Get single ticket configuration
@@ -33,27 +27,18 @@ export const ticketConfigApi = {
     console.log('🔧 Ticket type:', ticketType);
     console.log('🔧 Config data:', config);
     
-    const response = await fetch(`${API_BASE}/save-ticket/${ticketType}`, {
+    const response = await api<{ success: boolean; data: TicketConfig; message: string }>(`/save-ticket/${ticketType}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
       body: JSON.stringify(config)
     });
     
-    console.log('🔧 Response status:', response.status);
-    console.log('🔧 Response headers:', response.headers);
+    console.log('🔧 Ticket config save response:', response);
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('🔧 Response error:', errorText);
-      throw new Error(`Failed to update ticket configuration: ${response.status} ${errorText}`);
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to update ticket configuration');
     }
     
-    const result = await response.json();
-    console.log('🔧 Ticket config save response:', result);
-    return result.success ? result.data : null;
+    return response.data;
   },
 
   // Delete ticket configuration

@@ -11,6 +11,10 @@ router.get('/', authenticate, async (req, res) => {
     console.error('Ticket config list API called successfully');
     const configs = await TicketConfig.find().sort({ ticketType: 1 });
     
+    // Set CORS headers
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
     const result = {
       success: true,
       data: configs || []  // Always return an array
@@ -35,12 +39,9 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     
     console.log('🔧 Update request for ticket type:', ticketType);
     console.log('🔧 Update data:', req.body);
-    console.log('🔧 Mongoose connection state:', mongoose.connection.readyState);
     
-    // Set CORS headers manually for this specific endpoint
-    res.header('Access-Control-Allow-Origin', 'https://thesouthticketmanagement.netlify.app');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    // Set CORS headers
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Credentials', 'true');
     
     // Check database connection
@@ -390,7 +391,7 @@ router.post('/initialize', authenticate, requireAdmin, async (req, res) => {
       },
       {
         ticketType: '300',
-        basePrice: 300,
+        basePrice: 350,
         label: 'Without Food 3-4hr',
         hasKids: true,
         description: '3-4 hours access to park activities without food',
@@ -402,7 +403,7 @@ router.post('/initialize', authenticate, requireAdmin, async (req, res) => {
       },
       {
         ticketType: '450',
-        basePrice: 450,
+        basePrice: 500,
         label: 'With Fast Food',
         hasKids: true,
         description: 'Full day access with fast food coupons',
@@ -414,7 +415,7 @@ router.post('/initialize', authenticate, requireAdmin, async (req, res) => {
       },
       {
         ticketType: '600',
-        basePrice: 600,
+        basePrice: 700,
         label: 'With Main Food',
         hasKids: true,
         description: 'Full day access with main food coupons',

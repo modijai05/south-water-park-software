@@ -166,4 +166,99 @@ router.get('/:id/logs', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+// POST /api/users/:id/reset-password - Reset user password (admin only)
+router.post('/:id/reset-password', authenticate, requireAdmin, async (req, res) => {
+  try {
+    console.error('Reset password API called successfully');
+    const { newPassword } = req.body;
+    
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters long' 
+      });
+    }
+    
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+    
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { password: hashedPassword },
+      { new: true, runValidators: true }
+    ).select('-password -loginLogs');
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
+    const result = {
+      success: true,
+      message: 'Password reset successfully',
+      data: { user }
+    };
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Reset password API error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to reset password',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// GET /api/users/stats - Get user statistics (admin only)
+router.get('/stats', authenticate, requireAdmin, async (req, res) => {
+  try {
+    console.error('User stats API called successfully');
+    const stats = await User.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalUsers: { $sum: 1 },
+          activeUsers: { $sum: { $cond: ['$active', 1, 0] } },
+          inactiveUsers: { $sum: { $cond: ['$active', 0, 1] } },
+          adminUsers: { $sum: { $cond: [{ $eq: ['$role', 'admin'] }, 1, 0] } },
+          staffUsers: { $sum: { $cond: [{ $eq: ['$role', 'staff'] }, 1, 0] } },
+          recentUsers: {
+            $sum: {
+              $cond: [
+                { $gte: ['$createdAt', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
+    
+    const result = {
+      success: true,
+      data: stats[0] || {
+        totalUsers: 0,
+        activeUsers: 0,
+        inactiveUsers: 0,
+        adminUsers: 0,
+        staffUsers: 0,
+        recentUsers: 0
+      }
+    };
+    
+    res.json(result);
+  } catch (error) {
+    console.error('User stats API error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch user statistics',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
 module.exports = router;

@@ -23,6 +23,7 @@ export async function api<T>(
   const config: RequestInit = {
     ...options,
     headers,
+    credentials: 'include', // Include cookies for CORS
   };
 
   // Retry logic for failed requests
@@ -35,6 +36,21 @@ export async function api<T>(
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Handle token expiration specifically
+        if (response.status === 401 && (errorData.code === 'TOKEN_EXPIRED' || errorData.message === 'Token expired')) {
+          console.log('🔐 Token expired, clearing local storage');
+          localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
+          
+          // Trigger a global auth event
+          window.dispatchEvent(new CustomEvent('auth-expired', {
+            detail: { message: 'Session expired, please login again' }
+          }));
+          
+          throw new Error('Session expired, please login again');
+        }
+        
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
       

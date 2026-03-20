@@ -122,7 +122,7 @@ export function Staff() {
     
     // Fallback to static prices
     const fallbackPrices: { [key: string]: number } = {
-      '100': 100, '150': 150, '300': 300, '450': 450, '600': 600
+      '100': 100, '150': 150, '300': 350, '450': 500, '600': 700
     };
     return fallbackPrices[ticketType] || 0;
   };
@@ -545,7 +545,7 @@ export function Staff() {
               <span className="font-bold text-blue-900">{stats?.today300Adults ?? 0}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">₹450:</span>
+              <span className="text-gray-600">₹500:</span>
               <span className="font-bold text-blue-900">{stats?.today450Adults ?? 0}</span>
             </div>
             <div className="flex justify-between text-sm">
@@ -590,7 +590,7 @@ export function Staff() {
               <span className="font-bold text-blue-900">{stats?.today300Kids ?? 0}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">₹450:</span>
+              <span className="text-gray-600">₹500:</span>
               <span className="font-bold text-blue-900">{stats?.today450Kids ?? 0}</span>
             </div>
             <div className="flex justify-between text-sm">

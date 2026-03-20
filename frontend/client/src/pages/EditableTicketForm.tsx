@@ -124,9 +124,9 @@ export function EditableTicketForm() {
     if (ticketConfigs.length === 0) {
       return [
         { value: '150' as TicketType, label: '₹150 – Without Food (1 Hour)', price: 150, hasKids: false },
-        { value: '300' as TicketType, label: '₹300 – Without Food (3–4 Hours)', price: 300, hasKids: true },
-        { value: '450' as TicketType, label: '₹450 – With Fast Food (3–4 Hours)', price: 450, hasKids: true },
-        { value: '600' as TicketType, label: '₹600 – With Main Food (4–5 Hours)', price: 600, hasKids: true },
+        { value: '300' as TicketType, label: '₹350 – Without Food (3–4 Hours)', price: 350, hasKids: true },
+        { value: '450' as TicketType, label: '₹500 – With Fast Food (3–4 Hours)', price: 500, hasKids: true },
+        { value: '600' as TicketType, label: '₹700 – With Main Food (4–5 Hours)', price: 700, hasKids: true },
         { value: '100' as TicketType, label: 'Special ticket with Sitting Only', price: 100, hasKids: true },
       ];
     }
@@ -629,7 +629,7 @@ export function EditableTicketForm() {
                               <div className="text-2xl">🍔</div>
                               <div>
                                 <h4 className="text-orange-900 font-bold text-sm">
-                                  ₹450 Ticket - Fast Food Coupons
+                                  ₹500 Ticket - Fast Food Coupons
                                 </h4>
                                 <p className="text-orange-700 text-xs">
                                   Enter coupon numbers for fast food redemption
@@ -667,7 +667,7 @@ export function EditableTicketForm() {
                               <div className="text-2xl">🍽️</div>
                               <div>
                                 <h4 className="text-green-900 font-bold text-sm">
-                                  ₹600 Ticket - Main Food Coupons
+                                  ₹700 Ticket - Main Food Coupons
                                 </h4>
                                 <p className="text-green-700 text-xs">
                                   Enter coupon numbers for main food redemption

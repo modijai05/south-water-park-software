@@ -353,8 +353,8 @@ router.post('/initialize', authenticate, async (req: AuthRequest, res: any) => {
       },
       {
         ticketType: '300',
-        basePrice: 300,
-        label: '₹300 – 3-4hr access',
+        basePrice: 350,
+        label: '₹350 – 3-4hr access',
         hasKids: true,
         description: 'Full access to water activities for 3-4 hours',
         dayWisePricing: [
@@ -371,8 +371,8 @@ router.post('/initialize', authenticate, async (req: AuthRequest, res: any) => {
       },
       {
         ticketType: '450',
-        basePrice: 450,
-        label: '₹450 – Fast food + 3-4hr access',
+        basePrice: 500,
+        label: '₹500 – Fast food + 3-4hr access',
         hasKids: true,
         description: 'Fast food coupon + full water activities access',
         dayWisePricing: [
@@ -389,8 +389,8 @@ router.post('/initialize', authenticate, async (req: AuthRequest, res: any) => {
       },
       {
         ticketType: '600',
-        basePrice: 600,
-        label: '₹600 – Main food + 3-4hr access',
+        basePrice: 700,
+        label: '₹700 – Main food + 3-4hr access',
         hasKids: true,
         description: 'Main food coupon + full water activities access',
         dayWisePricing: [

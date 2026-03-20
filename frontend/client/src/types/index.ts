@@ -98,9 +98,9 @@ export interface EntryRecord {
 
 export const TICKET_OPTIONS: { value: TicketType; label: string; price: number; hasKids: boolean }[] = [
   { value: '150', label: '₹150 – Without Food (1 Hour)', price: 150, hasKids: false },
-  { value: '300', label: '₹300 – Without Food (3–4 Hours)', price: 300, hasKids: true },
-  { value: '450', label: '₹450 – With Fast Food (3–4 Hours)', price: 450, hasKids: true },
-  { value: '600', label: '₹600 – With Main Food (4–5 Hours)', price: 600, hasKids: true },
+  { value: '300', label: '₹350 – Without Food (3–4 Hours)', price: 350, hasKids: true },
+  { value: '450', label: '₹500 – With Fast Food (3–4 Hours)', price: 500, hasKids: true },
+  { value: '600', label: '₹700 – With Main Food (4–5 Hours)', price: 700, hasKids: true },
   { value: '100', label: '₹100 – Sitting Only', price: 100, hasKids: false },
 ];
 

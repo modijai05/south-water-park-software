@@ -15,11 +15,25 @@ import { EditableTicketForm } from '@/pages/EditableTicketForm';
 import { TicketAnalytics } from '@/pages/TicketAnalytics';
 
 function AppRoutes() {
-  const { user, token, fetchUser, isLoading } = useAuthStore();
+  const { user, token, fetchUser, isLoading, logout } = useAuthStore();
 
   useEffect(() => {
     if (token && !user && !isLoading) fetchUser();
   }, [token, user, fetchUser, isLoading]);
+
+  // Handle global auth expiration events
+  useEffect(() => {
+    const handleAuthExpired = (event: CustomEvent) => {
+      console.log('🔐 Global auth expired event received:', event.detail);
+      logout();
+    };
+
+    window.addEventListener('auth-expired', handleAuthExpired as EventListener);
+    
+    return () => {
+      window.removeEventListener('auth-expired', handleAuthExpired as EventListener);
+    };
+  }, [logout]);
 
   // Show loading state while checking authentication
   if (isLoading) {
