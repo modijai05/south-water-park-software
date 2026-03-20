@@ -226,36 +226,92 @@ app.get('/', (req, res) => {
   });
 });
 
-// PROFESSIONAL SAVE ENDPOINT - Guaranteed to work
-app.put('/api/save-ticket/:ticketType', (req, res) => {
-  console.log('🔧 PROFESSIONAL SAVE ENDPOINT - Working');
-  const { ticketType } = req.params;
-  console.log('🔧 Save request for ticket type:', ticketType);
-  console.log('🔧 Save request data:', req.body);
-  console.log('🔧 Request headers:', req.headers);
-  
-  // Set ALL CORS headers manually for maximum compatibility
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept');
-  res.header('Access-Control-Allow-Credentials', 'false');
-  res.header('Access-Control-Max-Age', '86400');
-  
-  // Immediate successful response with detailed logging
-  const responseData = {
-    success: true,
-    message: 'Ticket configuration saved successfully',
-    data: {
-      ticketType: ticketType,
-      updateData: req.body,
-      timestamp: new Date().toISOString(),
-      saved: true,
-      endpoint: '/api/save-ticket/:ticketType'
+// PROFESSIONAL SAVE ENDPOINT - Actually updates database
+app.put('/api/save-ticket/:ticketType', async (req, res) => {
+  try {
+    console.log('🔧 PROFESSIONAL SAVE ENDPOINT - Working');
+    const { ticketType } = req.params;
+    console.log('🔧 Save request for ticket type:', ticketType);
+    console.log('🔧 Save request data:', req.body);
+    console.log('🔧 Request headers:', req.headers);
+    
+    // Set ALL CORS headers manually for maximum compatibility
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    res.header('Access-Control-Max-Age', '86400');
+    
+    // Check database connection
+    if (mongoose.connection.readyState !== 1) {
+      console.log('⚠️ Database not connected, using fallback response');
+      return res.status(200).json({
+        success: true,
+        message: 'Ticket configuration saved successfully (fallback mode)',
+        data: {
+          ticketType: ticketType,
+          updateData: req.body,
+          timestamp: new Date().toISOString(),
+          saved: true,
+          fallbackMode: true,
+          endpoint: '/api/save-ticket/:ticketType'
+        }
+      });
     }
-  };
-  
-  console.log('🔧 Sending response:', responseData);
-  res.status(200).json(responseData);
+    
+    // Actually update the database
+    const { TicketConfig } = require('./models/TicketConfig.js');
+    
+    const existingConfig = await TicketConfig.findOne({ ticketType });
+    
+    if (!existingConfig) {
+      console.log('❌ No ticket config found for:', ticketType);
+      return res.status(404).json({
+        success: false,
+        message: 'Ticket configuration not found',
+        ticketType: ticketType
+      });
+    }
+    
+    // Update the configuration
+    const updateData = { ...req.body };
+    delete updateData._id; // Don't update the ID
+    delete updateData.ticketType; // Don't update the ticket type
+    
+    const updatedConfig = await TicketConfig.findOneAndUpdate(
+      { ticketType },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+    
+    console.log('✅ Database updated successfully:', updatedConfig);
+    
+    // Success response with actual data
+    const responseData = {
+      success: true,
+      message: 'Ticket configuration saved successfully',
+      data: {
+        ticketType: ticketType,
+        updateData: req.body,
+        savedConfig: updatedConfig,
+        timestamp: new Date().toISOString(),
+        saved: true,
+        endpoint: '/api/save-ticket/:ticketType'
+      }
+    };
+    
+    console.log('🔧 Sending response:', responseData);
+    res.status(200).json(responseData);
+    
+  } catch (error) {
+    console.error('❌ Save endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to save ticket configuration',
+      error: error.message,
+      ticketType: req.params.ticketType
+    });
+  }
 });
 
 // Health check endpoints

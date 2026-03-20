@@ -46,9 +46,9 @@ router.get('/analysis', async (req: any, res: any) => {
     // Ticket type definitions
     const ticketDefinitions = {
       '150': { name: 'Without Food 1hr', price: 150 },
-      '300': { name: 'Without Food 3-4hr', price: 300 },
-      '450': { name: 'With Fast Food', price: 450 },
-      '600': { name: 'With Main Food', price: 600 },
+      '300': { name: 'Without Food 3-4hr', price: 350 },
+      '450': { name: 'With Fast Food', price: 500 },
+      '600': { name: 'With Main Food', price: 700 },
       '100': { name: 'Sitting Only', price: 100 }
     };
     
