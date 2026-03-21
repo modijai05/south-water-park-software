@@ -21,10 +21,10 @@
   "devDependencies": {
     "concurrently": "^8.2.2"
   },
-  "workspaces": [
-    "frontend/client",
-    "backend/server"
-  ],
+  "workspaces": {
+    "packages": ["frontend/client", "backend/server"],
+    "nohoist": ["@rollup/rollup-linux-x64-gnu"]
+  },
   "keywords": [
     "water-park",
     "ticketing",
