@@ -13,7 +13,7 @@ services:
       - key: JWT_SECRET
         value: south-water-park-production-secret-2024-secure
       - key: CLIENT_URL
-        value: https://ticketmanagementthesouth.netlify.app
+        value: https://endearing-kleicha-b78d8e.netlify.app
       - key: PORT
         value: 10000
       - key: TZ

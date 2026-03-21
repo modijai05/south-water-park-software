@@ -26,6 +26,7 @@ app.use(cors({
     'http://localhost:5173',
     'https://ticketmanagementthesouth.netlify.app',
     'https://thesouthticketmanagement.netlify.app',
+    'https://endearing-kleicha-b78d8e.netlify.app',
     'https://south-water-park-backend.onrender.com',
     'https://south-water-park-frontend.onrender.com'
   ],
