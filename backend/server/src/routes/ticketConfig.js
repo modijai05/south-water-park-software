@@ -13,7 +13,7 @@ router.get('/', authenticate, async (req, res) => {
     
     // Set CORS headers
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Credentials', 'false');
     
     const result = {
       success: true,
@@ -42,7 +42,7 @@ router.put('/:ticketType', authenticate, requireAdmin, async (req, res) => {
     
     // Set CORS headers
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Credentials', 'false');
     
     // Check database connection
     if (mongoose.connection.readyState !== 1) {

@@ -23,7 +23,7 @@ export async function api<T>(
   const config: RequestInit = {
     ...options,
     headers,
-    credentials: 'include', // Include cookies for CORS
+    credentials: 'omit', // Omit cookies to avoid CORS issues
   };
 
   // Retry logic for failed requests
