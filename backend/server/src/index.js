@@ -30,7 +30,7 @@ app.use(cors({
     'https://south-water-park-backend.onrender.com',
     'https://south-water-park-frontend.onrender.com'
   ],
-  credentials: true,
+  credentials: false,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['Set-Cookie'],
