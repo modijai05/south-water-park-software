@@ -195,7 +195,7 @@ export function AdminTicketConfig() {
     }));
   };
 
-  // Quick price set function for any specific day
+  // Quick price set function for any specific day - FIXED with proper state update
   const setDayPrice = (ticketType: string, day: DayWisePricing['day'], price: number) => {
     console.log('🔧 setDayPrice called:', { ticketType, day, price });
     
@@ -224,7 +224,7 @@ export function AdminTicketConfig() {
               const updated = { 
                 ...dp, 
                 fixedAmount: price, 
-                priceMultiplier: 1,
+                priceMultiplier: 1.0, // Reset multiplier to 1.0 when using fixed amount
                 enabled: true 
               };
               console.log('🔧 setDayPrice - updated day for', day, ':', updated);

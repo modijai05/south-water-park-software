@@ -168,13 +168,13 @@ export function AdminDashboard() {
     }
   };
 
-  // Get current ticket price from dynamic configs (with day-wise pricing)
+  // Get current ticket price from dynamic configs (with day-wise pricing) - FIXED
   const getCurrentTicketPrice = (ticketType: string): number => {
     const config = ticketConfigs.find(c => c.ticketType === ticketType);
-    if (config && config.dayWisePricing.length > 0) {
+    if (config) {
       // Get current day name
       const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-      const todayPricing = config.dayWisePricing.find(dp => dp.day === today && dp.enabled);
+      const todayPricing = config.dayWisePricing?.find(dp => dp.day === today && dp.enabled);
       
       if (todayPricing) {
         if (todayPricing.fixedAmount !== undefined) {
@@ -182,9 +182,7 @@ export function AdminDashboard() {
         }
         return Math.round(config.basePrice * todayPricing.priceMultiplier);
       }
-    }
-    
-    if (config) {
+      // Use base price if no day-wise pricing or not enabled
       return config.basePrice;
     }
     
@@ -419,7 +417,7 @@ export function AdminDashboard() {
                   <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span className="font-bold text-lg">🎉 Sunday Special! 50% OFF on All Tickets (Except ₹150 & ₹100)</span>
+                  <span className="font-bold text-lg">🎉 Sunday Special! ₹50 Extra on All Tickets (Except ₹150 & ₹100)</span>
                   <svg className="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>

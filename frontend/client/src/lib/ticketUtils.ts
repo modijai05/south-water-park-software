@@ -40,7 +40,7 @@ function getDayName(): 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday
 // Export isSunday so other components can use it
 export { isSunday, getDayName };
 
-// Fetch ticket configurations from API
+// Fetch ticket configurations from API - FIXED VERSION
 async function fetchTicketConfigs(): Promise<TicketConfig[]> {
   const now = Date.now();
   if (ticketConfigs.length > 0 && (now - lastFetchTime) < CACHE_DURATION) {
@@ -48,26 +48,30 @@ async function fetchTicketConfigs(): Promise<TicketConfig[]> {
   }
 
   try {
-    const today = getDayName();
-    const response = await fetch(`${API_BASE}/ticket-config/pricing/${today}`);
+    // Fetch full configs, not just current day pricing
+    const response = await fetch(`${API_BASE}/ticket-config`);
     if (response.ok) {
-      const pricingData = await response.json();
-      // Convert pricing data back to TicketConfig format with current day pricing
-      ticketConfigs = pricingData.map((item: any) => ({
-        ticketType: item.ticketType,
-        basePrice: item.basePrice,
-        label: item.label,
-        hasKids: item.hasKids,
-        description: item.description,
-        dayWisePricing: [item.dayPricing], // Current day pricing
-        isActive: true,
-        foodIncluded: item.label.includes('Food')
+      const configs = await response.json();
+      // Ensure proper dayWisePricing structure
+      ticketConfigs = configs.map((config: any) => ({
+        ...config,
+        dayWisePricing: config.dayWisePricing || []
       }));
       lastFetchTime = now;
     }
   } catch (error) {
     console.error('Failed to fetch ticket configs:', error);
-    // Fallback to static TICKET_OPTIONS
+    // Fallback to static TICKET_OPTIONS converted to TicketConfig format
+    ticketConfigs = TICKET_OPTIONS.map(option => ({
+      ticketType: option.value,
+      basePrice: option.price,
+      label: option.label.replace(/^₹\d+\s*–\s*/, ''),
+      hasKids: option.hasKids,
+      description: option.label,
+      dayWisePricing: [],
+      isActive: true,
+      foodIncluded: option.label.includes('Food')
+    }));
   }
 
   return ticketConfigs;
@@ -106,6 +110,8 @@ export async function getTicketPrice(type: TicketType): Promise<number> {
       }
       return Math.round(config.basePrice * todayPricing.priceMultiplier);
     }
+    // If day-wise pricing exists but today is not enabled, use base price
+    return config.basePrice;
   }
   
   // Fallback to static pricing with Sunday rule
@@ -156,7 +162,7 @@ export async function getTicketLabel(type: TicketType): Promise<string> {
   return option?.label ?? type;
 }
 
-// Synchronous version for backward compatibility - now uses dynamic pricing
+// Synchronous version for backward compatibility - FIXED with proper day-wise pricing
 export function getTicketPriceSync(type: TicketType): number {
   // First try to get from cached ticket configs
   const config = ticketConfigs.find(t => t.ticketType === type);

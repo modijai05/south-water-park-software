@@ -5,7 +5,31 @@ import bcrypt from 'bcryptjs';
 
 const router = Router();
 
-/** GET /api/users - List users (admin only) */
+/** GET /api/users/stats - User statistics (admin only) - FIXED route order */
+router.get('/stats', authenticate, requireAdmin, async (_req: any, res: any) => {
+  try {
+    const [totalUsers, activeUsers, adminUsers, staffUsers, recentUsers] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ active: true }),
+      User.countDocuments({ role: 'admin' }),
+      User.countDocuments({ role: 'staff' }),
+      User.countDocuments({ createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } })
+    ]);
+    
+    res.json({
+      totalUsers,
+      activeUsers,
+      inactiveUsers: totalUsers - activeUsers,
+      adminUsers,
+      staffUsers,
+      recentUsers
+    });
+  } catch (err) {
+    res.status(500).json({ message: (err as Error).message });
+  }
+});
+
+/** GET /api/users - List users (admin only) - MOVED AFTER stats */
 router.get('/', authenticate, requireAdmin, async (_req: any, res: any) => {
   try {
     const users = await User.find().select('-password').sort({ createdAt: -1 }).lean();
@@ -260,30 +284,6 @@ router.post('/:id/reset-password', authenticate, requireAdmin, async (req: any, 
     });
   } catch (err) {
     res.status(400).json({ message: (err as Error).message });
-  }
-});
-
-/** GET /api/users/stats - User statistics (admin only) */
-router.get('/stats', authenticate, requireAdmin, async (_req: any, res: any) => {
-  try {
-    const [totalUsers, activeUsers, adminUsers, staffUsers, recentUsers] = await Promise.all([
-      User.countDocuments(),
-      User.countDocuments({ active: true }),
-      User.countDocuments({ role: 'admin' }),
-      User.countDocuments({ role: 'staff' }),
-      User.countDocuments({ createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } })
-    ]);
-    
-    res.json({
-      totalUsers,
-      activeUsers,
-      inactiveUsers: totalUsers - activeUsers,
-      adminUsers,
-      staffUsers,
-      recentUsers
-    });
-  } catch (err) {
-    res.status(500).json({ message: (err as Error).message });
   }
 });
 

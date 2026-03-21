@@ -269,16 +269,16 @@ export function TicketForm() {
   // Combined food coupon visibility
   const showFoodCoupons = has450Ticket || has600Ticket;
 
-  // Optimized instant calculation with dynamic config support
+  // Optimized instant calculation with dynamic config support - FIXED
   const calculateInstantAmount = useCallback((ticketType: TicketType, adults: number, kids: number) => {
     // Try to get price from dynamic configs first (with day-wise pricing)
     let ticketPrice = 0;
     
     const config = ticketConfigs.find(c => c.ticketType === ticketType);
-    if (config && config.dayWisePricing.length > 0) {
+    if (config) {
       // Get current day name
       const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-      const todayPricing = config.dayWisePricing.find(dp => dp.day === today && dp.enabled);
+      const todayPricing = config.dayWisePricing?.find(dp => dp.day === today && dp.enabled);
       
       if (todayPricing) {
         if (todayPricing.fixedAmount !== undefined) {
@@ -287,10 +287,9 @@ export function TicketForm() {
           ticketPrice = Math.round(config.basePrice * todayPricing.priceMultiplier);
         }
       } else {
+        // Use base price if no day-wise pricing or not enabled
         ticketPrice = config.basePrice;
       }
-    } else if (config) {
-      ticketPrice = config.basePrice;
     } else {
       // Fallback to cached or static price
       if (!priceCacheRef.current.has(ticketType)) {
@@ -343,15 +342,15 @@ export function TicketForm() {
       if (selection.ticketType === '150' && selection.kids > 0) continue;
       if (selection.ticketType === '100' && selection.kids > 0) continue;
       
-      // Get cached price or calculate once
+      // Get cached price or calculate once - FIXED pricing logic
       let ticketPrice = priceCacheRef.current.get(selection.ticketType);
       if (ticketPrice === undefined) {
         // Check dynamic configs first with day-wise pricing
         const config = ticketConfigs.find(c => c.ticketType === selection.ticketType);
-        if (config && config.dayWisePricing.length > 0) {
+        if (config) {
           // Get current day name
           const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-          const todayPricing = config.dayWisePricing.find(dp => dp.day === today && dp.enabled);
+          const todayPricing = config.dayWisePricing?.find(dp => dp.day === today && dp.enabled);
           
           if (todayPricing) {
             if (todayPricing.fixedAmount !== undefined) {
@@ -360,10 +359,9 @@ export function TicketForm() {
               ticketPrice = Math.round(config.basePrice * todayPricing.priceMultiplier);
             }
           } else {
+            // Use base price if no day-wise pricing or not enabled
             ticketPrice = config.basePrice;
           }
-        } else if (config) {
-          ticketPrice = config.basePrice;
         } else {
           ticketPrice = getTicketPriceSync(selection.ticketType);
         }
