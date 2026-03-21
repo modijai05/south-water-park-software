@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "cd frontend/client && npm run dev",
     "dev:backend": "cd backend/server && npm run dev",
-    "build": "npm run build:frontend && npm run build:backend",
+    "build": "npm run build:frontend",
     "build:frontend": "cd frontend/client && npm run build",
     "build:backend": "cd backend/server && npm run build",
     "start": "npm run start:backend",
