@@ -90,7 +90,7 @@ export function Staff() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Fetch ticket configurations
+  // Enhanced fetch ticket configurations with proper error handling and sync
   const fetchTicketConfigs = async (): Promise<TicketConfig[]> => {
     try {
       console.log('🔄 Staff: Fetching ticket configs...');
@@ -98,17 +98,34 @@ export function Staff() {
       // Invalidate cache to ensure fresh data
       invalidateTicketConfigCache();
       
+      // Add small delay to ensure cache is cleared
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
       const configs = await ticketConfigApi.getAll();
       console.log('✅ Staff: Fetched ticket configs:', configs);
+      console.log('🎫 Staff: Current prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
+      
       setTicketConfigs(configs);
-      return configs; // Return configs for proper async handling
+      return configs;
     } catch (error) {
       console.error('❌ Staff: Failed to fetch ticket configs:', error);
-      return []; // Return empty array on error
+      // Return fallback configs to prevent UI errors
+      const fallbackConfigs = TICKET_OPTIONS.map(option => ({
+        ticketType: option.value,
+        basePrice: option.price,
+        label: option.label.replace(/^₹\d+\s*–\s*/, ''),
+        hasKids: option.hasKids,
+        description: option.label,
+        dayWisePricing: [],
+        isActive: true,
+        foodIncluded: option.label.includes('Food')
+      }));
+      setTicketConfigs(fallbackConfigs);
+      return fallbackConfigs;
     }
   };
 
-  // Get current ticket price from dynamic configs (with day-wise pricing) - SYNCED WITH ADMIN
+  // Enhanced getCurrentTicketPrice with better logging and fallback handling
   const getCurrentTicketPrice = (ticketType: string): number => {
     console.log('🎫 Staff: Getting price for ticket type:', ticketType, 'Available configs:', ticketConfigs.length);
     
@@ -121,12 +138,13 @@ export function Staff() {
       const todayPricing = config.dayWisePricing?.find(dp => dp.day === today && dp.enabled);
       
       if (todayPricing) {
-        console.log('🎫 Staff: Using day-wise pricing for', today, 'price:', todayPricing.fixedAmount || todayPricing.priceMultiplier);
-        if (todayPricing.fixedAmount !== undefined) {
-          return todayPricing.fixedAmount;
-        }
-        return Math.round(config.basePrice * todayPricing.priceMultiplier);
+        const finalPrice = todayPricing.fixedAmount !== undefined 
+          ? todayPricing.fixedAmount 
+          : Math.round(config.basePrice * todayPricing.priceMultiplier);
+        console.log('🎫 Staff: Using day-wise pricing for', today, 'price:', finalPrice);
+        return finalPrice;
       }
+      
       // Use base price if no day-wise pricing or not enabled
       console.log('🎫 Staff: Using base price:', config.basePrice);
       return config.basePrice;
@@ -241,7 +259,7 @@ export function Staff() {
       }
     };
 
-    // Handle ticket config updates
+    // Handle ticket config updates with immediate price refresh
     const handleTicketConfigUpdate = async () => {
       console.log('🔄 Staff: Ticket config updated event received, refreshing configs...');
       try {
@@ -251,7 +269,7 @@ export function Staff() {
         // Add small delay to ensure cache is cleared
         await new Promise(resolve => setTimeout(resolve, 50));
         
-        // Force refresh stats as well to ensure complete sync
+        // Force refresh both configs and stats for complete sync
         const [statsRes, configs] = await Promise.all([
           entriesApi.stats(),
           fetchTicketConfigs()
@@ -260,6 +278,7 @@ export function Staff() {
         if (!cancelled) {
           setStats(statsRes as unknown as Stats);
           console.log('🔄 Staff: Refreshed stats and ticket configs');
+          console.log('🎫 Staff: Updated prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
           console.log('✅ Staff: Complete data refresh successful');
         }
       } catch (error) {
@@ -372,10 +391,11 @@ export function Staff() {
     }
   };
   
-  // Generate receipt for existing entry
+  // Enhanced receipt generation with correct pricing and professional sync
   const generateReceiptForEntry = async (entry: any) => {
     try {
       console.log('🧾 Staff: Generating receipt for entry:', entry.id);
+      console.log('🎫 Staff: Entry ticket type:', entry.ticketType, 'Current price:', getCurrentTicketPrice(entry.ticketType));
       
       // Generate receipt number if it doesn't exist
       let receiptNumber = entry.receiptNumber;
@@ -401,7 +421,9 @@ export function Staff() {
                 receiptNumber: receiptNumber,
                 generatedBy: user?.username || 'Staff',
                 timestamp: new Date().toISOString(),
-                source: 'staff-dashboard'
+                source: 'staff-dashboard',
+                ticketType: entry.ticketType,
+                ticketPrice: getCurrentTicketPrice(entry.ticketType)
               }
             }));
           } else {
@@ -428,13 +450,28 @@ export function Staff() {
         }
       }
       
-      // Prepare receipt data directly from the existing entry
+      // Enhanced receipt data with correct pricing information
+      const currentTicketPrice = getCurrentTicketPrice(entry.ticketType);
       const receiptPayload = {
         receiptNumber,
         ...entry,
+        // Ensure correct pricing is included
+        baseAmount: entry.baseAmount || (currentTicketPrice * (entry.adults || 1)),
+        finalAmount: entry.finalAmount || (currentTicketPrice * (entry.adults || 1)),
+        // Add current ticket price for display
+        currentTicketPrice: currentTicketPrice,
+        ticketTypeLabel: getTicketTypeName(entry.ticketType),
         // Add staff generation note with timestamp
         notes: `${entry.notes || ''} [Receipt printed by ${user?.username || 'Staff'} on ${new Date().toLocaleString()}]`
       };
+      
+      console.log('🧾 Staff: Enhanced receipt payload prepared:', {
+        receiptNumber,
+        ticketType: entry.ticketType,
+        currentPrice: currentTicketPrice,
+        baseAmount: receiptPayload.baseAmount,
+        finalAmount: receiptPayload.finalAmount
+      });
       
       setReceiptData(receiptPayload);
       setShowReceipt(true);
@@ -447,11 +484,15 @@ export function Staff() {
           printedBy: user?.username || 'Staff',
           timestamp: new Date().toISOString(),
           source: 'staff-dashboard',
+          ticketType: entry.ticketType,
+          ticketPrice: currentTicketPrice,
           entryData: {
             name: entry.name,
             mobile: entry.mobile,
             ticketType: entry.ticketType,
-            finalAmount: entry.finalAmount
+            ticketTypeLabel: getTicketTypeName(entry.ticketType),
+            finalAmount: receiptPayload.finalAmount,
+            currentPrice: currentTicketPrice
           }
         }
       }));
@@ -462,16 +503,30 @@ export function Staff() {
           action: 'receipt-printed',
           entryId: entry.id,
           timestamp: new Date().toISOString(),
-          source: 'staff-receipt-generation'
+          source: 'staff-receipt-generation',
+          ticketType: entry.ticketType,
+          ticketPrice: currentTicketPrice
         }
       }));
       
-      console.log('✅ Staff: Receipt generated successfully and sync events dispatched');
+      console.log('✅ Staff: Enhanced receipt generated successfully and sync events dispatched');
       
     } catch (error) {
       console.error('❌ Staff: Failed to generate receipt:', error);
       alert('Failed to generate receipt. Please try again.');
     }
+  };
+  
+  // Helper function to get ticket type name (consistent with Receipt component)
+  const getTicketTypeName = (type: string) => {
+    const ticketNames: { [key: string]: string } = {
+      '150': 'Regular Entry (₹150)',
+      '300': '3-4 Hours Entry (₹300)',
+      '450': 'Fast Food + Entry (₹450)',
+      '600': 'Full Day Entry (₹600)',
+      '100': 'Kids Special (₹100)'
+    };
+    return ticketNames[type] || type;
   };
 
   return (
