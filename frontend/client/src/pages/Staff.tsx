@@ -91,7 +91,7 @@ export function Staff() {
   const [isSearching, setIsSearching] = useState(false);
 
   // Fetch ticket configurations
-  const fetchTicketConfigs = async () => {
+  const fetchTicketConfigs = async (): Promise<TicketConfig[]> => {
     try {
       console.log('🔄 Staff: Fetching ticket configs...');
       
@@ -101,8 +101,10 @@ export function Staff() {
       const configs = await ticketConfigApi.getAll();
       console.log('✅ Staff: Fetched ticket configs:', configs);
       setTicketConfigs(configs);
+      return configs; // Return configs for proper async handling
     } catch (error) {
       console.error('❌ Staff: Failed to fetch ticket configs:', error);
+      return []; // Return empty array on error
     }
   };
 
@@ -137,16 +139,28 @@ export function Staff() {
     return fallbackPrice;
   };
 
+  // Combined effect for initial data loading and real-time sync
   useEffect(() => {
-    const fetchStats = async () => {
+    let syncInterval: number;
+    let cancelled = false;
+    
+    const fetchInitialData = async () => {
       try {
-        // Fetch real stats from API
-        const res = await entriesApi.stats();
-        setStats(res as unknown as Stats);
-        // Also fetch ticket configs
-        await fetchTicketConfigs();
+        console.log('🚀 Staff: Loading initial data...');
+        
+        // Fetch both stats and ticket configs in parallel
+        const [statsRes, configs] = await Promise.all([
+          entriesApi.stats(),
+          fetchTicketConfigs()
+        ]);
+        
+        if (!cancelled) {
+          setStats(statsRes as unknown as Stats);
+          // Note: setTicketConfigs is already called in fetchTicketConfigs
+          console.log('✅ Staff: Initial data loaded - Stats:', statsRes, 'Configs:', configs.length);
+        }
       } catch (error) {
-        console.error('Failed to fetch stats:', error);
+        console.error('❌ Staff: Failed to load initial data:', error);
         // Set to zero if API fails
         setStats({
           todayEntries: 0,
@@ -210,53 +224,24 @@ export function Staff() {
       }
     };
 
-    fetchStats();
+    // Load initial data
+    fetchInitialData();
     
-    // Refresh stats every 30 seconds for real-time updates
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Real-time sync: Listen for entry updates with enhanced cross-dashboard syncing
-  useEffect(() => {
-    let syncInterval: number;
-    let cancelled = false;
-    
-    const handleEntryUpdate = () => {
-      // Refresh stats when an entry is updated
-      const fetchStats = async () => {
-        try {
-          const res = await entriesApi.stats();
-          if (!cancelled) {
-            setStats(res as unknown as Stats);
-            
-            // Trigger global sync events for cross-dashboard communication
-            window.dispatchEvent(new CustomEvent('staff-synced', {
-              detail: { 
-                timestamp: new Date().toISOString(), 
-                stats: res,
-                source: 'staff-dashboard'
-              }
-            }));
-            
-            // Also trigger admin sync event to ensure admin dashboard updates
-            window.dispatchEvent(new CustomEvent('dashboard-synced', {
-              detail: { 
-                timestamp: new Date().toISOString(), 
-                stats: res,
-                source: 'staff-dashboard-sync'
-              }
-            }));
-          }
-        } catch (error) {
-          console.error('Failed to refresh staff stats:', error);
+    // Handle entry updates
+    const handleEntryUpdate = async () => {
+      console.log('🔄 Staff: Handling entry update...');
+      try {
+        const res = await entriesApi.stats();
+        if (!cancelled) {
+          setStats(res as unknown as Stats);
+          console.log('✅ Staff: Stats refreshed successfully');
         }
-      };
-
-      fetchStats();
+      } catch (error) {
+        console.error('❌ Staff: Failed to refresh stats:', error);
+      }
     };
 
-    // Specific handler for ticket config updates
+    // Handle ticket config updates
     const handleTicketConfigUpdate = async () => {
       console.log('🔄 Staff: Ticket config updated event received, refreshing configs...');
       try {
@@ -266,22 +251,16 @@ export function Staff() {
         // Add small delay to ensure cache is cleared
         await new Promise(resolve => setTimeout(resolve, 50));
         
-        const configs = await ticketConfigApi.getAll();
+        // Force refresh stats as well to ensure complete sync
+        const [statsRes, configs] = await Promise.all([
+          entriesApi.stats(),
+          fetchTicketConfigs()
+        ]);
+        
         if (!cancelled) {
-          console.log('🔄 Staff: Setting new ticket configs:', configs.length, 'configs');
-          setTicketConfigs(configs);
-          console.log('✅ Staff: Ticket configs refreshed successfully');
-          
-          // Force a re-render by updating a dummy state
-          setTimeout(() => {
-            console.log('🔄 Staff: Triggering price update verification');
-            // Verify prices are updated
-            console.log('🎫 Staff: New 150 price:', getCurrentTicketPrice('150'));
-            console.log('🎫 Staff: New 300 price:', getCurrentTicketPrice('300'));
-            console.log('🎫 Staff: New 450 price:', getCurrentTicketPrice('450'));
-            console.log('🎫 Staff: New 600 price:', getCurrentTicketPrice('600'));
-            console.log('🎫 Staff: New 100 price:', getCurrentTicketPrice('100'));
-          }, 100);
+          setStats(statsRes as unknown as Stats);
+          console.log('🔄 Staff: Refreshed stats and ticket configs');
+          console.log('✅ Staff: Complete data refresh successful');
         }
       } catch (error) {
         console.error('❌ Staff: Failed to refresh ticket configs:', error);
@@ -304,6 +283,7 @@ export function Staff() {
       handleEntryUpdate();
     };
 
+    // Set up event listeners
     window.addEventListener('entry-updated', throttledHandleEntryUpdate);
     window.addEventListener('entry-created', immediateHandleEntryUpdate); // Immediate sync for new entries
     window.addEventListener('entry-deleted', immediateHandleEntryUpdate); // Immediate sync for deletions
