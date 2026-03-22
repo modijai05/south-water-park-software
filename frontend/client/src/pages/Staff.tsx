@@ -246,6 +246,20 @@ export function Staff() {
       fetchStats();
     };
 
+    // Specific handler for ticket config updates
+    const handleTicketConfigUpdate = async () => {
+      console.log('🔄 Staff: Ticket config updated, refreshing configs...');
+      try {
+        const configs = await ticketConfigApi.getAll();
+        if (!cancelled) {
+          setTicketConfigs(configs);
+          console.log('✅ Staff: Ticket configs refreshed successfully');
+        }
+      } catch (error) {
+        console.error('❌ Staff: Failed to refresh ticket configs:', error);
+      }
+    };
+
     // Optimized event listeners with throttling
     let lastUpdateTime = 0;
     const throttledHandleEntryUpdate = () => {
@@ -262,7 +276,7 @@ export function Staff() {
     window.addEventListener('dashboard-synced', throttledHandleEntryUpdate);
     window.addEventListener('admin-synced', throttledHandleEntryUpdate);
     window.addEventListener('staff-synced', throttledHandleEntryUpdate);
-    window.addEventListener('ticket-config-updated', throttledHandleEntryUpdate);
+    window.addEventListener('ticket-config-updated', handleTicketConfigUpdate);
     
     // Reduced sync frequency - refresh every 60 seconds instead of 30
     syncInterval = setInterval(() => {
@@ -280,7 +294,7 @@ export function Staff() {
       window.removeEventListener('dashboard-synced', throttledHandleEntryUpdate);
       window.removeEventListener('admin-synced', throttledHandleEntryUpdate);
       window.removeEventListener('staff-synced', throttledHandleEntryUpdate);
-      window.removeEventListener('ticket-config-updated', throttledHandleEntryUpdate);
+      window.removeEventListener('ticket-config-updated', handleTicketConfigUpdate);
       if (syncInterval) clearInterval(syncInterval);
     };
   }, []);
