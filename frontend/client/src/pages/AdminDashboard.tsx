@@ -324,7 +324,7 @@ export function AdminDashboard() {
     const handleTicketConfigRefresh = async () => {
       console.log('🔄 AdminDashboard: Refreshing ticket configs after update');
       try {
-        const configs = await ticketConfigApi.list();
+        const configs = await ticketConfigApi.getAll();
         setTicketConfigs(configs || []);
       } catch (error) {
         console.error('Failed to refresh ticket configs:', error);
@@ -1236,13 +1236,13 @@ export function AdminDashboard() {
                     <div className="relative z-10">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">150 Tickets</p>
+                          <p className="text-sm font-medium text-gray-600 mb-1">₹{getCurrentTicketPrice('150')} Tickets</p>
                           <p className="text-3xl font-bold text-gray-900">
                             {!stats ? '0' : <AnimatedCounter value={stats.total150 ?? 0} />}
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
-                          <span className="text-white text-xl font-bold">150</span>
+                          <span className="text-white text-xl font-bold">₹{getCurrentTicketPrice('150')}</span>
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -1277,13 +1277,13 @@ export function AdminDashboard() {
                     <div className="relative z-10">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">300 Tickets</p>
+                          <p className="text-sm font-medium text-gray-600 mb-1">₹{getCurrentTicketPrice('300')} Tickets</p>
                           <p className="text-3xl font-bold text-gray-900">
                             {!stats ? '0' : <AnimatedCounter value={stats.total300 ?? 0} />}
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
-                          <span className="text-white text-xl font-bold">300</span>
+                          <span className="text-white text-xl font-bold">₹{getCurrentTicketPrice('300')}</span>
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -1322,13 +1322,13 @@ export function AdminDashboard() {
                     <div className="relative z-10">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">450 Tickets</p>
+                          <p className="text-sm font-medium text-gray-600 mb-1">₹{getCurrentTicketPrice('450')} Tickets</p>
                           <p className="text-3xl font-bold text-gray-900">
                             {!stats ? '0' : <AnimatedCounter value={stats.total450 ?? 0} />}
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
-                          <span className="text-white text-xl font-bold">450</span>
+                          <span className="text-white text-xl font-bold">₹{getCurrentTicketPrice('450')}</span>
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -1367,13 +1367,13 @@ export function AdminDashboard() {
                     <div className="relative z-10">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">600 Tickets</p>
+                          <p className="text-sm font-medium text-gray-600 mb-1">₹{getCurrentTicketPrice('600')} Tickets</p>
                           <p className="text-3xl font-bold text-gray-900">
                             {!stats ? '0' : <AnimatedCounter value={stats.total600 ?? 0} />}
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
-                          <span className="text-white text-xl font-bold">600</span>
+                          <span className="text-white text-xl font-bold">₹{getCurrentTicketPrice('600')}</span>
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -1412,13 +1412,13 @@ export function AdminDashboard() {
                     <div className="relative z-10">
                       <div className="flex items-center justify-between mb-4">
                         <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">100 Tickets</p>
+                          <p className="text-sm font-medium text-gray-600 mb-1">₹{getCurrentTicketPrice('100')} Tickets</p>
                           <p className="text-3xl font-bold text-gray-900">
                             {!stats ? '0' : <AnimatedCounter value={stats.total100 ?? 0} />}
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                          <span className="text-white text-xl font-bold">100</span>
+                          <span className="text-white text-xl font-bold">₹{getCurrentTicketPrice('100')}</span>
                         </div>
                       </div>
                       <div className="space-y-2">

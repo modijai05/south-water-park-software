@@ -21,6 +21,41 @@ const authenticate = async (req, res, next) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     console.log('Auth: Token decoded for userId:', decoded.userId);
     
+    // Handle fallback mode when database is not connected
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.log('Auth: Database not connected, using fallback authentication');
+      
+      // For fallback users, create a mock user object
+      if (decoded.userId === 'fallback-admin') {
+        req.user = {
+          _id: 'fallback-admin',
+          username: 'admin1',
+          fullName: 'Admin User',
+          role: 'admin',
+          active: true
+        };
+        console.log('Auth: Fallback admin authenticated successfully');
+        return next();
+      }
+      
+      if (decoded.userId === 'fallback-staff') {
+        req.user = {
+          _id: 'fallback-staff',
+          username: 'staff1',
+          fullName: 'Staff User',
+          role: 'staff',
+          active: true
+        };
+        console.log('Auth: Fallback staff authenticated successfully');
+        return next();
+      }
+      
+      console.log('Auth: Invalid fallback userId:', decoded.userId);
+      return res.status(401).json({ message: 'Invalid token - user not found' });
+    }
+    
+    // Normal database authentication
     const user = await User.findById(decoded.userId);
     if (!user) {
       console.log('Auth: User not found for userId:', decoded.userId);
