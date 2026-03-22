@@ -331,6 +331,15 @@ export function AdminDashboard() {
     window.addEventListener('staff-synced', throttledHandleEntryUpdate); // Listen to staff dashboard events
     window.addEventListener('ticket-config-updated', throttledHandleEntryUpdate); // Listen to ticket config updates
     
+    // Listen for receipt events from staff dashboard
+    const handleReceiptEvent = (event: any) => {
+      console.log('🧾 AdminDashboard: Receipt event received:', event.detail);
+      handleEntryUpdate();
+    };
+    
+    window.addEventListener('receipt-generated', handleReceiptEvent);
+    window.addEventListener('receipt-printed', handleReceiptEvent);
+    
     // Add specific ticket config refresh listener
     const handleTicketConfigRefresh = async () => {
       console.log('🔄 AdminDashboard: Refreshing ticket configs after update');
@@ -360,6 +369,8 @@ export function AdminDashboard() {
       window.removeEventListener('staff-synced', throttledHandleEntryUpdate); // Remove staff event listener
       window.removeEventListener('ticket-config-updated', throttledHandleEntryUpdate); // Remove ticket config listener
       window.removeEventListener('ticket-config-updated', handleTicketConfigRefresh); // Remove refresh listener
+      window.removeEventListener('receipt-generated', handleReceiptEvent);
+      window.removeEventListener('receipt-printed', handleReceiptEvent);
     };
   }, []);
 

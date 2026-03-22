@@ -283,7 +283,7 @@ export function Staff() {
       handleEntryUpdate();
     };
 
-    // Set up event listeners
+    // Set up event listeners for comprehensive real-time sync
     window.addEventListener('entry-updated', throttledHandleEntryUpdate);
     window.addEventListener('entry-created', immediateHandleEntryUpdate); // Immediate sync for new entries
     window.addEventListener('entry-deleted', immediateHandleEntryUpdate); // Immediate sync for deletions
@@ -291,6 +291,16 @@ export function Staff() {
     window.addEventListener('admin-synced', throttledHandleEntryUpdate);
     window.addEventListener('staff-synced', throttledHandleEntryUpdate);
     window.addEventListener('ticket-config-updated', handleTicketConfigUpdate);
+    
+    // Listen for receipt-related events from admin dashboard
+    const handleReceiptEvent = () => {
+      console.log('🧾 Staff: Receipt event received, refreshing stats...');
+      handleEntryUpdate();
+    };
+    
+    window.addEventListener('receipt-generated', handleReceiptEvent);
+    window.addEventListener('receipt-printed', handleReceiptEvent);
+    window.addEventListener('payment-completed', handleReceiptEvent);
     
     // Reduced sync frequency - refresh every 60 seconds instead of 30
     syncInterval = setInterval(() => {
@@ -309,6 +319,9 @@ export function Staff() {
       window.removeEventListener('admin-synced', throttledHandleEntryUpdate);
       window.removeEventListener('staff-synced', throttledHandleEntryUpdate);
       window.removeEventListener('ticket-config-updated', handleTicketConfigUpdate);
+      window.removeEventListener('receipt-generated', handleReceiptEvent);
+      window.removeEventListener('receipt-printed', handleReceiptEvent);
+      window.removeEventListener('payment-completed', handleReceiptEvent);
       if (syncInterval) clearInterval(syncInterval);
     };
   }, []);
@@ -362,6 +375,8 @@ export function Staff() {
   // Generate receipt for existing entry
   const generateReceiptForEntry = async (entry: any) => {
     try {
+      console.log('🧾 Staff: Generating receipt for entry:', entry.id);
+      
       // Generate receipt number if it doesn't exist
       let receiptNumber = entry.receiptNumber;
       if (!receiptNumber) {
@@ -378,6 +393,17 @@ export function Staff() {
             const receiptData = await receiptRes.json();
             receiptNumber = receiptData.receiptNumber;
             console.log('🔍 Staff: Receipt number generated:', receiptNumber);
+            
+            // Trigger receipt-generated event for real-time sync
+            window.dispatchEvent(new CustomEvent('receipt-generated', {
+              detail: {
+                entryId: entry.id,
+                receiptNumber: receiptNumber,
+                generatedBy: user?.username || 'Staff',
+                timestamp: new Date().toISOString(),
+                source: 'staff-dashboard'
+              }
+            }));
           } else {
             console.error('🔍 Staff: Failed to generate receipt number, response:', receiptRes.status);
             // Generate fallback receipt number locally
@@ -413,7 +439,34 @@ export function Staff() {
       setReceiptData(receiptPayload);
       setShowReceipt(true);
       
-      console.log('✅ Staff: Receipt generated successfully');
+      // Trigger receipt-printed event for real-time sync with admin dashboard
+      window.dispatchEvent(new CustomEvent('receipt-printed', {
+        detail: {
+          entryId: entry.id,
+          receiptNumber: receiptNumber,
+          printedBy: user?.username || 'Staff',
+          timestamp: new Date().toISOString(),
+          source: 'staff-dashboard',
+          entryData: {
+            name: entry.name,
+            mobile: entry.mobile,
+            ticketType: entry.ticketType,
+            finalAmount: entry.finalAmount
+          }
+        }
+      }));
+      
+      // Also trigger general dashboard sync to refresh stats
+      window.dispatchEvent(new CustomEvent('staff-synced', {
+        detail: {
+          action: 'receipt-printed',
+          entryId: entry.id,
+          timestamp: new Date().toISOString(),
+          source: 'staff-receipt-generation'
+        }
+      }));
+      
+      console.log('✅ Staff: Receipt generated successfully and sync events dispatched');
       
     } catch (error) {
       console.error('❌ Staff: Failed to generate receipt:', error);

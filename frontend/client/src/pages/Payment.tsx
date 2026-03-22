@@ -672,6 +672,35 @@ export function Payment() {
       };
       setReceiptData(receiptPayload);
       setShowReceipt(true);
+      
+      // Trigger receipt-printed event for real-time sync
+      window.dispatchEvent(new CustomEvent('receipt-printed', {
+        detail: {
+          entryId: (payload as any).id || 'new',
+          receiptNumber: (receiptPayload as any).receiptNumber || 'Generated',
+          printedBy: user?.username || 'User',
+          timestamp: new Date().toISOString(),
+          source: 'payment-page',
+          entryData: {
+            name: receiptPayload.name,
+            mobile: receiptPayload.mobile,
+            ticketType: receiptPayload.ticketType,
+            finalAmount: receiptPayload.finalAmount
+          }
+        }
+      }));
+      
+      // Also trigger general dashboard sync to refresh stats
+      window.dispatchEvent(new CustomEvent('payment-completed', {
+        detail: {
+          action: 'receipt-generated',
+          entryId: (payload as any).id || 'new',
+          timestamp: new Date().toISOString(),
+          source: 'payment-receipt-generation'
+        }
+      }));
+      
+      console.log('✅ Payment: Receipt generated and sync events dispatched');
 
       
       // Clear form data after successful submission

@@ -117,6 +117,16 @@ export function AdminExport() {
     window.addEventListener('payment-completed', handleEntryUpdate);
     window.addEventListener('export-refresh', handleEntryUpdate); // Listen for admin sync coordinator
     
+    // Listen for receipt events from staff dashboard
+    const handleReceiptEvent = (event: any) => {
+      console.log('🧾 AdminExport: Receipt event received:', event.detail);
+      handleEntryUpdate();
+    };
+    
+    window.addEventListener('receipt-generated', handleReceiptEvent);
+    window.addEventListener('receipt-printed', handleReceiptEvent);
+    window.addEventListener('staff-synced', handleEntryUpdate);
+    
     // 24/7 continuous sync - refresh every 5 seconds for export
     syncInterval = setInterval(() => {
       if (!cancelled) {
@@ -136,6 +146,9 @@ export function AdminExport() {
       window.removeEventListener('dashboard-synced', handleEntryUpdate);
       window.removeEventListener('payment-completed', handleEntryUpdate);
       window.removeEventListener('export-refresh', handleEntryUpdate); // Remove admin sync coordinator event
+      window.removeEventListener('receipt-generated', handleReceiptEvent);
+      window.removeEventListener('receipt-printed', handleReceiptEvent);
+      window.removeEventListener('staff-synced', handleEntryUpdate);
       if (syncInterval) clearInterval(syncInterval);
     };
   }, [range, from, to, particularDate]);

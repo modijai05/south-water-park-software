@@ -69,6 +69,17 @@ export function AdminEntries() {
     window.addEventListener('entry-deleted', handleEntryUpdate);
     window.addEventListener('dashboard-synced', handleEntryUpdate);
     window.addEventListener('entries-refresh', handleEntryUpdate); // Listen for admin sync coordinator
+    
+    // Listen for receipt events from staff dashboard
+    const handleReceiptEvent = (event: any) => {
+      console.log('🧾 AdminEntries: Receipt event received:', event.detail);
+      fetchEntries();
+    };
+    
+    window.addEventListener('receipt-generated', handleReceiptEvent);
+    window.addEventListener('receipt-printed', handleReceiptEvent);
+    window.addEventListener('staff-synced', handleEntryUpdate);
+    window.addEventListener('payment-completed', handleEntryUpdate);
 
     return () => {
       window.removeEventListener('entry-created', handleEntryUpdate);
@@ -76,6 +87,10 @@ export function AdminEntries() {
       window.removeEventListener('entry-deleted', handleEntryUpdate);
       window.removeEventListener('dashboard-synced', handleEntryUpdate);
       window.removeEventListener('entries-refresh', handleEntryUpdate); // Remove admin sync coordinator event
+      window.removeEventListener('receipt-generated', handleReceiptEvent);
+      window.removeEventListener('receipt-printed', handleReceiptEvent);
+      window.removeEventListener('staff-synced', handleEntryUpdate);
+      window.removeEventListener('payment-completed', handleEntryUpdate);
     };
   }, [page, search]);
 
