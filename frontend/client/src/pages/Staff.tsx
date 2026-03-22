@@ -9,6 +9,7 @@ import Receipt from '@/components/Receipt';
 import type { TicketConfig } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { TICKET_OPTIONS } from '@/types';
+import { invalidateTicketConfigCache } from '@/lib/ticketUtils';
 
 interface Stats {
   todayEntries: number;
@@ -93,6 +94,10 @@ export function Staff() {
   const fetchTicketConfigs = async () => {
     try {
       console.log('🔄 Staff: Fetching ticket configs...');
+      
+      // Invalidate cache to ensure fresh data
+      invalidateTicketConfigCache();
+      
       const configs = await ticketConfigApi.getAll();
       console.log('✅ Staff: Fetched ticket configs:', configs);
       setTicketConfigs(configs);
@@ -255,6 +260,12 @@ export function Staff() {
     const handleTicketConfigUpdate = async () => {
       console.log('🔄 Staff: Ticket config updated event received, refreshing configs...');
       try {
+        // Invalidate shared cache first to ensure fresh data
+        invalidateTicketConfigCache();
+        
+        // Add small delay to ensure cache is cleared
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
         const configs = await ticketConfigApi.getAll();
         if (!cancelled) {
           console.log('🔄 Staff: Setting new ticket configs:', configs.length, 'configs');

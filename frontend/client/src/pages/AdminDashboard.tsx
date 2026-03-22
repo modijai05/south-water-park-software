@@ -8,6 +8,7 @@ import { ticketConfigApi } from '@/lib/ticketApi';
 import { entriesApi } from '@/lib/api';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { invalidateTicketConfigCache } from '@/lib/ticketUtils';
 import { useAuthStore } from '@/store/authStore';
 import type { TicketConfig } from '@/types';
 
@@ -160,6 +161,10 @@ export function AdminDashboard() {
   const fetchTicketConfigs = async () => {
     try {
       console.log('🔄 Dashboard: Fetching ticket configs...');
+      
+      // Invalidate cache to ensure fresh data
+      invalidateTicketConfigCache();
+      
       const configs = await ticketConfigApi.getAll();
       console.log('✅ Dashboard: Fetched ticket configs:', configs);
       setTicketConfigs(configs);
@@ -330,6 +335,12 @@ export function AdminDashboard() {
     const handleTicketConfigRefresh = async () => {
       console.log('🔄 AdminDashboard: Refreshing ticket configs after update');
       try {
+        // Invalidate shared cache first to ensure fresh data
+        invalidateTicketConfigCache();
+        
+        // Add small delay to ensure cache is cleared
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
         const configs = await ticketConfigApi.getAll();
         setTicketConfigs(configs || []);
       } catch (error) {
