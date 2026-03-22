@@ -73,13 +73,17 @@ router.post('/', authenticate, requireAdmin, async (req: any, res: any) => {
     });
     await user.save();
     res.status(201).json({ 
-      id: user._id, 
-      username: user.username, 
-      role: user.role, 
-      active: user.active,
-      email: user.email,
-      fullName: user.fullName,
-      createdAt: user.createdAt
+      success: true,
+      message: 'User created successfully',
+      data: {
+        id: user._id, 
+        username: user.username, 
+        role: user.role, 
+        active: user.active,
+        email: user.email,
+        fullName: user.fullName,
+        createdAt: user.createdAt
+      }
     });
   } catch (err) {
     res.status(400).json({ message: (err as Error).message });
@@ -155,7 +159,11 @@ router.patch('/:id', authenticate, requireAdmin, async (req: any, res: any) => {
       roleChanged: !!update.role
     });
     
-    res.json(user);
+    res.json({
+      success: true,
+      message: 'User updated successfully',
+      data: user
+    });
   } catch (err) {
     res.status(400).json({ message: (err as Error).message });
   }
@@ -274,8 +282,9 @@ router.post('/:id/reset-password', authenticate, requireAdmin, async (req: any, 
     });
     
     res.json({ 
+      success: true,
       message: 'Password reset successfully',
-      user: {
+      data: {
         id: user._id,
         username: user.username,
         role: user.role,

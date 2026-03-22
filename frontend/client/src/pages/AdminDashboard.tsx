@@ -320,6 +320,19 @@ export function AdminDashboard() {
     window.addEventListener('staff-synced', throttledHandleEntryUpdate); // Listen to staff dashboard events
     window.addEventListener('ticket-config-updated', throttledHandleEntryUpdate); // Listen to ticket config updates
     
+    // Add specific ticket config refresh listener
+    const handleTicketConfigRefresh = async () => {
+      console.log('🔄 AdminDashboard: Refreshing ticket configs after update');
+      try {
+        const configs = await ticketConfigApi.list();
+        setTicketConfigs(configs || []);
+      } catch (error) {
+        console.error('Failed to refresh ticket configs:', error);
+      }
+    };
+    
+    window.addEventListener('ticket-config-updated', handleTicketConfigRefresh);
+    
     return () => {
       cancelled = true;
       window.removeEventListener('entry-updated', throttledHandleEntryUpdate);
@@ -329,6 +342,7 @@ export function AdminDashboard() {
       window.removeEventListener('payment-completed', throttledHandleEntryUpdate);
       window.removeEventListener('staff-synced', throttledHandleEntryUpdate); // Remove staff event listener
       window.removeEventListener('ticket-config-updated', throttledHandleEntryUpdate); // Remove ticket config listener
+      window.removeEventListener('ticket-config-updated', handleTicketConfigRefresh); // Remove refresh listener
     };
   }, []);
 
