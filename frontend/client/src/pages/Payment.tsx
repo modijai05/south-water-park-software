@@ -596,8 +596,33 @@ export function Payment() {
 
       console.log('🎫 Payment: Dispatching sync events for entry creation...');
 
+      // Dispatch discount-specific events for additional discount tracking
+      if (payload.additionalDiscount > 0) {
+        console.log('💰 Payment: Dispatching additional discount update event:', payload.additionalDiscount);
+        window.dispatchEvent(new CustomEvent('additional-discount-updated', {
+          detail: {
+            entryId: result.id,
+            additionalDiscount: payload.additionalDiscount,
+            timestamp: new Date().toISOString(),
+            source: 'payment-form'
+          }
+        }));
+      }
       
-
+      if (payload.kidDiscount > 0 || payload.additionalDiscount > 0) {
+        console.log('💰 Payment: Dispatching total discount update event');
+        window.dispatchEvent(new CustomEvent('discount-updated', {
+          detail: {
+            entryId: result.id,
+            kidDiscount: payload.kidDiscount,
+            additionalDiscount: payload.additionalDiscount,
+            totalDiscount: payload.kidDiscount + payload.additionalDiscount,
+            timestamp: new Date().toISOString(),
+            source: 'payment-form'
+          }
+        }));
+      }
+      
       window.dispatchEvent(new CustomEvent('entry-created', { 
 
         detail: { 

@@ -324,6 +324,11 @@ export function AdminDashboard() {
             if (!cancelled) {
               console.log('📊 Dashboard: Updated stats received:', s);
               console.log('📈 Dashboard: Updated charts received:', c);
+              
+              // Log specific discount data for debugging
+              console.log('💰 Dashboard: Additional Discount Data - Today:', (s as any)?.todayAdditionalDiscount, 'Total:', (s as any)?.totalAdditionalDiscount);
+              console.log('💰 Dashboard: Total Discount Data - Today:', (s as any)?.todayTotalDiscount, 'All-Time:', (s as any)?.totalTotalDiscount);
+              
               setStats(s as unknown as Stats);
               setCharts(c as unknown as Charts);
               
@@ -340,10 +345,21 @@ export function AdminDashboard() {
               
               console.log('✅ Dashboard: Data updated successfully');
               console.log('🍔 Dashboard: Food coupons data - todayTotal:', (s as any)?.todayTotalFoodCoupons, 'totalFoodCoupons:', (s as any)?.totalFoodCoupons);
+              console.log('💰 Dashboard: Additional discount data - todayAdditionalDiscount:', (s as any)?.todayAdditionalDiscount, 'totalAdditionalDiscount:', (s as any)?.totalAdditionalDiscount);
               
               // Dispatch sync event for other components
               window.dispatchEvent(new CustomEvent('dashboard-synced', {
-                detail: { timestamp: new Date().toISOString(), stats: s, charts: c }
+                detail: { 
+                  timestamp: new Date().toISOString(), 
+                  stats: s, 
+                  charts: c,
+                  discounts: {
+                    todayAdditionalDiscount: (s as any)?.todayAdditionalDiscount,
+                    totalAdditionalDiscount: (s as any)?.totalAdditionalDiscount,
+                    todayTotalDiscount: (s as any)?.todayTotalDiscount,
+                    totalTotalDiscount: (s as any)?.totalTotalDiscount
+                  }
+                }
               }));
             }
           } catch (error) {
@@ -389,6 +405,15 @@ export function AdminDashboard() {
     window.addEventListener('receipt-generated', handleReceiptEvent);
     window.addEventListener('receipt-printed', handleReceiptEvent);
     
+    // Add specific discount update listener
+    const handleDiscountUpdate = (event: any) => {
+      console.log('💰 AdminDashboard: Discount update event received:', event.detail);
+      handleEntryUpdate();
+    };
+    
+    window.addEventListener('discount-updated', handleDiscountUpdate);
+    window.addEventListener('additional-discount-updated', handleDiscountUpdate);
+    
     // Add specific ticket config refresh listener
     const handleTicketConfigRefresh = async () => {
       console.log('🔄 AdminDashboard: Refreshing ticket configs after update');
@@ -421,6 +446,8 @@ export function AdminDashboard() {
       window.removeEventListener('ticket-config-updated', handleTicketConfigRefresh); // Remove refresh listener
       window.removeEventListener('receipt-generated', handleReceiptEvent);
       window.removeEventListener('receipt-printed', handleReceiptEvent);
+      window.removeEventListener('discount-updated', handleDiscountUpdate);
+      window.removeEventListener('additional-discount-updated', handleDiscountUpdate);
     };
   }, []);
 
