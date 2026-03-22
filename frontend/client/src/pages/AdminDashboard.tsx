@@ -1756,6 +1756,190 @@ export function AdminDashboard() {
 
             <div className="h-12"></div>
 
+            {/* Comprehensive Analytics Dashboard */}
+            <div className="modern-card mb-8">
+              <h3 className="heading-lg text-purple-700 mb-6">📊 Complete Analytics Overview</h3>
+              
+              {/* Payment Analytics Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Today's Payment Breakdown */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200"
+                >
+                  <h4 className="text-lg font-bold text-blue-900 mb-4">💳 Today's Payment Breakdown</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-blue-700">Cash Payments:</span>
+                      <span className="font-bold text-blue-900">₹{!stats ? '0' : <AnimatedCounter value={stats.todayCash || 0} />}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-blue-700">UPI Payments:</span>
+                      <span className="font-bold text-blue-900">₹{!stats ? '0' : <AnimatedCounter value={stats.todayUpi || 0} />}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-blue-700">Advance Payments:</span>
+                      <span className="font-bold text-blue-900">₹{!stats ? '0' : <AnimatedCounter value={stats.todayAdvance || 0} />}</span>
+                    </div>
+                    <div className="border-t border-blue-200 pt-2 mt-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold text-blue-900">Total Revenue:</span>
+                        <span className="font-bold text-xl text-blue-900">₹{!stats ? '0' : <AnimatedCounter value={stats.todayAmount || 0} />}</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* All-Time Payment Breakdown */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200"
+                >
+                  <h4 className="text-lg font-bold text-purple-900 mb-4">🏆 All-Time Payment Breakdown</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-purple-700">Cash Collections:</span>
+                      <span className="font-bold text-purple-900">₹{!stats ? '0' : <AnimatedCounter value={stats.totalCash || 0} />}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-purple-700">UPI Collections:</span>
+                      <span className="font-bold text-purple-900">₹{!stats ? '0' : <AnimatedCounter value={stats.totalUpi || 0} />}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-purple-700">Advance Collections:</span>
+                      <span className="font-bold text-purple-900">₹{!stats ? '0' : <AnimatedCounter value={stats.totalAdvance || 0} />}</span>
+                    </div>
+                    <div className="border-t border-purple-200 pt-2 mt-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold text-purple-900">Total Revenue:</span>
+                        <span className="font-bold text-xl text-purple-900">₹{!stats ? '0' : <AnimatedCounter value={stats.totalAmount || 0} />}</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Discount Analytics */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border-2 border-amber-200"
+                >
+                  <h4 className="text-lg font-bold text-amber-900 mb-4">💰 Discount Analytics</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-amber-700">Today's Discounts:</span>
+                      <span className="font-bold text-amber-900">₹{!stats ? '0' : <AnimatedCounter value={stats.todayTotalDiscount || 0} />}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-amber-700">Additional Today:</span>
+                      <span className="font-bold text-amber-900">₹{!stats ? '0' : <AnimatedCounter value={stats.todayAdditionalDiscount || 0} />}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-amber-700">All-Time Discounts:</span>
+                      <span className="font-bold text-amber-900">₹{!stats ? '0' : <AnimatedCounter value={stats.totalTotalDiscount || 0} />}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-amber-700">Additional All-Time:</span>
+                      <span className="font-bold text-amber-900">₹{!stats ? '0' : <AnimatedCounter value={stats.totalAdditionalDiscount || 0} />}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Performance Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Average Ticket Value */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4 border-2 border-emerald-200"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-emerald-900">📈 Average Ticket Value</span>
+                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-emerald-900">
+                    ₹{!stats ? '0' : <AnimatedCounter value={Math.round(stats.averageTicketValue || 0)} />}
+                  </p>
+                  <p className="text-xs text-emerald-600 mt-1">Per customer average</p>
+                </motion.div>
+
+                {/* Peak Hour */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-xl p-4 border-2 border-rose-200"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-rose-900">⏰ Peak Hour</span>
+                    <div className="w-8 h-8 bg-rose-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-rose-900">
+                    {!stats ? '--:--' : stats.peakHour || '12:00'}
+                  </p>
+                  <p className="text-xs text-rose-600 mt-1">Busiest time today</p>
+                </motion.div>
+
+                {/* Conversion Rate */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-4 border-2 border-indigo-200"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-indigo-900">🎯 Conversion Rate</span>
+                    <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-indigo-900">
+                    {!stats ? '0%' : <AnimatedCounter value={Math.round((stats.conversionRate || 0) * 100)} />}%</p>
+                  <p className="text-xs text-indigo-600 mt-1">Visitor conversion</p>
+                </motion.div>
+
+                {/* Upgrade Rate */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="bg-gradient-to-br from-cyan-50 to-sky-50 rounded-xl p-4 border-2 border-cyan-200"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-cyan-900">⬆️ Upgrade Rate</span>
+                    <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-cyan-900">
+                    {!stats ? '0' : <AnimatedCounter value={stats.todayUpgrades || 0} />}
+                  </p>
+                  <p className="text-xs text-cyan-600 mt-1">Today's upgrades</p>
+                </motion.div>
+              </div>
+            </div>
+
+            <div className="h-12"></div>
+
             {/* Today's Food Coupon Stats */}
             <div className="modern-card mb-8">
               <h3 className="heading-lg text-blue-700 mb-6">🎯 Today's Food Coupons</h3>
@@ -1861,79 +2045,119 @@ export function AdminDashboard() {
                 </motion.div>
               </div>
             </div>
-          </div>
 
-        <div className="h-12"></div>
+            <div className="h-12"></div>
 
-        <div className="modern-card mb-8">
-          <h3 className="heading-lg text-orange-700 mb-6">🏆 All Time Food Coupons</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Total Fast Food Coupons All Time */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-xl p-4 border-2 border-yellow-300"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-yellow-900">🍟 Total Fast Food</span>
-                  <div className="w-8 h-8 bg-yellow-600 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                    </svg>
+            {/* All-Time Food Coupon Stats */}
+            <div className="modern-card mb-8">
+              <h3 className="heading-lg text-purple-700 mb-6">🏆 All-Time Food Coupons</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Fast Food Coupons All-Time */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-4 border-2 border-orange-200"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-orange-900">🍟 Fast Food Coupons</span>
+                    <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
-                <p className="text-xl font-bold text-yellow-900">
-                  {!stats ? '0' : <AnimatedCounter value={stats.totalFastFoodCoupons || 0} />}
-                </p>
-                <p className="text-xs text-yellow-700 mt-1">All time fast food coupons</p>
-              </motion.div>
-
-              {/* Total Main Food Coupons All Time */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="bg-gradient-to-r from-green-100 to-emerald-100 rounded-xl p-4 border-2 border-green-300"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-green-900">🍽️ Total Main Food</span>
-                  <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
+                  <p className="text-2xl font-bold text-orange-900">
+                    {!stats ? '0' : <AnimatedCounter value={stats.totalFastFoodCoupons || 0} />}
+                  </p>
+                  <p className="text-xs text-orange-600 mt-1">Total fast food coupons</p>
+                  <div className="mt-2 text-xs text-blue-700">
+                    <div>Adults: {!stats ? '0' : <AnimatedCounter value={stats.totalAdultsFastFoodCoupons || 0} />}</div>
+                    <div>Kids: {!stats ? '0' : <AnimatedCounter value={stats.totalKidsFastFoodCoupons || 0} />}</div>
                   </div>
-                </div>
-                <p className="text-xl font-bold text-green-900">
-                  {!stats ? '0' : <AnimatedCounter value={stats.totalMainFoodCoupons || 0} />}
-                </p>
-                <p className="text-xs text-green-700 mt-1">All time main food coupons</p>
-              </motion.div>
+                </motion.div>
 
-              {/* Total Food Coupons All Time */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl p-4 border-2 border-purple-300"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-purple-900">🎫 Total All Food</span>
-                  <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                    </svg>
+                {/* Main Food Coupons All-Time */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border-2 border-green-200"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-green-900">🍽️ Main Food Coupons</span>
+                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
-                <p className="text-xl font-bold text-purple-900">
-                  {!stats ? '0' : <AnimatedCounter value={stats.totalFoodCoupons || 0} />}
-                </p>
-                <p className="text-xs text-purple-700 mt-1">All time food coupons</p>
-              </motion.div>
+                  <p className="text-2xl font-bold text-green-900">
+                    {!stats ? '0' : <AnimatedCounter value={stats.totalMainFoodCoupons || 0} />}
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">Total main food coupons</p>
+                  <div className="mt-2 text-xs text-blue-700">
+                    <div>Adults: {!stats ? '0' : <AnimatedCounter value={stats.totalAdultsMainFoodCoupons || 0} />}</div>
+                    <div>Kids: {!stats ? '0' : <AnimatedCounter value={stats.totalKidsMainFoodCoupons || 0} />}</div>
+                  </div>
+                </motion.div>
+
+                {/* Total Food Coupons All-Time */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-purple-200"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-purple-900">🎫 Total Food Coupons</span>
+                    <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {!stats ? '0' : <AnimatedCounter value={stats.totalFoodCoupons || 0} />}
+                  </p>
+                  <p className="text-xs text-purple-600 mt-1">All food coupons all-time</p>
+                  <div className="mt-2 text-xs text-blue-700">
+                    <div>Fast Food: {!stats ? '0' : <AnimatedCounter value={stats.totalFastFoodCoupons || 0} />}</div>
+                    <div>Main Food: {!stats ? '0' : <AnimatedCounter value={stats.totalMainFoodCoupons || 0} />}</div>
+                  </div>
+                </motion.div>
+
+                {/* All-Time Coupon Usage Rate */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-200"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-blue-900">📊 All-Time Coupon Rate</span>
+                    <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-900">
+                    {!stats || !stats.totalPeople ? '0%' : `${Math.round(((stats.totalFoodCoupons || 0) / stats.totalPeople) * 100)}%`}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">People with coupons</p>
+                  <div className="mt-2 text-xs text-blue-700">
+                    <div>Coupons: {!stats ? '0' : <AnimatedCounter value={stats.totalFoodCoupons || 0} />}</div>
+                    <div>People: {!stats ? '0' : <AnimatedCounter value={stats.totalPeople || 0} />}</div>
+                  </div>
+                </motion.div>
+              </div>
             </div>
           </div>
 
-        <div className="modern-card mb-8">
+          <div className="h-12"></div>
+
+          <div className="modern-card mb-8">
           <h3 className="heading-lg text-indigo-900 mb-6">📈 Advanced Analytics & Insights</h3>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
