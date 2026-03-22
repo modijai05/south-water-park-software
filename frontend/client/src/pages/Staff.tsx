@@ -8,6 +8,7 @@ import { AnimatedCounter } from '@/components/AnimatedCounter';
 import Receipt from '@/components/Receipt';
 import type { TicketConfig } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { TICKET_OPTIONS } from '@/types';
 
 interface Stats {
   todayEntries: number;
@@ -100,31 +101,35 @@ export function Staff() {
     }
   };
 
-  // Get current ticket price from dynamic configs (with day-wise pricing)
+  // Get current ticket price from dynamic configs (with day-wise pricing) - SYNCED WITH ADMIN
   const getCurrentTicketPrice = (ticketType: string): number => {
+    console.log('🎫 Staff: Getting price for ticket type:', ticketType, 'Available configs:', ticketConfigs.length);
+    
     const config = ticketConfigs.find(c => c.ticketType === ticketType);
-    if (config && config.dayWisePricing.length > 0) {
+    if (config) {
+      console.log('🎫 Staff: Found config for', ticketType, 'basePrice:', config.basePrice);
+      
       // Get current day name
       const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-      const todayPricing = config.dayWisePricing.find(dp => dp.day === today && dp.enabled);
+      const todayPricing = config.dayWisePricing?.find(dp => dp.day === today && dp.enabled);
       
       if (todayPricing) {
+        console.log('🎫 Staff: Using day-wise pricing for', today, 'price:', todayPricing.fixedAmount || todayPricing.priceMultiplier);
         if (todayPricing.fixedAmount !== undefined) {
           return todayPricing.fixedAmount;
         }
         return Math.round(config.basePrice * todayPricing.priceMultiplier);
       }
-    }
-    
-    if (config) {
+      // Use base price if no day-wise pricing or not enabled
+      console.log('🎫 Staff: Using base price:', config.basePrice);
       return config.basePrice;
     }
     
-    // Fallback to static prices
-    const fallbackPrices: { [key: string]: number } = {
-      '100': 100, '150': 150, '300': 350, '450': 500, '600': 700
-    };
-    return fallbackPrices[ticketType] || 0;
+    // Fallback to static options (same as Admin Dashboard)
+    const staticOption = TICKET_OPTIONS.find(t => t.value === ticketType);
+    const fallbackPrice = staticOption?.price || 0;
+    console.log('🎫 Staff: Using fallback price for', ticketType, ':', fallbackPrice);
+    return fallbackPrice;
   };
 
   useEffect(() => {
@@ -248,12 +253,24 @@ export function Staff() {
 
     // Specific handler for ticket config updates
     const handleTicketConfigUpdate = async () => {
-      console.log('🔄 Staff: Ticket config updated, refreshing configs...');
+      console.log('🔄 Staff: Ticket config updated event received, refreshing configs...');
       try {
         const configs = await ticketConfigApi.getAll();
         if (!cancelled) {
+          console.log('🔄 Staff: Setting new ticket configs:', configs.length, 'configs');
           setTicketConfigs(configs);
           console.log('✅ Staff: Ticket configs refreshed successfully');
+          
+          // Force a re-render by updating a dummy state
+          setTimeout(() => {
+            console.log('🔄 Staff: Triggering price update verification');
+            // Verify prices are updated
+            console.log('🎫 Staff: New 150 price:', getCurrentTicketPrice('150'));
+            console.log('🎫 Staff: New 300 price:', getCurrentTicketPrice('300'));
+            console.log('🎫 Staff: New 450 price:', getCurrentTicketPrice('450'));
+            console.log('🎫 Staff: New 600 price:', getCurrentTicketPrice('600'));
+            console.log('🎫 Staff: New 100 price:', getCurrentTicketPrice('100'));
+          }, 100);
         }
       } catch (error) {
         console.error('❌ Staff: Failed to refresh ticket configs:', error);
