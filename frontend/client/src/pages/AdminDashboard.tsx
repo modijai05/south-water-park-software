@@ -666,6 +666,14 @@ export function AdminDashboard() {
                           <span className="text-gray-600">People:</span>
                           <span className="font-semibold text-cyan-700">{!stats ? '0' : <AnimatedCounter value={stats.today150Adults ?? 0} />}</span>
                         </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Kids:</span>
+                          <span className="font-semibold text-cyan-700">{!stats ? '0' : <AnimatedCounter value={stats.today150Kids ?? 0} />}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Total:</span>
+                          <span className="font-semibold text-cyan-700">{!stats ? '0' : <AnimatedCounter value={stats.today150 ?? 0} />}</span>
+                        </div>
                       </div>
                       <div className="flex items-center text-sm text-cyan-600 mt-3">
                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1255,6 +1263,14 @@ export function AdminDashboard() {
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">People:</span>
                           <span className="font-semibold text-rose-700">{!stats ? '0' : <AnimatedCounter value={stats.total150Adults ?? 0} />}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Kids:</span>
+                          <span className="font-semibold text-rose-700">{!stats ? '0' : <AnimatedCounter value={stats.total150Kids ?? 0} />}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Total:</span>
+                          <span className="font-semibold text-rose-700">{!stats ? '0' : <AnimatedCounter value={stats.total150 ?? 0} />}</span>
                         </div>
                       </div>
                       <div className="flex items-center text-sm text-rose-600 mt-3">

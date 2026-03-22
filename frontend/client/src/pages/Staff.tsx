@@ -545,8 +545,16 @@ export function Staff() {
           </div>
           <div className="space-y-1">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Total Persons:</span>
+              <span className="text-gray-600">Adults:</span>
               <span className="font-bold text-cyan-900">{stats?.today150Adults ?? 0}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Kids:</span>
+              <span className="font-bold text-cyan-900">{stats?.today150Kids ?? 0}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Total:</span>
+              <span className="font-bold text-cyan-900">{stats?.today150 ?? 0}</span>
             </div>
           </div>
           <div className="mt-2 flex items-center text-sm text-cyan-600">

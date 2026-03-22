@@ -39,6 +39,53 @@ router.get('/stats', authenticate, async (req, res) => {
     const todayCouponCounts = aggregateCouponCounts(todayEntries);
     const totalCouponCounts = aggregateCouponCounts(allEntries);
     
+    // Calculate ticket type breakdown statistics
+    const calculateTicketTypeStats = (entries) => {
+      const ticketTypes = ['100', '150', '300', '450', '600'];
+      const stats = {};
+      
+      ticketTypes.forEach(type => {
+        const typeEntries = entries.filter(e => e.ticketType === type);
+        const todayStats = typeEntries.reduce((acc, entry) => {
+          let entryAdults = entry.adults || 0;
+          let entryKids = entry.kids || 0;
+          let entryPeople = entry.totalPeople || 0;
+          
+          // Include people from upgrades
+          if (entry.upgrades) {
+            entry.upgrades.forEach((upgrade) => {
+              entryPeople += (upgrade.adults || 0) + (upgrade.kids || 0);
+              if (upgrade.ticketType !== '150') {
+                entryAdults += upgrade.adults || 0;
+              }
+              entryKids += upgrade.kids || 0;
+            });
+          }
+          
+          // For 150 tickets, adults are counted separately in general adults count
+          // but we still track them in ticket-specific counts
+          return {
+            entries: acc.entries + 1,
+            adults: acc.adults + entryAdults,
+            kids: acc.kids + entryKids,
+            people: acc.people + entryPeople
+          };
+        }, { entries: 0, adults: 0, kids: 0, people: 0 });
+        
+        stats[`today${type}`] = todayStats.entries;
+        stats[`total${type}`] = todayStats.entries;
+        stats[`today${type}Adults`] = todayStats.adults;
+        stats[`total${type}Adults`] = todayStats.adults;
+        stats[`today${type}Kids`] = todayStats.kids;
+        stats[`total${type}Kids`] = todayStats.kids;
+      });
+      
+      return stats;
+    };
+    
+    const todayTicketStats = calculateTicketTypeStats(todayEntries);
+    const totalTicketStats = calculateTicketTypeStats(allEntries);
+    
     // Manual calculations for stats
     const calculatePeopleStats = (entries) => {
       return entries.reduce((acc, entry) => {
@@ -108,6 +155,9 @@ router.get('/stats', authenticate, async (req, res) => {
         totalAdults: manualTotalStats.adults,
         todayKids: manualTodayStats.kids,
         totalKids: manualTotalStats.kids,
+        // Add ticket type breakdown statistics
+        ...todayTicketStats,
+        ...totalTicketStats,
         // Only provide financial data to admin
         ...(isAdmin ? {
           todayAmount: manualTodayStats.finalAmount,
