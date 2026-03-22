@@ -157,6 +157,42 @@ export function Staff() {
     return fallbackPrice;
   };
 
+  // Enhanced sync function to force refresh all data
+  const forceRefreshAllData = async () => {
+    console.log('🔄 Staff: Force refreshing all data...');
+    try {
+      // Invalidate cache first
+      invalidateTicketConfigCache();
+      
+      // Add delay to ensure cache is cleared
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Fetch everything fresh
+      const [statsRes, configs] = await Promise.all([
+        entriesApi.stats(),
+        fetchTicketConfigs()
+      ]);
+      
+      setStats(statsRes as unknown as Stats);
+      console.log('🎫 Staff: Force refreshed - New prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
+      console.log('📊 Staff: Force refreshed - New stats:', statsRes);
+      
+      // Trigger global sync event
+      window.dispatchEvent(new CustomEvent('staff-synced', {
+        detail: {
+          action: 'force-refresh',
+          timestamp: new Date().toISOString(),
+          source: 'staff-dashboard',
+          ticketConfigs: configs,
+          stats: statsRes
+        }
+      }));
+      
+    } catch (error) {
+      console.error('❌ Staff: Failed to force refresh data:', error);
+    }
+  };
+
   // Combined effect for initial data loading and real-time sync
   useEffect(() => {
     let syncInterval: number;
@@ -280,6 +316,26 @@ export function Staff() {
           console.log('🔄 Staff: Refreshed stats and ticket configs');
           console.log('🎫 Staff: Updated prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
           console.log('✅ Staff: Complete data refresh successful');
+          
+          // Trigger comprehensive sync events
+          window.dispatchEvent(new CustomEvent('staff-synced', {
+            detail: {
+              action: 'ticket-config-update',
+              entryId: 'all',
+              timestamp: new Date().toISOString(),
+              source: 'staff-dashboard',
+              ticketConfigs: configs,
+              stats: statsRes
+            }
+          }));
+          
+          window.dispatchEvent(new CustomEvent('global-sync', {
+            detail: {
+              action: 'ticket-config-update',
+              timestamp: new Date().toISOString(),
+              source: 'staff-dashboard'
+            }
+          }));
         }
       } catch (error) {
         console.error('❌ Staff: Failed to refresh ticket configs:', error);
@@ -531,15 +587,29 @@ export function Staff() {
 
   return (
     <Layout title="Dashboard">
-      {/* Sync Status Indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="fixed top-4 right-4 z-40 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg flex items-center gap-2"
-      >
-        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-        Live Sync Active
-      </motion.div>
+      {/* Sync Status Indicator with Refresh Button */}
+      <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg flex items-center gap-2"
+        >
+          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          Live Sync Active
+        </motion.div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={forceRefreshAllData}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg flex items-center gap-2 transition-colors"
+          title="Refresh all data and pricing"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refresh
+        </motion.button>
+      </div>
 
       {/* Welcome Message */}
       <motion.div

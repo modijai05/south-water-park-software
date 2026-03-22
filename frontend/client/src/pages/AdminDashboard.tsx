@@ -168,8 +168,50 @@ export function AdminDashboard() {
       const configs = await ticketConfigApi.getAll();
       console.log('✅ Dashboard: Fetched ticket configs:', configs);
       setTicketConfigs(configs);
+      return configs;
     } catch (error) {
       console.error('❌ Dashboard: Failed to fetch ticket configs:', error);
+      return [];
+    }
+  };
+
+  // Enhanced sync function to force refresh all data
+  const forceRefreshAllData = async () => {
+    console.log('🔄 Admin: Force refreshing all data...');
+    try {
+      // Invalidate cache first
+      invalidateTicketConfigCache();
+      
+      // Add delay to ensure cache is cleared
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Fetch everything fresh
+      const [statsRes, chartsRes, configs] = await Promise.all([
+        entriesApi.stats(),
+        entriesApi.charts(),
+        fetchTicketConfigs()
+      ]);
+      
+      setStats(statsRes as unknown as Stats);
+      setCharts(chartsRes as unknown as Charts);
+      console.log('🎫 Admin: Force refreshed - New prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
+      console.log('📊 Admin: Force refreshed - New stats:', statsRes);
+      console.log('📈 Admin: Force refreshed - New charts:', chartsRes);
+      
+      // Trigger global sync event
+      window.dispatchEvent(new CustomEvent('admin-synced', {
+        detail: {
+          action: 'force-refresh',
+          timestamp: new Date().toISOString(),
+          source: 'admin-dashboard',
+          ticketConfigs: configs,
+          stats: statsRes,
+          charts: chartsRes
+        }
+      }));
+      
+    } catch (error) {
+      console.error('❌ Admin: Failed to force refresh data:', error);
     }
   };
 
@@ -274,8 +316,14 @@ export function AdminDashboard() {
         const fetchData = async () => {
           try {
             console.log('🔄 Dashboard: Fetching updated data...');
-            const [s, c] = await Promise.all([entriesApi.stats(), entriesApi.charts()]);
+            const [s, c] = await Promise.all([
+              entriesApi.stats(), 
+              entriesApi.charts(),
+              fetchTicketConfigs() // Also refresh ticket configs to ensure pricing sync
+            ]);
             if (!cancelled) {
+              console.log('📊 Dashboard: Updated stats received:', s);
+              console.log('📈 Dashboard: Updated charts received:', c);
               setStats(s as unknown as Stats);
               setCharts(c as unknown as Charts);
               
@@ -291,6 +339,7 @@ export function AdminDashboard() {
               }
               
               console.log('✅ Dashboard: Data updated successfully');
+              console.log('🍔 Dashboard: Food coupons data - todayTotal:', (s as any)?.todayTotalFoodCoupons, 'totalFoodCoupons:', (s as any)?.totalFoodCoupons);
               
               // Dispatch sync event for other components
               window.dispatchEvent(new CustomEvent('dashboard-synced', {
@@ -352,6 +401,7 @@ export function AdminDashboard() {
         
         const configs = await ticketConfigApi.getAll();
         setTicketConfigs(configs || []);
+        console.log('🎫 AdminDashboard: Ticket configs refreshed, new prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
       } catch (error) {
         console.error('Failed to refresh ticket configs:', error);
       }
@@ -385,12 +435,17 @@ export function AdminDashboard() {
       const fetchData = async () => {
         try {
           console.log('🔄 Dashboard: Fetching updated data...');
-          const [s, c] = await Promise.all([entriesApi.stats(), entriesApi.charts()]);
+          const [s, c] = await Promise.all([
+            entriesApi.stats(), 
+            entriesApi.charts(),
+            fetchTicketConfigs() // Ensure ticket configs are also refreshed
+          ]);
           if (!cancelled) {
+            console.log('📊 Dashboard: New stats - todayAdvance:', (s as any)?.todayAdvance, 'totalAdvance:', (s as any)?.totalAdvance);
+            console.log('🍔 Dashboard: Food coupons - todayTotal:', (s as any)?.todayTotalFoodCoupons, 'totalFoodCoupons:', (s as any)?.totalFoodCoupons);
             setStats(s as unknown as Stats);
             setCharts(c as unknown as Charts);
             console.log('✅ Dashboard: Data updated via global sync');
-            console.log('📊 Dashboard: New stats - todayAdvance:', (s as any)?.todayAdvance, 'totalAdvance:', (s as any)?.totalAdvance);
           }
         } catch (error) {
           console.error('❌ Dashboard: Global sync failed:', error);
@@ -417,6 +472,30 @@ export function AdminDashboard() {
 
   return (
     <Layout title="Dashboard">
+      {/* Admin Refresh Button */}
+      <div className="fixed top-4 right-4 z-40 flex items-center gap-2">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg flex items-center gap-2"
+        >
+          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          Admin Live Sync
+        </motion.div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={forceRefreshAllData}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg flex items-center gap-2 transition-colors"
+          title="Refresh all admin data and pricing"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refresh All
+        </motion.button>
+      </div>
+
       <div className="space-y-8">
         {/* Loading State */}
         {loading && (
