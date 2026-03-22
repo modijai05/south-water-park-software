@@ -277,19 +277,25 @@ export function Staff() {
       }
     };
 
-    // Optimized event listeners with throttling
+    // Optimized event listeners with reduced throttling for real-time sync
     let lastUpdateTime = 0;
     const throttledHandleEntryUpdate = () => {
       const now = Date.now();
-      // Throttle to prevent excessive calls
-      if (now - lastUpdateTime < 1000) return;
+      // Reduced throttle to 100ms for more responsive updates
+      if (now - lastUpdateTime < 100) return;
       lastUpdateTime = now;
       handleEntryUpdate();
     };
 
+    // Immediate handler for critical events (no throttling)
+    const immediateHandleEntryUpdate = () => {
+      console.log('🚀 Staff: Immediate sync triggered for entry change');
+      handleEntryUpdate();
+    };
+
     window.addEventListener('entry-updated', throttledHandleEntryUpdate);
-    window.addEventListener('entry-created', throttledHandleEntryUpdate);
-    window.addEventListener('entry-deleted', throttledHandleEntryUpdate);
+    window.addEventListener('entry-created', immediateHandleEntryUpdate); // Immediate sync for new entries
+    window.addEventListener('entry-deleted', immediateHandleEntryUpdate); // Immediate sync for deletions
     window.addEventListener('dashboard-synced', throttledHandleEntryUpdate);
     window.addEventListener('admin-synced', throttledHandleEntryUpdate);
     window.addEventListener('staff-synced', throttledHandleEntryUpdate);
@@ -306,8 +312,8 @@ export function Staff() {
     return () => {
       cancelled = true;
       window.removeEventListener('entry-updated', throttledHandleEntryUpdate);
-      window.removeEventListener('entry-created', throttledHandleEntryUpdate);
-      window.removeEventListener('entry-deleted', throttledHandleEntryUpdate);
+      window.removeEventListener('entry-created', immediateHandleEntryUpdate);
+      window.removeEventListener('entry-deleted', immediateHandleEntryUpdate);
       window.removeEventListener('dashboard-synced', throttledHandleEntryUpdate);
       window.removeEventListener('admin-synced', throttledHandleEntryUpdate);
       window.removeEventListener('staff-synced', throttledHandleEntryUpdate);

@@ -301,20 +301,26 @@ export function AdminDashboard() {
       }
     };
 
-    // Optimized event listeners with throttling
+    // Optimized event listeners with reduced throttling for real-time sync
     let lastUpdateTime = 0;
     const throttledHandleEntryUpdate = () => {
       const now = Date.now();
-      // Throttle to prevent excessive calls
-      if (now - lastUpdateTime < 1000) return;
+      // Reduced throttle to 100ms for more responsive updates
+      if (now - lastUpdateTime < 100) return;
       lastUpdateTime = now;
+      handleEntryUpdate();
+    };
+
+    // Immediate handler for critical events (no throttling)
+    const immediateHandleEntryUpdate = () => {
+      console.log('🚀 Admin: Immediate sync triggered for entry change');
       handleEntryUpdate();
     };
 
     // Listen for all update events including staff dashboard events
     window.addEventListener('entry-updated', throttledHandleEntryUpdate);
-    window.addEventListener('entry-created', throttledHandleEntryUpdate);
-    window.addEventListener('entry-deleted', throttledHandleEntryUpdate);
+    window.addEventListener('entry-created', immediateHandleEntryUpdate); // Immediate sync for new entries
+    window.addEventListener('entry-deleted', immediateHandleEntryUpdate); // Immediate sync for deletions
     window.addEventListener('user-updated', throttledHandleEntryUpdate);
     window.addEventListener('payment-completed', throttledHandleEntryUpdate);
     window.addEventListener('staff-synced', throttledHandleEntryUpdate); // Listen to staff dashboard events
@@ -336,8 +342,8 @@ export function AdminDashboard() {
     return () => {
       cancelled = true;
       window.removeEventListener('entry-updated', throttledHandleEntryUpdate);
-      window.removeEventListener('entry-created', throttledHandleEntryUpdate);
-      window.removeEventListener('entry-deleted', throttledHandleEntryUpdate);
+      window.removeEventListener('entry-created', immediateHandleEntryUpdate);
+      window.removeEventListener('entry-deleted', immediateHandleEntryUpdate);
       window.removeEventListener('user-updated', throttledHandleEntryUpdate);
       window.removeEventListener('payment-completed', throttledHandleEntryUpdate);
       window.removeEventListener('staff-synced', throttledHandleEntryUpdate); // Remove staff event listener
