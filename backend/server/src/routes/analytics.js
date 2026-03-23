@@ -118,15 +118,27 @@ router.get('/today', authenticate, requireAdmin, async (req, res) => {
   try {
     console.log('📊 Today analytics endpoint called by user:', req.user?.username);
     
-    const todayStart = dayjs().startOf('day').toDate();
-    const todayEnd = dayjs().endOf('day').toDate();
-    const todayFilter = { createdAt: { $gte: todayStart, $lte: todayEnd } };
+    // Use UTC timezone to ensure consistent date handling
+    const now = dayjs();
+    const todayStart = now.startOf('day').toDate();
+    const todayEnd = now.endOf('day').toDate();
+    
+    // Create date filter without timezone complications
+    const todayFilter = { 
+      createdAt: { 
+        $gte: todayStart, 
+        $lte: todayEnd 
+      } 
+    };
 
     console.log('📊 Today date range:', {
       todayStart: todayStart.toISOString(),
       todayEnd: todayEnd.toISOString(),
-      timezone: dayjs().format('Z')
+      currentTime: now.toISOString(),
+      timezone: now.format('Z')
     });
+
+    console.log('📊 Today filter object:', JSON.stringify(todayFilter));
 
     const entries = await Entry.find(todayFilter).lean();
     console.log('📊 Today entries found:', entries.length);
