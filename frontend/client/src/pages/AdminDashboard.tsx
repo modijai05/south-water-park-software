@@ -155,71 +155,6 @@ export function AdminDashboard() {
   const [charts, setCharts] = useState<Charts | null>(null);
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // TARGETED TODAY'S DATA RESET - Preserve all-time data
-  useEffect(() => {
-    console.log('🎯 TARGETED RESET: Setting TODAY\'S data to ZERO, preserving ALL-TIME data');
-    
-    // Only reset TODAY'S data, preserve all-time data for API fetching
-    const todayResetStats = {
-      // TODAY'S DATA - SET TO ZERO (0 entries today)
-      todayEntries: 0,
-      todayPeople: 0,
-      todayAdults: 0,
-      todayKids: 0,
-      today150: 0,
-      today300: 0,
-      today450: 0,
-      today600: 0,
-      today100: 0,
-      today150Adults: 0,
-      today300Adults: 0,
-      today450Adults: 0,
-      today600Adults: 0,
-      today100Adults: 0,
-      today150Kids: 0,
-      today300Kids: 0,
-      today450Kids: 0,
-      today600Kids: 0,
-      today100Kids: 0,
-      todayTotalFoodCoupons: 0,
-      todayTotalFastFoodCoupons: 0,
-      todayTotalMainFoodCoupons: 0,
-      todayFinalAmount: 0,
-      todayCashAmount: 0,
-      todayUpiAmount: 0,
-      todayAdvanceAmount: 0,
-      todayKidDiscount: 0,
-      todayAdditionalDiscount: 0,
-      todayTotalDiscount: 0,
-      todayCash: 0,
-      todayUpi: 0,
-      todayAdvance: 0,
-      todayAmount: 0
-    };
-    
-    // Apply today's reset immediately
-    setStats(todayResetStats as unknown as Stats);
-    setLoading(false);
-    
-    console.log('🧹🧹 TARGETED RESET: TODAY\'S data set to ZERO, ALL-TIME data preserved');
-    
-    // Continuously ensure today's data stays zero while allowing all-time data to be fetched
-    const interval = setInterval(() => {
-      // Only override today's data, preserve any all-time data that was fetched
-      setStats(prevStats => {
-        if (prevStats) {
-          return {
-            ...prevStats,
-            ...todayResetStats
-          } as unknown as Stats;
-        }
-        return todayResetStats as unknown as Stats;
-      });
-    }, 2000); // Every 2 seconds
-    
-    return () => clearInterval(interval);
-  }, []);
   const [error, setError] = useState<string | null>(null);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
 
@@ -601,138 +536,7 @@ export function AdminDashboard() {
     const handleDailyReset = (data: any) => {
       if (!cancelled) {
         console.log('🌅 AdminDashboard: Daily reset triggered, refreshing data');
-        // Force refresh all data to get today's fresh data
         handleGlobalSyncTriggered({ ...data, reason: 'daily-reset' });
-      }
-    };
-
-    // Handle force reset events (aggressive reset)
-    const handleForceReset = (data: any) => {
-      if (!cancelled) {
-        console.log('🚨 AdminDashboard: FORCE RESET triggered - clearing all data immediately');
-        
-        // Clear stats state immediately
-        setStats(null);
-        setCharts(null);
-        setRecentEntries([]);
-        
-        // Force refresh after a short delay
-        setTimeout(() => {
-          if (!cancelled) {
-            console.log('🔄 AdminDashboard: Force refreshing data after clear');
-            handleGlobalSyncTriggered({ ...data, reason: 'force-reset' });
-          }
-        }, 500);
-      }
-    };
-
-    // Handle emergency reset events (complete clear)
-    const handleEmergencyReset = (data: any) => {
-      if (!cancelled) {
-        console.log('🚨🚨 AdminDashboard: EMERGENCY RESET triggered - COMPLETE CLEAR');
-        
-        // Clear ALL state immediately
-        setStats(null);
-        setCharts(null);
-        setRecentEntries([]);
-        setLoading(true);
-        
-        // Force refresh after short delay
-        setTimeout(() => {
-          if (!cancelled) {
-            console.log('🔄 AdminDashboard: Emergency refresh after complete clear');
-            setLoading(false);
-            handleGlobalSyncTriggered({ ...data, reason: 'emergency-reset' });
-          }
-        }, 1000);
-      }
-    };
-
-    // Handle immediate reset events (DIRECT CLEAR)
-    const handleImmediateReset = (data: any) => {
-      if (!cancelled) {
-        console.log('🚨🚨 AdminDashboard: IMMEDIATE RESET triggered - DIRECT CLEAR NOW');
-        
-        // Clear ALL state IMMEDIATELY
-        setStats(null);
-        setCharts(null);
-        setRecentEntries([]);
-        setLoading(true);
-        
-        // Force refresh immediately
-        setTimeout(() => {
-          if (!cancelled) {
-            console.log('🔄 AdminDashboard: Immediate refresh after direct clear');
-            setLoading(false);
-            handleGlobalSyncTriggered({ ...data, reason: 'immediate-reset' });
-          }
-        }, 500);
-      }
-    };
-
-    // Handle manual forced reset events (SET TO ZERO)
-    const handleManualForcedReset = (data: any) => {
-      if (!cancelled) {
-        console.log('🚨🚨 AdminDashboard: MANUAL FORCED RESET - SETTING ALL TO ZERO');
-        
-        // Force set all stats to ZERO immediately
-        const zeroStats = {
-          todayEntries: 0,
-          totalEntries: 0,
-          todayPeople: 0,
-          totalPeople: 0,
-          todayAdults: 0,
-          totalAdults: 0,
-          todayKids: 0,
-          totalKids: 0,
-          today150: 0,
-          today300: 0,
-          today450: 0,
-          today600: 0,
-          today100: 0,
-          today150Adults: 0,
-          today300Adults: 0,
-          today450Adults: 0,
-          today600Adults: 0,
-          today100Adults: 0,
-          today150Kids: 0,
-          today300Kids: 0,
-          today450Kids: 0,
-          today600Kids: 0,
-          today100Kids: 0,
-          todayTotalFoodCoupons: 0,
-          todayTotalFastFoodCoupons: 0,
-          todayTotalMainFoodCoupons: 0,
-          todayFinalAmount: 0,
-          todayCashAmount: 0,
-          todayUpiAmount: 0,
-          todayAdvanceAmount: 0,
-          todayKidDiscount: 0,
-          todayAdditionalDiscount: 0,
-          todayTotalDiscount: 0,
-          totalFoodCoupons: 0,
-          totalFastFoodCoupons: 0,
-          totalMainFoodCoupons: 0,
-          totalFinalAmount: 0,
-          totalCashAmount: 0,
-          totalUpiAmount: 0,
-          totalAdvanceAmount: 0,
-          totalKidDiscount: 0,
-          totalAdditionalDiscount: 0,
-          totalTotalDiscount: 0,
-          todayCash: 0,
-          todayUpi: 0,
-          todayAdvance: 0,
-          todayAmount: 0
-        };
-        
-        // Set stats to zero immediately
-        setStats(zeroStats as unknown as Stats);
-        setCharts(null);
-        setRecentEntries([]);
-        setLoading(false);
-        
-        console.log('🧹🧹 AdminDashboard: All stats manually set to ZERO');
       }
     };
 
@@ -740,31 +544,15 @@ export function AdminDashboard() {
     globalSyncService.addEventListener('global-sync-triggered', handleGlobalSyncTriggered);
     globalSyncService.addEventListener('immediate-sync-required', handleImmediateSyncRequired);
     globalSyncService.addEventListener('daily-reset-complete', handleDailyReset);
-    globalSyncService.addEventListener('force-daily-reset', handleForceReset);
-    globalSyncService.addEventListener('emergency-reset-all', handleEmergencyReset);
-    globalSyncService.addEventListener('immediate-reset-all', handleImmediateReset);
-    globalSyncService.addEventListener('manual-forced-reset', handleManualForcedReset);
 
     // Also listen for DOM events for compatibility
     window.addEventListener('daily-reset', handleDailyReset);
-    window.addEventListener('force-daily-reset', handleForceReset);
-    window.addEventListener('emergency-reset-all', handleEmergencyReset);
-    window.addEventListener('immediate-reset-all', handleImmediateReset);
-    window.addEventListener('manual-forced-reset', handleManualForcedReset);
 
     return () => {
       globalSyncService.removeEventListener('global-sync-triggered', handleGlobalSyncTriggered);
       globalSyncService.removeEventListener('immediate-sync-required', handleImmediateSyncRequired);
       globalSyncService.removeEventListener('daily-reset-complete', handleDailyReset);
-      globalSyncService.removeEventListener('force-daily-reset', handleForceReset);
-      globalSyncService.removeEventListener('emergency-reset-all', handleEmergencyReset);
-      globalSyncService.removeEventListener('immediate-reset-all', handleImmediateReset);
-      globalSyncService.removeEventListener('manual-forced-reset', handleManualForcedReset);
       window.removeEventListener('daily-reset', handleDailyReset);
-      window.removeEventListener('force-daily-reset', handleForceReset);
-      window.removeEventListener('emergency-reset-all', handleEmergencyReset);
-      window.removeEventListener('immediate-reset-all', handleImmediateReset);
-      window.removeEventListener('manual-forced-reset', handleManualForcedReset);
     };
   }, []);
 
