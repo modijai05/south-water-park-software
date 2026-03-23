@@ -106,8 +106,9 @@ export function TicketAnalytics() {
       if (timeRange === 'today') {
         // Use date-wise endpoint for today's data
         response = await analyticsApi.dateWise();
+        console.log('✅ Date-wise analytics data loaded:', response);
         
-        // Use date-wise data for today's view
+        // Use today's analytics from the new endpoint
         const analyticsData: AnalyticsData = {
           demandAnalysis: response.todayAnalytics || [],
           upgradeInsights: [],

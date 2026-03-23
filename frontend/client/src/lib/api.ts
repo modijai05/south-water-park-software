@@ -120,10 +120,10 @@ export const entriesApi = {
     .then(response => response),
   clearAll: () => api<{ success: boolean; message: string }>('/entries/clear-all', { method: 'DELETE' })
     .then(response => response),
-  stats: () => api<{ success: boolean; data: Record<string, number> }>('/entries/stats')
+  stats: () => api<{ success: boolean; data: Record<string, number> }>(`/entries/stats?t=${Date.now()}`)
     .then(response => response.data),
   charts: () =>
-    api<{ success: boolean; data: { last7Days: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number }[]; monthly: { _id: string; count: number; amount: number }[] } }>(`/entries/charts`)
+    api<{ success: boolean; data: { last7Days: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number }[]; monthly: { _id: string; count: number; amount: number }[] } }>(`/entries/charts?t=${Date.now()}`)
     .then(response => response.data),
 };
 
@@ -158,30 +158,35 @@ export const analyticsApi = {
   demand: (timeRange?: string) => {
     const q = new URLSearchParams();
     if (timeRange) q.set('timeRange', timeRange);
+    q.set('t', Date.now().toString()); // Cache-busting
     const query = q.toString();
     return api<any[]>(`/analytics/demand${query ? `?${query}` : ''}`);
   },
   upgrades: (timeRange?: string) => {
     const q = new URLSearchParams();
     if (timeRange) q.set('timeRange', timeRange);
+    q.set('t', Date.now().toString()); // Cache-busting
     const query = q.toString();
     return api<any[]>(`/analytics/upgrades${query ? `?${query}` : ''}`);
   },
   timeSeries: (timeRange?: string) => {
     const q = new URLSearchParams();
     if (timeRange) q.set('timeRange', timeRange);
+    q.set('t', Date.now().toString()); // Cache-busting
     const query = q.toString();
     return api<any[]>(`/analytics/timeseries${query ? `?${query}` : ''}`);
   },
   peakHours: (timeRange?: string) => {
     const q = new URLSearchParams();
     if (timeRange) q.set('timeRange', timeRange);
+    q.set('t', Date.now().toString()); // Cache-busting
     const query = q.toString();
     return api<any[]>(`/analytics/peak-hours${query ? `?${query}` : ''}`);
   },
   customerPreferences: (timeRange?: string) => {
     const q = new URLSearchParams();
     if (timeRange) q.set('timeRange', timeRange);
+    q.set('t', Date.now().toString()); // Cache-busting
     const query = q.toString();
     return api<any[]>(`/analytics/customer-preferences${query ? `?${query}` : ''}`);
   },
@@ -196,6 +201,10 @@ export const analyticsApi = {
         today: any, 
         historical: any 
       }
-    }>(`/analytics/date-wise`);
+    }>(`/analytics/date-wise`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}`
+      }
+    });
   },
 };
