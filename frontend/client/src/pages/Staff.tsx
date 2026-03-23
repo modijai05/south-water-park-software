@@ -84,7 +84,7 @@ export function Staff() {
   const [loading, setLoading] = useState(true);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
   
-  // BRUTE FORCE ZERO OVERRIDE - SHOW ZERO IMMEDIATELY
+  // BRUTE FORCE ZERO OVERRIDE - SHOW ZERO IMMEDIATELY AND CONTINUOUSLY
   useEffect(() => {
     console.log('🚨🚨 STAFF BRUTE FORCE: Setting all display values to ZERO NOW');
     
@@ -144,6 +144,15 @@ export function Staff() {
     setLoading(false);
     
     console.log('🧹🧹 STAFF BRUTE FORCE: All values forced to ZERO in display');
+    
+    // CONTINUOUSLY override any data fetching attempts
+    const interval = setInterval(() => {
+      console.log('🔄 STAFF BRUTE FORCE: Re-applying ZERO override');
+      setStats(forcedZeroStats as unknown as Stats);
+      setLoading(false);
+    }, 1000); // Every 1 second
+    
+    return () => clearInterval(interval);
   }, []); // Run only once on mount
   
   // Receipt generation states

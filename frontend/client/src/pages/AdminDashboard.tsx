@@ -156,7 +156,7 @@ export function AdminDashboard() {
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // BRUTE FORCE ZERO OVERRIDE - SHOW ZERO IMMEDIATELY
+  // BRUTE FORCE ZERO OVERRIDE - SHOW ZERO IMMEDIATELY AND CONTINUOUSLY
   useEffect(() => {
     console.log('🚨🚨 BRUTE FORCE: Setting all display values to ZERO NOW');
     
@@ -218,6 +218,17 @@ export function AdminDashboard() {
     setLoading(false);
     
     console.log('🧹🧹 BRUTE FORCE: All values forced to ZERO in display');
+    
+    // CONTINUOUSLY override any data fetching attempts
+    const interval = setInterval(() => {
+      console.log('🔄 BRUTE FORCE: Re-applying ZERO override');
+      setStats(forcedZeroStats as unknown as Stats);
+      setCharts(null);
+      setRecentEntries([]);
+      setLoading(false);
+    }, 1000); // Every 1 second
+    
+    return () => clearInterval(interval);
   }, []); // Run only once on mount
   const [error, setError] = useState<string | null>(null);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
