@@ -45,6 +45,47 @@ export function Layout({ children, title }: LayoutProps) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [navigate, location.pathname, user?.role]);
+  
+  // Add global styles for animations
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .animate-slide-in {
+        animation: slideInRight 0.3s ease-out;
+      }
+      
+      .animate-slide-out {
+        animation: slideOutRight 0.3s ease-out;
+      }
+      
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   // Optimize time updates - update every 30 seconds instead of every second
   useEffect(() => {

@@ -59,11 +59,11 @@ class GlobalSyncService {
     });
   }
 
-  // Setup periodic sync every 30 seconds
+  // Setup periodic sync every 60 seconds (reduced from 30 for performance)
   private setupPeriodicSync() {
     this.syncInterval = setInterval(() => {
       this.triggerGlobalSync();
-    }, 30000); // 30 seconds
+    }, 60000); // 60 seconds instead of 30 for better performance
   }
 
   // Add event listener

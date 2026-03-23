@@ -542,31 +542,27 @@ export function Payment() {
 
       
 
-      // Animate in
-
+      // Animate in with CSS transitions for better performance
+      successToast.classList.add('animate-slide-in');
       setTimeout(() => {
-
-        successToast.classList.remove('translate-x-full');
-
-        successToast.classList.add('translate-x-0');
-
+        successToast.classList.remove('animate-slide-in');
+        successToast.classList.add('animate-slide-out');
+        
+        // Remove after animation completes
+        setTimeout(() => {
+          document.body.removeChild(successToast);
+        }, 300);
       }, 100);
 
-      
-
-      // Remove after 4 seconds
-
+      // Remove after 2 seconds for better UX
       setTimeout(() => {
-
-        successToast.classList.add('translate-x-full');
-
+        successToast.classList.add('animate-slide-out');
+        
+        // Remove after animation completes
         setTimeout(() => {
-
           document.body.removeChild(successToast);
-
         }, 300);
-
-      }, 4000);
+      }, 2000);
 
       
 
