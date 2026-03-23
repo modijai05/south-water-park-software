@@ -16,6 +16,53 @@ class GlobalSyncService {
     setTimeout(() => {
       this.forceDailyResetNow();
     }, 1000);
+    
+    // EMERGENCY FIX: Immediate reset on page load
+    setTimeout(() => {
+      console.log('🚨 EMERGENCY: Immediate complete reset triggered');
+      this.emergencyResetAllData();
+    }, 2000);
+  }
+
+  // Emergency complete reset (immediate fix)
+  public emergencyResetAllData() {
+    console.log('🚨🚨 EMERGENCY RESET: Clearing ALL data immediately');
+    
+    // Clear ALL localStorage
+    localStorage.clear();
+    
+    // Clear all stats-related cache specifically
+    localStorage.removeItem('lastResetDate');
+    localStorage.removeItem('adminDashboardStats');
+    localStorage.removeItem('staffDashboardStats');
+    localStorage.removeItem('dashboardCache');
+    localStorage.removeItem('ticketConfigs');
+    localStorage.removeItem('recentEntries');
+    localStorage.removeItem('searchResults');
+    
+    // Trigger multiple reset events
+    this.triggerDailyReset();
+    this.forceDailyResetNow();
+    
+    // Broadcast emergency reset
+    this.broadcastEvent('emergency-reset-all', {
+      timestamp: new Date().toISOString(),
+      message: 'EMERGENCY: Complete data reset triggered',
+      clearAll: true,
+      immediate: true
+    });
+    
+    // Dispatch DOM emergency reset
+    window.dispatchEvent(new CustomEvent('emergency-reset-all', {
+      detail: {
+        timestamp: new Date().toISOString(),
+        message: 'EMERGENCY RESET - Clear everything immediately',
+        clearAll: true,
+        immediate: true
+      }
+    }));
+    
+    console.log('🧹🧹 EMERGENCY RESET: All data cleared, events dispatched');
   }
 
   public static getInstance(): GlobalSyncService {

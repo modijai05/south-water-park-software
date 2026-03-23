@@ -474,23 +474,48 @@ export function Staff() {
       }
     };
 
+    // Handle emergency reset events (complete clear)
+    const handleEmergencyReset = (data: any) => {
+      if (!cancelled) {
+        console.log('🚨🚨 Staff: EMERGENCY RESET triggered - COMPLETE CLEAR');
+        
+        // Clear ALL state immediately
+        setStats(null);
+        setSearchResults([]);
+        setLoading(true);
+        
+        // Force refresh after short delay
+        setTimeout(() => {
+          if (!cancelled) {
+            console.log('🔄 Staff: Emergency refresh after complete clear');
+            setLoading(false);
+            handleGlobalSyncTriggered({ ...data, reason: 'emergency-reset' });
+          }
+        }, 1000);
+      }
+    };
+
     // Register listeners with global sync service
     globalSyncService.addEventListener('global-sync-triggered', handleGlobalSyncTriggered);
     globalSyncService.addEventListener('immediate-sync-required', handleImmediateSyncRequired);
     globalSyncService.addEventListener('daily-reset-complete', handleDailyReset);
     globalSyncService.addEventListener('force-daily-reset', handleForceReset);
+    globalSyncService.addEventListener('emergency-reset-all', handleEmergencyReset);
 
     // Also listen for DOM events for compatibility
     window.addEventListener('daily-reset', handleDailyReset);
     window.addEventListener('force-daily-reset', handleForceReset);
+    window.addEventListener('emergency-reset-all', handleEmergencyReset);
 
     return () => {
       globalSyncService.removeEventListener('global-sync-triggered', handleGlobalSyncTriggered);
       globalSyncService.removeEventListener('immediate-sync-required', handleImmediateSyncRequired);
       globalSyncService.removeEventListener('daily-reset-complete', handleDailyReset);
       globalSyncService.removeEventListener('force-daily-reset', handleForceReset);
+      globalSyncService.removeEventListener('emergency-reset-all', handleEmergencyReset);
       window.removeEventListener('daily-reset', handleDailyReset);
       window.removeEventListener('force-daily-reset', handleForceReset);
+      window.removeEventListener('emergency-reset-all', handleEmergencyReset);
     };
   }, []);
   
