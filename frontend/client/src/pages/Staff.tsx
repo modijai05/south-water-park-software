@@ -84,6 +84,68 @@ export function Staff() {
   const [loading, setLoading] = useState(true);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
   
+  // BRUTE FORCE ZERO OVERRIDE - SHOW ZERO IMMEDIATELY
+  useEffect(() => {
+    console.log('🚨🚨 STAFF BRUTE FORCE: Setting all display values to ZERO NOW');
+    
+    // Force all stats to ZERO immediately
+    const forcedZeroStats = {
+      todayEntries: 0,
+      totalEntries: 0,
+      todayPeople: 0,
+      totalPeople: 0,
+      todayAdults: 0,
+      totalAdults: 0,
+      todayKids: 0,
+      totalKids: 0,
+      today150: 0,
+      today300: 0,
+      today450: 0,
+      today600: 0,
+      today100: 0,
+      today150Adults: 0,
+      today300Adults: 0,
+      today450Adults: 0,
+      today600Adults: 0,
+      today100Adults: 0,
+      today150Kids: 0,
+      today300Kids: 0,
+      today450Kids: 0,
+      today600Kids: 0,
+      today100Kids: 0,
+      todayTotalFoodCoupons: 0,
+      todayTotalFastFoodCoupons: 0,
+      todayTotalMainFoodCoupons: 0,
+      todayFinalAmount: 0,
+      todayCashAmount: 0,
+      todayUpiAmount: 0,
+      todayAdvanceAmount: 0,
+      todayKidDiscount: 0,
+      todayAdditionalDiscount: 0,
+      todayTotalDiscount: 0,
+      totalFoodCoupons: 0,
+      totalFastFoodCoupons: 0,
+      totalMainFoodCoupons: 0,
+      totalFinalAmount: 0,
+      totalCashAmount: 0,
+      totalUpiAmount: 0,
+      totalAdvanceAmount: 0,
+      totalKidDiscount: 0,
+      totalAdditionalDiscount: 0,
+      totalTotalDiscount: 0,
+      todayCash: 0,
+      todayUpi: 0,
+      todayAdvance: 0,
+      todayAmount: 0
+    };
+    
+    // Set to zero immediately
+    setStats(forcedZeroStats as unknown as Stats);
+    setLoading(false);
+    
+    console.log('🧹🧹 STAFF BRUTE FORCE: All values forced to ZERO in display');
+  }, []); // Run only once on mount
+  
   // Receipt generation states
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
