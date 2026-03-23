@@ -583,17 +583,41 @@ export function AdminDashboard() {
       }
     };
 
+    // Handle immediate reset events (DIRECT CLEAR)
+    const handleImmediateReset = (data: any) => {
+      if (!cancelled) {
+        console.log('🚨🚨 AdminDashboard: IMMEDIATE RESET triggered - DIRECT CLEAR NOW');
+        
+        // Clear ALL state IMMEDIATELY
+        setStats(null);
+        setCharts(null);
+        setRecentEntries([]);
+        setLoading(true);
+        
+        // Force refresh immediately
+        setTimeout(() => {
+          if (!cancelled) {
+            console.log('🔄 AdminDashboard: Immediate refresh after direct clear');
+            setLoading(false);
+            handleGlobalSyncTriggered({ ...data, reason: 'immediate-reset' });
+          }
+        }, 500);
+      }
+    };
+
     // Register listeners with global sync service
     globalSyncService.addEventListener('global-sync-triggered', handleGlobalSyncTriggered);
     globalSyncService.addEventListener('immediate-sync-required', handleImmediateSyncRequired);
     globalSyncService.addEventListener('daily-reset-complete', handleDailyReset);
     globalSyncService.addEventListener('force-daily-reset', handleForceReset);
     globalSyncService.addEventListener('emergency-reset-all', handleEmergencyReset);
+    globalSyncService.addEventListener('immediate-reset-all', handleImmediateReset);
 
     // Also listen for DOM events for compatibility
     window.addEventListener('daily-reset', handleDailyReset);
     window.addEventListener('force-daily-reset', handleForceReset);
     window.addEventListener('emergency-reset-all', handleEmergencyReset);
+    window.addEventListener('immediate-reset-all', handleImmediateReset);
 
     return () => {
       globalSyncService.removeEventListener('global-sync-triggered', handleGlobalSyncTriggered);
@@ -601,9 +625,11 @@ export function AdminDashboard() {
       globalSyncService.removeEventListener('daily-reset-complete', handleDailyReset);
       globalSyncService.removeEventListener('force-daily-reset', handleForceReset);
       globalSyncService.removeEventListener('emergency-reset-all', handleEmergencyReset);
+      globalSyncService.removeEventListener('immediate-reset-all', handleImmediateReset);
       window.removeEventListener('daily-reset', handleDailyReset);
       window.removeEventListener('force-daily-reset', handleForceReset);
       window.removeEventListener('emergency-reset-all', handleEmergencyReset);
+      window.removeEventListener('immediate-reset-all', handleImmediateReset);
     };
   }, []);
 

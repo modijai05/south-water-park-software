@@ -9,19 +9,40 @@ class GlobalSyncService {
   private dailyResetInterval: NodeJS.Timeout | null = null;
 
   private constructor() {
+    // IMMEDIATE RESET - NO DELAYS
+    console.log('🚨 IMMEDIATE RESET: Clearing all data NOW');
+    localStorage.clear();
+    localStorage.removeItem('lastResetDate');
+    localStorage.removeItem('adminDashboardStats');
+    localStorage.removeItem('staffDashboardStats');
+    localStorage.removeItem('dashboardCache');
+    localStorage.removeItem('ticketConfigs');
+    localStorage.removeItem('recentEntries');
+    localStorage.removeItem('searchResults');
+    
+    // Trigger immediate reset events
+    this.triggerDailyReset();
+    
+    // Broadcast immediate reset
+    this.broadcastEvent('immediate-reset-all', {
+      timestamp: new Date().toISOString(),
+      message: 'IMMEDIATE RESET - Clear everything NOW',
+      clearAll: true,
+      immediate: true
+    });
+    
+    // Dispatch DOM event
+    window.dispatchEvent(new CustomEvent('immediate-reset-all', {
+      detail: {
+        timestamp: new Date().toISOString(),
+        message: 'IMMEDIATE RESET - Clear everything NOW',
+        clearAll: true,
+        immediate: true
+      }
+    }));
+    
     this.initializeDailyReset();
     this.setupPeriodicSync();
-    
-    // Professional fix: Force immediate reset to clear yesterday's data
-    setTimeout(() => {
-      this.forceDailyResetNow();
-    }, 1000);
-    
-    // EMERGENCY FIX: Immediate reset on page load
-    setTimeout(() => {
-      console.log('🚨 EMERGENCY: Immediate complete reset triggered');
-      this.emergencyResetAllData();
-    }, 2000);
   }
 
   // Emergency complete reset (immediate fix)
