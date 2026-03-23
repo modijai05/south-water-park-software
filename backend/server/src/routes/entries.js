@@ -12,11 +12,21 @@ const router = Router();
 // GET /api/entries/stats - Get entry statistics
 router.get('/stats', authenticate, async (req, res) => {
   try {
-    console.error('Entries stats API called successfully');
+    console.error('📊 Entries stats API called successfully');
     const isAdmin = req.user?.role === 'admin';
-    const todayStart = dayjs().startOf('day').toDate();
-    const todayEnd = dayjs().endOf('day').toDate();
+    
+    // Use UTC timezone to ensure consistent date handling
+    const now = dayjs();
+    const todayStart = now.startOf('day').utc().toDate();
+    const todayEnd = now.endOf('day').utc().toDate();
     const todayFilter = { createdAt: { $gte: todayStart, $lte: todayEnd } };
+
+    console.log('📊 Today date range:', {
+      todayStart: todayStart.toISOString(),
+      todayEnd: todayEnd.toISOString(),
+      currentTime: now.toISOString(),
+      timezone: now.format('Z')
+    });
 
     // For staff, filter by their own entries
     const staffFilter = isAdmin ? {} : { createdBy: req.user?._id };
@@ -35,6 +45,14 @@ router.get('/stats', authenticate, async (req, res) => {
         .lean()
         .maxTimeMS(10000)
     ]);
+    
+    console.log('📊 Today entries found:', todayEntries.length);
+    console.log('📊 Today entries sample:', todayEntries.slice(0, 3).map(e => ({
+      id: e._id,
+      createdAt: e.createdAt,
+      ticketType: e.ticketType,
+      finalAmount: e.finalAmount
+    })));
     
     const todayCouponCounts = aggregateCouponCounts(todayEntries);
     const totalCouponCounts = aggregateCouponCounts(allEntries);
@@ -131,6 +149,15 @@ router.get('/stats', authenticate, async (req, res) => {
       kidDiscount: todayEntries.reduce((sum, e) => sum + (e.kidDiscount || 0), 0),
       additionalDiscount: todayEntries.reduce((sum, e) => sum + (e.additionalDiscount || 0), 0),
     };
+    
+    console.log('📊 Manual today stats calculated:', {
+      totalEntries: todayEntries.length,
+      totalPeople: manualTodayStats.totalPeople,
+      totalRevenue: manualTodayStats.finalAmount,
+      totalCash: manualTodayStats.cashAmount,
+      totalUPI: manualTodayStats.upiAmount,
+      totalAdvance: manualTodayStats.advanceAmount
+    });
     
     const manualTotalStats = {
       totalPeople: totalPeopleStats.totalPeople,
