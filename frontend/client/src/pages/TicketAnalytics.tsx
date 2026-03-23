@@ -5,6 +5,7 @@ import { Layout } from '@/components/Layout';
 import { entriesApi } from '@/lib/api';
 import { analyticsApi } from '@/lib/api';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
+import { TodayAnalytics } from '@/components/TodayAnalytics';
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, 
@@ -82,6 +83,7 @@ export function TicketAnalytics() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
   const [selectedMetric, setSelectedMetric] = useState<'revenue' | 'entries' | 'growth'>('revenue');
+  const [showToday, setShowToday] = useState(true); // Show today's analytics by default
 
   useEffect(() => {
     fetchAnalyticsData();
@@ -357,48 +359,89 @@ export function TicketAnalytics() {
   }
 
   return (
-    <Layout title="📊 Ticket Type Demand Analysis & Upgrade Insights">
-      {/* Header Controls */}
+    <Layout title="📊 Ticket Analytics Dashboard">
+      {/* View Toggle */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-6 flex flex-wrap gap-4 items-center justify-between"
       >
         <div className="flex gap-2">
-          {(['7d', '30d', '90d', '1y'] as const).map(range => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                timeRange === range
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : range === '90d' ? '90 Days' : '1 Year'}
-            </button>
-          ))}
+          <button
+            onClick={() => setShowToday(true)}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              showToday
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📊 Today's Performance
+          </button>
+          <button
+            onClick={() => setShowToday(false)}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              !showToday
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📈 Historical Analytics
+          </button>
         </div>
         
-        <div className="flex gap-2">
-          {(['revenue', 'entries', 'growth'] as const).map(metric => (
-            <button
-              key={metric}
-              onClick={() => setSelectedMetric(metric)}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                selectedMetric === metric
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {metric === 'revenue' ? 'Revenue' : metric === 'entries' ? 'Entries' : 'Growth'}
-            </button>
-          ))}
-        </div>
+        {!showToday && (
+          <>
+            <div className="flex gap-2">
+              {(['7d', '30d', '90d', '1y'] as const).map(range => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    timeRange === range
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : range === '90d' ? '90 Days' : '1 Year'}
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex gap-2">
+              {(['revenue', 'entries', 'growth'] as const).map(metric => (
+                <button
+                  key={metric}
+                  onClick={() => setSelectedMetric(metric)}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    selectedMetric === metric
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {metric === 'revenue' ? 'Revenue' : metric === 'entries' ? 'Entries' : 'Growth'}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </motion.div>
 
-      {/* Key Insights Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Today's Analytics Section */}
+      {showToday && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <TodayAnalytics />
+        </motion.div>
+      )}
+
+      {/* Historical Analytics Section */}
+      {!showToday && (
+        <>
+          {/* Key Insights Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -591,6 +634,8 @@ export function TicketAnalytics() {
           </LineChart>
         </ResponsiveContainer>
       </motion.div>
+        </>
+      )}
     </Layout>
   );
 }

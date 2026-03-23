@@ -185,4 +185,7 @@ export const analyticsApi = {
     const query = q.toString();
     return api<any[]>(`/analytics/customer-preferences${query ? `?${query}` : ''}`);
   },
+  today: () => {
+    return api<{ todayAnalytics: any[], summary: any }>(`/analytics/today`);
+  },
 };

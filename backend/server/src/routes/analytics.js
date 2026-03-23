@@ -113,4 +113,73 @@ router.get('/demand', authenticate, async (req, res) => {
   }
 });
 
+/** GET /api/analytics/today - Get today's performance analytics */
+router.get('/today', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const todayStart = dayjs().startOf('day').toDate();
+    const todayEnd = dayjs().endOf('day').toDate();
+    const todayFilter = { createdAt: { $gte: todayStart, $lte: todayEnd } };
+
+    const entries = await Entry.find(todayFilter).lean();
+
+    const ticketTypes = ['150', '300', '450', '600', '100'];
+    const todayAnalytics = ticketTypes.map(type => {
+      const typeEntries = entries.filter(e => e.ticketType === type);
+      const totalEntries = typeEntries.length;
+      const revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+      const totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+      const adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
+      const kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+      const avgPeoplePerEntry = totalEntries > 0 ? totalPeople / totalEntries : 0;
+
+      // Get ticket labels
+      const getTicketLabel = (ticketType) => {
+        switch (ticketType) {
+          case '150': return 'Special tickets';
+          case '300': return '3-4hr tickets';
+          case '450': return 'Fast food tickets';
+          case '600': return 'Main food tickets';
+          case '100': return 'Sitting only';
+          default: return ticketType;
+        }
+      };
+
+      return {
+        ticketType: type,
+        label: getTicketLabel(type),
+        price: parseInt(type),
+        tickets: totalEntries,
+        revenue,
+        totalPeople,
+        adults,
+        kids,
+        avgPeoplePerEntry: Math.round(avgPeoplePerEntry * 100) / 100
+      };
+    });
+
+    // Calculate overall today stats
+    const totalRevenue = entries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+    const totalEntries = entries.length;
+    const totalPeople = entries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+    const totalAdults = entries.reduce((sum, e) => sum + (e.adults || 0), 0);
+    const totalKids = entries.reduce((sum, e) => sum + (e.kids || 0), 0);
+
+    res.json({
+      todayAnalytics,
+      summary: {
+        totalRevenue,
+        totalEntries,
+        totalPeople,
+        totalAdults,
+        totalKids,
+        date: dayjs().format('YYYY-MM-DD'),
+        lastUpdated: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Today analytics error:', error);
+    res.status(500).json({ message: 'Failed to fetch today analytics' });
+  }
+});
+
 module.exports = { analyticsRouter: router };
