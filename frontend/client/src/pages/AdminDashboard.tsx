@@ -730,7 +730,11 @@ export function AdminDashboard() {
                         <div>
                           <p className="text-sm font-medium text-gray-600 mb-1">Total People</p>
                           <p className="text-3xl font-bold text-gray-900">
-                            {!stats ? '0' : <AnimatedCounter value={stats.todayPeople ?? 0} />}
+                            {!stats || stats.todayEntries === 0 ? (
+                              <span className="text-gray-400">No entries</span>
+                            ) : (
+                              <AnimatedCounter value={stats.todayPeople ?? 0} />
+                            )}
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -1328,7 +1332,11 @@ export function AdminDashboard() {
                         <div>
                           <p className="text-sm font-medium text-gray-600 mb-1">Total People</p>
                           <p className="text-3xl font-bold text-gray-900">
-                            {!stats ? '0' : <AnimatedCounter value={stats.totalPeople ?? 0} />}
+                            {!stats || stats.totalEntries === 0 ? (
+                              <span className="text-gray-400">No entries</span>
+                            ) : (
+                              <AnimatedCounter value={stats.totalPeople ?? 0} />
+                            )}
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -2124,12 +2132,12 @@ export function AdminDashboard() {
                     </div>
                   </div>
                   <p className="text-2xl font-bold text-blue-900">
-                    {!stats || !stats.todayPeople ? '0%' : `${Math.round(((stats.todayTotalFoodCoupons || 0) / stats.todayPeople) * 100)}%`}
+                    {!stats || stats.todayEntries === 0 || !stats.todayPeople ? '0%' : `${Math.round(((stats.todayTotalFoodCoupons || 0) / stats.todayPeople) * 100)}%`}
                   </p>
                   <p className="text-xs text-blue-600 mt-1">People with coupons</p>
                   <div className="mt-2 text-xs text-blue-700">
-                    <div>Coupons: {!stats ? '0' : <AnimatedCounter value={stats.todayTotalFoodCoupons || 0} />}</div>
-                    <div>People: {!stats ? '0' : <AnimatedCounter value={stats.todayPeople || 0} />}</div>
+                    <div>Coupons: {!stats || stats.todayEntries === 0 ? '0' : <AnimatedCounter value={stats.todayTotalFoodCoupons || 0} />}</div>
+                    <div>People: {!stats || stats.todayEntries === 0 ? '0' : <AnimatedCounter value={stats.todayPeople || 0} />}</div>
                   </div>
                 </motion.div>
               </div>
@@ -2232,12 +2240,12 @@ export function AdminDashboard() {
                     </div>
                   </div>
                   <p className="text-2xl font-bold text-blue-900">
-                    {!stats || !stats.totalPeople ? '0%' : `${Math.round(((stats.totalFoodCoupons || 0) / stats.totalPeople) * 100)}%`}
+                    {!stats || stats.totalEntries === 0 || !stats.totalPeople ? '0%' : `${Math.round(((stats.totalFoodCoupons || 0) / stats.totalPeople) * 100)}%`}
                   </p>
                   <p className="text-xs text-blue-600 mt-1">People with coupons</p>
                   <div className="mt-2 text-xs text-blue-700">
-                    <div>Coupons: {!stats ? '0' : <AnimatedCounter value={stats.totalFoodCoupons || 0} />}</div>
-                    <div>People: {!stats ? '0' : <AnimatedCounter value={stats.totalPeople || 0} />}</div>
+                    <div>Coupons: {!stats || stats.totalEntries === 0 ? '0' : <AnimatedCounter value={stats.totalFoodCoupons || 0} />}</div>
+                    <div>People: {!stats || stats.totalEntries === 0 ? '0' : <AnimatedCounter value={stats.totalPeople || 0} />}</div>
                   </div>
                 </motion.div>
               </div>

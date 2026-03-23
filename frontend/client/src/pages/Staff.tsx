@@ -743,16 +743,18 @@ export function Staff() {
             <motion.div 
               className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg"
               whileHover={{ scale: 1.1, rotate: -5 }}
-              transition={{ duration: 0.3 }}
+              whileTap={{ scale: 0.9 }}
             >
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
               </svg>
             </motion.div>
           </div>
-          <div className="text-4xl font-black text-blue-900">
+          <div className="text-3xl font-bold text-gray-900">
             {loading ? (
               <div className="loading-skeleton h-10 w-20"></div>
+            ) : stats?.todayEntries === 0 ? (
+              <span className="text-gray-400">No entries</span>
             ) : (
               <AnimatedCounter value={stats?.todayPeople ?? 0} />
             )}
