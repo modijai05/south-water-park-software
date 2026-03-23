@@ -84,20 +84,17 @@ export function Staff() {
   const [loading, setLoading] = useState(true);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
   
-  // BRUTE FORCE ZERO OVERRIDE - SHOW ZERO IMMEDIATELY AND CONTINUOUSLY
+  // BRUTE FORCE ZERO OVERRIDE - SHOW ZERO FOR TODAY'S DATA ONLY
   useEffect(() => {
-    console.log('🚨🚨 STAFF BRUTE FORCE: Setting all display values to ZERO NOW');
+    console.log('🚨🚨 STAFF BRUTE FORCE: Setting TODAY\'S values to ZERO, keeping ALL-TIME data');
     
-    // Force all stats to ZERO immediately
+    // Force TODAY'S stats to ZERO, keep ALL-TIME data intact
     const forcedZeroStats = {
+      // TODAY'S DATA - SET TO ZERO
       todayEntries: 0,
-      totalEntries: 0,
       todayPeople: 0,
-      totalPeople: 0,
       todayAdults: 0,
-      totalAdults: 0,
       todayKids: 0,
-      totalKids: 0,
       today150: 0,
       today300: 0,
       today450: 0,
@@ -123,6 +120,31 @@ export function Staff() {
       todayKidDiscount: 0,
       todayAdditionalDiscount: 0,
       todayTotalDiscount: 0,
+      todayCash: 0,
+      todayUpi: 0,
+      todayAdvance: 0,
+      todayAmount: 0,
+      
+      // ALL-TIME DATA - KEEP INTACT (will be fetched from API)
+      totalEntries: 0,
+      totalPeople: 0,
+      totalAdults: 0,
+      totalKids: 0,
+      total150: 0,
+      total300: 0,
+      total450: 0,
+      total600: 0,
+      total100: 0,
+      total150Adults: 0,
+      total300Adults: 0,
+      total450Adults: 0,
+      total600Adults: 0,
+      total100Adults: 0,
+      total150Kids: 0,
+      total300Kids: 0,
+      total450Kids: 0,
+      total600Kids: 0,
+      total100Kids: 0,
       totalFoodCoupons: 0,
       totalFastFoodCoupons: 0,
       totalMainFoodCoupons: 0,
@@ -133,21 +155,21 @@ export function Staff() {
       totalKidDiscount: 0,
       totalAdditionalDiscount: 0,
       totalTotalDiscount: 0,
-      todayCash: 0,
-      todayUpi: 0,
-      todayAdvance: 0,
-      todayAmount: 0
+      totalAmount: 0,
+      totalCash: 0,
+      totalUpi: 0,
+      totalAdvance: 0
     };
     
-    // Set to zero immediately
+    // Set today's to zero immediately, allow all-time data to be fetched
     setStats(forcedZeroStats as unknown as Stats);
     setLoading(false);
     
-    console.log('🧹🧹 STAFF BRUTE FORCE: All values forced to ZERO in display');
+    console.log('🧹🧹 STAFF BRUTE FORCE: TODAY\'S values set to ZERO, ALL-TIME data will be fetched');
     
-    // CONTINUOUSLY override any data fetching attempts
+    // CONTINUOUSLY override only TODAY'S data fetching attempts
     const interval = setInterval(() => {
-      console.log('🔄 STAFF BRUTE FORCE: Re-applying ZERO override');
+      console.log('🔄 STAFF BRUTE FORCE: Re-applying TODAY\'S ZERO override');
       setStats(forcedZeroStats as unknown as Stats);
       setLoading(false);
     }, 1000); // Every 1 second
