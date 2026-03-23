@@ -213,4 +213,166 @@ router.get('/today', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
+/** GET /api/analytics/date-wise - Get date-wise analytics (today vs historical) */
+router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
+  try {
+    console.log('📊 Date-wise analytics endpoint called by user:', req.user?.username);
+    
+    const now = dayjs();
+    const todayStart = now.startOf('day').toDate();
+    const todayEnd = now.endOf('day').toDate();
+    
+    console.log('📊 Date-wise date range:', {
+      todayStart: todayStart.toISOString(),
+      todayEnd: todayEnd.toISOString(),
+      currentTime: now.toISOString(),
+      timezone: now.format('Z')
+    });
+
+    // Get all entries
+    const allEntries = await Entry.find({}).lean();
+    console.log('📊 Total entries found:', allEntries.length);
+
+    // Separate today's entries and historical entries
+    const todayEntries = allEntries.filter(entry => {
+      const entryDate = dayjs(entry.createdAt);
+      return entryDate.isAfter(todayStart) && entryDate.isBefore(todayEnd);
+    });
+    
+    const historicalEntries = allEntries.filter(entry => {
+      const entryDate = dayjs(entry.createdAt);
+      return !entryDate.isAfter(todayStart) || !entryDate.isBefore(todayEnd);
+    });
+
+    console.log('📊 Today entries:', todayEntries.length);
+    console.log('📊 Historical entries:', historicalEntries.length);
+
+    // Process today's data
+    const ticketTypes = ['150', '300', '450', '600', '100'];
+    const todayAnalytics = ticketTypes.map(type => {
+      const typeEntries = todayEntries.filter(e => e.ticketType === type);
+      const totalEntries = typeEntries.length;
+      const revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+      const totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+      const adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
+      const kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+      const avgPeoplePerEntry = totalEntries > 0 ? totalPeople / totalEntries : 0;
+
+      const getTicketLabel = (ticketType) => {
+        switch (ticketType) {
+          case '150': return 'Special tickets';
+          case '300': return '3-4hr tickets';
+          case '450': return 'Fast food tickets';
+          case '600': return 'Main food tickets';
+          case '100': return 'Sitting only';
+          default: return ticketType;
+        }
+      };
+
+      return {
+        ticketType: type,
+        label: getTicketLabel(type),
+        price: parseInt(type),
+        tickets: totalEntries,
+        revenue,
+        totalPeople,
+        adults,
+        kids,
+        avgPeoplePerEntry: Math.round(avgPeoplePerEntry * 100) / 100,
+        isToday: true // Mark as today's data
+      };
+    });
+
+    // Process historical data (last 30 days for example)
+    const thirtyDaysAgo = now.subtract(30, 'day').startOf('day').toDate();
+    const recentHistoricalEntries = historicalEntries.filter(entry => 
+      dayjs(entry.createdAt).isAfter(thirtyDaysAgo)
+    );
+
+    const historicalAnalytics = ticketTypes.map(type => {
+      const typeEntries = recentHistoricalEntries.filter(e => e.ticketType === type);
+      const totalEntries = typeEntries.length;
+      const revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+      const totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+      const adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
+      const kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+      const avgPeoplePerEntry = totalEntries > 0 ? totalPeople / totalEntries : 0;
+
+      const getTicketLabel = (ticketType) => {
+        switch (ticketType) {
+          case '150': return 'Special tickets';
+          case '300': return '3-4hr tickets';
+          case '450': return 'Fast food tickets';
+          case '600': return 'Main food tickets';
+          case '100': return 'Sitting only';
+          default: return ticketType;
+        }
+      };
+
+      return {
+        ticketType: type,
+        label: getTicketLabel(type),
+        price: parseInt(type),
+        tickets: totalEntries,
+        revenue,
+        totalPeople,
+        adults,
+        kids,
+        avgPeoplePerEntry: Math.round(avgPeoplePerEntry * 100) / 100,
+        isToday: false // Mark as historical data
+      };
+    });
+
+    // Calculate overall stats
+    const todayTotalRevenue = todayEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+    const todayTotalEntries = todayEntries.length;
+    const todayTotalPeople = todayEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+    const todayTotalAdults = todayEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
+    const todayTotalKids = todayEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+
+    const historicalTotalRevenue = recentHistoricalEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+    const historicalTotalEntries = recentHistoricalEntries.length;
+    const historicalTotalPeople = recentHistoricalEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+    const historicalTotalAdults = recentHistoricalEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
+    const historicalTotalKids = recentHistoricalEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+
+    const responseData = {
+      todayAnalytics,
+      historicalAnalytics,
+      summary: {
+        today: {
+          totalRevenue: todayTotalRevenue,
+          totalEntries: todayTotalEntries,
+          totalPeople: todayTotalPeople,
+          totalAdults: todayTotalAdults,
+          totalKids: todayTotalKids,
+          date: now.format('YYYY-MM-DD'),
+        },
+        historical: {
+          totalRevenue: historicalTotalRevenue,
+          totalEntries: historicalTotalEntries,
+          totalPeople: historicalTotalPeople,
+          totalAdults: historicalTotalAdults,
+          totalKids: historicalTotalKids,
+          dateRange: 'Last 30 days',
+        },
+        lastUpdated: new Date().toISOString()
+      }
+    };
+    
+    console.log('📊 Date-wise analytics response:', {
+      todayEntries: todayTotalEntries,
+      historicalEntries: historicalTotalEntries,
+      todayRevenue: todayTotalRevenue,
+      historicalRevenue: historicalTotalRevenue
+    });
+    
+    res.json(responseData);
+  } catch (error) {
+    console.error('Date-wise analytics error:', error);
+    console.error('Date-wise analytics error stack:', error.stack);
+    res.status(500).json({ message: 'Failed to fetch date-wise analytics' });
+  }
+});
+
 module.exports = { analyticsRouter: router };

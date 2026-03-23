@@ -188,4 +188,14 @@ export const analyticsApi = {
   today: () => {
     return api<{ todayAnalytics: any[], summary: any }>(`/analytics/today`);
   },
+  dateWise: () => {
+    return api<{ 
+      todayAnalytics: any[], 
+      historicalAnalytics: any[], 
+      summary: { 
+        today: any, 
+        historical: any 
+      }
+    }>(`/analytics/date-wise`);
+  },
 };

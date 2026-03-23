@@ -45,67 +45,16 @@ export function TodayAnalytics() {
       setLoading(true);
       setError(null);
       
-      // Try today analytics endpoint first
-      try {
-        const response = await analyticsApi.today();
-        setTodayData(response.todayAnalytics || []);
-        setSummary(response.summary || null);
-        console.log('✅ Today analytics data loaded:', response);
-      } catch (todayError) {
-        console.warn('⚠️ Today analytics endpoint failed, falling back to entries/stats:', todayError);
-        
-        // Fallback to entries/stats which has today's data
-        const { entriesApi } = await import('@/lib/api');
-        const statsResponse = await entriesApi.stats();
-        
-        // Transform stats data to match today analytics format
-        const ticketTypes = ['150', '300', '450', '600', '100'];
-        const todayAnalytics = ticketTypes.map(type => {
-          const tickets = statsResponse[`today${type}`] || 0;
-          const revenue = tickets * parseInt(type); // Approximate revenue
-          const adults = statsResponse[`today${type}Adults`] || 0;
-          const kids = statsResponse[`today${type}Kids`] || 0;
-          const totalPeople = adults + kids;
-          
-          const getTicketLabel = (ticketType) => {
-            switch (ticketType) {
-              case '150': return 'Special tickets';
-              case '300': return '3-4hr tickets';
-              case '450': return 'Fast food tickets';
-              case '600': return 'Main food tickets';
-              case '100': return 'Sitting only';
-              default: return ticketType;
-            }
-          };
-          
-          return {
-            ticketType: type,
-            label: getTicketLabel(type),
-            price: parseInt(type),
-            tickets,
-            revenue,
-            totalPeople,
-            adults,
-            kids,
-            avgPeoplePerEntry: tickets > 0 ? Math.round((totalPeople / tickets) * 100) / 100 : 0
-          };
-        });
-        
-        setTodayData(todayAnalytics);
-        setSummary({
-          totalRevenue: statsResponse.todayAmount || 0,
-          totalEntries: statsResponse.todayEntries || 0,
-          totalPeople: statsResponse.todayPeople || 0,
-          totalAdults: statsResponse.todayAdults || 0,
-          totalKids: statsResponse.todayKids || 0,
-          date: new Date().toISOString().split('T')[0],
-          lastUpdated: new Date().toISOString()
-        });
-        
-        console.log('✅ Fallback stats data loaded:', statsResponse);
-      }
+      // Use new date-wise analytics endpoint that properly separates today vs historical
+      const response = await analyticsApi.dateWise();
+      console.log('✅ Date-wise analytics data loaded:', response);
+      
+      // Use today's analytics from the new endpoint
+      setTodayData(response.todayAnalytics || []);
+      setSummary(response.summary?.today || null);
+      
     } catch (error) {
-      console.error('Failed to fetch today analytics:', error);
+      console.error('Failed to fetch date-wise analytics:', error);
       setError('Failed to load today\'s analytics data');
     } finally {
       setLoading(false);

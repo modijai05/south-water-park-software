@@ -30,6 +30,15 @@ interface AnalyticsData {
   peakHours: PeakHourData[];
 }
 
+interface DateWiseAnalyticsData {
+  todayAnalytics: any[];
+  historicalAnalytics: any[];
+  summary: {
+    today: any;
+    historical: any;
+  };
+}
+
 interface DemandAnalysis {
   ticketType: string;
   totalEntries: number;
@@ -81,7 +90,7 @@ interface PeakHourData {
 export function TicketAnalytics() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y' | 'today'>('30d');
   const [selectedMetric, setSelectedMetric] = useState<'revenue' | 'entries' | 'growth'>('revenue');
   const [showToday, setShowToday] = useState(true); // Show today's analytics by default
 
@@ -92,30 +101,54 @@ export function TicketAnalytics() {
   const fetchAnalyticsData = async () => {
     setLoading(true);
     try {
-      // Fetch analytics data from new endpoints
-      const [demandData, upgradesData, timeSeriesData, peakHoursData, customerPrefsData] = await Promise.all([
-        analyticsApi.demand(timeRange),
-        analyticsApi.upgrades(timeRange),
-        analyticsApi.timeSeries(timeRange),
-        analyticsApi.peakHours(timeRange),
-        analyticsApi.customerPreferences(timeRange)
-      ]);
+      let response;
       
-      const analyticsData = {
-        demandAnalysis: demandData,
-        upgradeInsights: upgradesData,
-        timeSeriesData: timeSeriesData,
-        revenueBreakdown: demandData.map((d: any) => ({
-          ticketType: d.ticketType,
-          revenue: d.revenue,
-          percentage: d.marketShare,
-          entries: d.totalEntries
-        })),
-        customerPreferences: customerPrefsData,
-        peakHours: peakHoursData
-      };
-      
-      setData(analyticsData);
+      if (timeRange === 'today') {
+        // Use date-wise endpoint for today's data
+        response = await analyticsApi.dateWise();
+        
+        // Use date-wise data for today's view
+        const analyticsData: AnalyticsData = {
+          demandAnalysis: response.todayAnalytics || [],
+          upgradeInsights: [],
+          timeSeriesData: [],
+          revenueBreakdown: (response.todayAnalytics || []).map((d: any) => ({
+            ticketType: d.ticketType,
+            revenue: d.revenue,
+            percentage: 0, // Calculate percentage based on today's total
+            entries: d.tickets
+          })),
+          customerPreferences: [],
+          peakHours: []
+        };
+        
+        setData(analyticsData);
+      } else {
+        // Use historical analytics for other time ranges
+        const [demandData, upgradesData, timeSeriesData, peakHoursData, customerPrefsData] = await Promise.all([
+          analyticsApi.demand(timeRange),
+          analyticsApi.upgrades(timeRange),
+          analyticsApi.timeSeries(timeRange),
+          analyticsApi.peakHours(timeRange),
+          analyticsApi.customerPreferences(timeRange)
+        ]);
+        
+        const analyticsData: AnalyticsData = {
+          demandAnalysis: demandData,
+          upgradeInsights: upgradesData,
+          timeSeriesData: timeSeriesData,
+          revenueBreakdown: demandData.map((d: any) => ({
+            ticketType: d.ticketType,
+            revenue: d.revenue,
+            percentage: d.marketShare,
+            entries: d.totalEntries
+          })),
+          customerPreferences: customerPrefsData,
+          peakHours: peakHoursData
+        };
+        
+        setData(analyticsData);
+      }
     } catch (error) {
       console.error('Failed to fetch analytics data:', error);
     } finally {
