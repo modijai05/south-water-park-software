@@ -11,6 +11,11 @@ class GlobalSyncService {
   private constructor() {
     this.initializeDailyReset();
     this.setupPeriodicSync();
+    
+    // Professional fix: Force immediate reset to clear yesterday's data
+    setTimeout(() => {
+      this.forceDailyResetNow();
+    }, 1000);
   }
 
   public static getInstance(): GlobalSyncService {
@@ -69,6 +74,26 @@ class GlobalSyncService {
     this.broadcastEvent('daily-reset-complete', {
       timestamp: new Date().toISOString(),
       message: 'Daily performance data has been reset'
+    });
+  }
+
+  // Force immediate daily reset (professional fix)
+  public forceDailyResetNow() {
+    console.log('🚨 GlobalSync: FORCE DAILY RESET TRIGGERED IMMEDIATELY');
+    
+    // Clear any existing localStorage date to force reset
+    localStorage.removeItem('lastResetDate');
+    
+    // Trigger immediate reset
+    this.triggerDailyReset();
+    
+    // Store today's date
+    localStorage.setItem('lastResetDate', new Date().toDateString());
+    
+    // Broadcast force reset event
+    this.broadcastEvent('force-daily-reset', {
+      timestamp: new Date().toISOString(),
+      message: 'Immediate daily reset triggered by professional developer'
     });
   }
 
