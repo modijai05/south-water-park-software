@@ -16,7 +16,7 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(new Date().toISOString())
   },
   build: {
-    outDir: 'dist',
+    outDir: '../../dist',
     sourcemap: false,
     minify: 'esbuild',
     chunkSizeWarningLimit: 1000,
