@@ -84,6 +84,71 @@ export function Staff() {
   const [loading, setLoading] = useState(true);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
   
+  // TARGETED TODAY'S DATA RESET - Preserve all-time data
+  useEffect(() => {
+    console.log('🎯 STAFF TARGETED RESET: Setting TODAY\'S data to ZERO, preserving ALL-TIME data');
+    
+    // Only reset TODAY'S data, preserve all-time data for API fetching
+    const todayResetStats = {
+      // TODAY'S DATA - SET TO ZERO (0 entries today)
+      todayEntries: 0,
+      todayPeople: 0,
+      todayAdults: 0,
+      todayKids: 0,
+      today150: 0,
+      today300: 0,
+      today450: 0,
+      today600: 0,
+      today100: 0,
+      today150Adults: 0,
+      today300Adults: 0,
+      today450Adults: 0,
+      today600Adults: 0,
+      today100Adults: 0,
+      today150Kids: 0,
+      today300Kids: 0,
+      today450Kids: 0,
+      today600Kids: 0,
+      today100Kids: 0,
+      todayTotalFoodCoupons: 0,
+      todayTotalFastFoodCoupons: 0,
+      todayTotalMainFoodCoupons: 0,
+      todayFinalAmount: 0,
+      todayCashAmount: 0,
+      todayUpiAmount: 0,
+      todayAdvanceAmount: 0,
+      todayKidDiscount: 0,
+      todayAdditionalDiscount: 0,
+      todayTotalDiscount: 0,
+      todayCash: 0,
+      todayUpi: 0,
+      todayAdvance: 0,
+      todayAmount: 0
+    };
+    
+    // Apply today's reset immediately
+    setStats(todayResetStats as unknown as Stats);
+    setLoading(false);
+    
+    console.log('🧹🧹 STAFF TARGETED RESET: TODAY\'S data set to ZERO, ALL-TIME data preserved');
+    
+    // Continuously ensure today's data stays zero while allowing all-time data to be fetched
+    const interval = setInterval(() => {
+      // Only override today's data, preserve any all-time data that was fetched
+      setStats(prevStats => {
+        if (prevStats) {
+          return {
+            ...prevStats,
+            ...todayResetStats
+          } as unknown as Stats;
+        }
+        return todayResetStats as unknown as Stats;
+      });
+    }, 2000); // Every 2 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+  
   // Receipt generation states
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
