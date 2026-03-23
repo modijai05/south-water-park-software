@@ -10,6 +10,7 @@ import type { TicketConfig } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { TICKET_OPTIONS } from '@/types';
 import { invalidateTicketConfigCache } from '@/lib/ticketUtils';
+import { globalSyncService } from '@/services/globalSyncService';
 
 interface Stats {
   todayEntries: number;
@@ -377,6 +378,15 @@ export function Staff() {
     window.addEventListener('receipt-printed', handleReceiptEvent);
     window.addEventListener('payment-completed', handleReceiptEvent);
     
+    // Add discount-specific event listeners for real-time sync
+    const handleDiscountUpdate = (event: any) => {
+      console.log('💰 Staff: Discount update event received:', event.detail);
+      handleEntryUpdate();
+    };
+    
+    window.addEventListener('discount-updated', handleDiscountUpdate);
+    window.addEventListener('additional-discount-updated', handleDiscountUpdate);
+    
     // Reduced sync frequency - refresh every 60 seconds instead of 30
     syncInterval = setInterval(() => {
       if (!cancelled) {
@@ -397,7 +407,67 @@ export function Staff() {
       window.removeEventListener('receipt-generated', handleReceiptEvent);
       window.removeEventListener('receipt-printed', handleReceiptEvent);
       window.removeEventListener('payment-completed', handleReceiptEvent);
+      window.removeEventListener('discount-updated', handleDiscountUpdate);
+      window.removeEventListener('additional-discount-updated', handleDiscountUpdate);
       if (syncInterval) clearInterval(syncInterval);
+    };
+  }, []);
+
+  // Global Sync Service Integration
+  useEffect(() => {
+    let cancelled = false;
+
+    // Handle global sync events from sync service
+    const handleGlobalSyncTriggered = (data: any) => {
+      if (!cancelled) {
+        console.log('🌐 Staff: Global sync triggered:', data);
+        const fetchData = async () => {
+          try {
+            const [s] = await Promise.all([
+              entriesApi.stats()
+            ]);
+            if (!cancelled) {
+              setStats(s.data as unknown as Stats);
+              console.log('✅ Staff: Data updated via global sync');
+            }
+          } catch (error) {
+            console.error('❌ Staff: Global sync failed:', error);
+          }
+        };
+        fetchData();
+      }
+    };
+
+    // Handle immediate sync requirements
+    const handleImmediateSyncRequired = (data: any) => {
+      if (!cancelled) {
+        console.log('🚀 Staff: Immediate sync required:', data);
+        handleGlobalSyncTriggered(data);
+      }
+    };
+
+    // Handle daily reset events
+    const handleDailyReset = (data: any) => {
+      if (!cancelled) {
+        console.log('🌅 Staff: Daily reset triggered, refreshing data');
+        // Force refresh all data to get today's fresh data
+        handleGlobalSyncTriggered({ ...data, reason: 'daily-reset' });
+      }
+    };
+
+    // Register listeners with global sync service
+    globalSyncService.addEventListener('global-sync-triggered', handleGlobalSyncTriggered);
+    globalSyncService.addEventListener('immediate-sync-required', handleImmediateSyncRequired);
+    globalSyncService.addEventListener('daily-reset-complete', handleDailyReset);
+
+    // Also listen for DOM events for compatibility
+    window.addEventListener('daily-reset', handleDailyReset);
+
+    return () => {
+      globalSyncService.removeEventListener('global-sync-triggered', handleGlobalSyncTriggered);
+      globalSyncService.removeEventListener('immediate-sync-required', handleImmediateSyncRequired);
+      globalSyncService.removeEventListener('daily-reset-complete', handleDailyReset);
+      window.removeEventListener('daily-reset', handleDailyReset);
     };
   }, []);
   

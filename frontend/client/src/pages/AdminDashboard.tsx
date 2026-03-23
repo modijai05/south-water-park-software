@@ -11,6 +11,7 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { invalidateTicketConfigCache } from '@/lib/ticketUtils';
 import { useAuthStore } from '@/store/authStore';
 import type { TicketConfig } from '@/types';
+import { globalSyncService } from '@/services/globalSyncService';
 
 // Helper functions for data transformation
 const generateQuarterlyData = (monthlyData: any[]) => {
@@ -492,6 +493,67 @@ export function AdminDashboard() {
       window.removeEventListener('dashboard-sync-required', handleGlobalSync);
       window.removeEventListener('staff-synced', handleGlobalSync); // Remove staff event listener
       window.removeEventListener('dashboard-refresh', handleGlobalSync); // Remove admin sync coordinator event
+    };
+  }, []);
+
+  // Global Sync Service Integration
+  useEffect(() => {
+    let cancelled = false;
+
+    // Handle global sync events from the sync service
+    const handleGlobalSyncTriggered = (data: any) => {
+      if (!cancelled) {
+        console.log('🌐 AdminDashboard: Global sync triggered:', data);
+        const fetchData = async () => {
+          try {
+            const [s, c] = await Promise.all([
+              entriesApi.stats(), 
+              entriesApi.charts(),
+              fetchTicketConfigs()
+            ]);
+            if (!cancelled) {
+              setStats(s as unknown as Stats);
+              setCharts(c as unknown as Charts);
+              console.log('✅ AdminDashboard: Data updated via global sync');
+            }
+          } catch (error) {
+            console.error('❌ AdminDashboard: Global sync failed:', error);
+          }
+        };
+        fetchData();
+      }
+    };
+
+    // Handle immediate sync requirements
+    const handleImmediateSyncRequired = (data: any) => {
+      if (!cancelled) {
+        console.log('🚀 AdminDashboard: Immediate sync required:', data);
+        handleGlobalSyncTriggered(data);
+      }
+    };
+
+    // Handle daily reset events
+    const handleDailyReset = (data: any) => {
+      if (!cancelled) {
+        console.log('🌅 AdminDashboard: Daily reset triggered, refreshing data');
+        // Force refresh all data to get today's fresh data
+        handleGlobalSyncTriggered({ ...data, reason: 'daily-reset' });
+      }
+    };
+
+    // Register listeners with global sync service
+    globalSyncService.addEventListener('global-sync-triggered', handleGlobalSyncTriggered);
+    globalSyncService.addEventListener('immediate-sync-required', handleImmediateSyncRequired);
+    globalSyncService.addEventListener('daily-reset-complete', handleDailyReset);
+
+    // Also listen for DOM events for compatibility
+    window.addEventListener('daily-reset', handleDailyReset);
+
+    return () => {
+      globalSyncService.removeEventListener('global-sync-triggered', handleGlobalSyncTriggered);
+      globalSyncService.removeEventListener('immediate-sync-required', handleImmediateSyncRequired);
+      globalSyncService.removeEventListener('daily-reset-complete', handleDailyReset);
+      window.removeEventListener('daily-reset', handleDailyReset);
     };
   }, []);
 

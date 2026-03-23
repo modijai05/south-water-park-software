@@ -24,6 +24,8 @@ import dayjs from 'dayjs';
 
 import Receipt from '@/components/Receipt';
 
+import { globalSyncService } from '@/services/globalSyncService';
+
 
 
 const paymentSchema = z.object({
@@ -682,6 +684,12 @@ export function Payment() {
       
 
       console.log('✅ Payment: All sync events dispatched successfully');
+      
+      // Trigger global sync service for comprehensive real-time updates
+      globalSyncService.triggerImmediateSync('new-entry-created');
+      
+      // Also trigger specific data type syncs
+      globalSyncService.syncDataTypes(['stats', 'entries', 'discounts']);
 
       
 
