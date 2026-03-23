@@ -605,6 +605,72 @@ export function AdminDashboard() {
       }
     };
 
+    // Handle manual forced reset events (SET TO ZERO)
+    const handleManualForcedReset = (data: any) => {
+      if (!cancelled) {
+        console.log('🚨🚨 AdminDashboard: MANUAL FORCED RESET - SETTING ALL TO ZERO');
+        
+        // Force set all stats to ZERO immediately
+        const zeroStats = {
+          todayEntries: 0,
+          totalEntries: 0,
+          todayPeople: 0,
+          totalPeople: 0,
+          todayAdults: 0,
+          totalAdults: 0,
+          todayKids: 0,
+          totalKids: 0,
+          today150: 0,
+          today300: 0,
+          today450: 0,
+          today600: 0,
+          today100: 0,
+          today150Adults: 0,
+          today300Adults: 0,
+          today450Adults: 0,
+          today600Adults: 0,
+          today100Adults: 0,
+          today150Kids: 0,
+          today300Kids: 0,
+          today450Kids: 0,
+          today600Kids: 0,
+          today100Kids: 0,
+          todayTotalFoodCoupons: 0,
+          todayTotalFastFoodCoupons: 0,
+          todayTotalMainFoodCoupons: 0,
+          todayFinalAmount: 0,
+          todayCashAmount: 0,
+          todayUpiAmount: 0,
+          todayAdvanceAmount: 0,
+          todayKidDiscount: 0,
+          todayAdditionalDiscount: 0,
+          todayTotalDiscount: 0,
+          totalFoodCoupons: 0,
+          totalFastFoodCoupons: 0,
+          totalMainFoodCoupons: 0,
+          totalFinalAmount: 0,
+          totalCashAmount: 0,
+          totalUpiAmount: 0,
+          totalAdvanceAmount: 0,
+          totalKidDiscount: 0,
+          totalAdditionalDiscount: 0,
+          totalTotalDiscount: 0,
+          todayCash: 0,
+          todayUpi: 0,
+          todayAdvance: 0,
+          todayAmount: 0
+        };
+        
+        // Set stats to zero immediately
+        setStats(zeroStats as unknown as Stats);
+        setCharts(null);
+        setRecentEntries([]);
+        setLoading(false);
+        
+        console.log('🧹🧹 AdminDashboard: All stats manually set to ZERO');
+      }
+    };
+
     // Register listeners with global sync service
     globalSyncService.addEventListener('global-sync-triggered', handleGlobalSyncTriggered);
     globalSyncService.addEventListener('immediate-sync-required', handleImmediateSyncRequired);
@@ -612,12 +678,14 @@ export function AdminDashboard() {
     globalSyncService.addEventListener('force-daily-reset', handleForceReset);
     globalSyncService.addEventListener('emergency-reset-all', handleEmergencyReset);
     globalSyncService.addEventListener('immediate-reset-all', handleImmediateReset);
+    globalSyncService.addEventListener('manual-forced-reset', handleManualForcedReset);
 
     // Also listen for DOM events for compatibility
     window.addEventListener('daily-reset', handleDailyReset);
     window.addEventListener('force-daily-reset', handleForceReset);
     window.addEventListener('emergency-reset-all', handleEmergencyReset);
     window.addEventListener('immediate-reset-all', handleImmediateReset);
+    window.addEventListener('manual-forced-reset', handleManualForcedReset);
 
     return () => {
       globalSyncService.removeEventListener('global-sync-triggered', handleGlobalSyncTriggered);
@@ -626,10 +694,12 @@ export function AdminDashboard() {
       globalSyncService.removeEventListener('force-daily-reset', handleForceReset);
       globalSyncService.removeEventListener('emergency-reset-all', handleEmergencyReset);
       globalSyncService.removeEventListener('immediate-reset-all', handleImmediateReset);
+      globalSyncService.removeEventListener('manual-forced-reset', handleManualForcedReset);
       window.removeEventListener('daily-reset', handleDailyReset);
       window.removeEventListener('force-daily-reset', handleForceReset);
       window.removeEventListener('emergency-reset-all', handleEmergencyReset);
       window.removeEventListener('immediate-reset-all', handleImmediateReset);
+      window.removeEventListener('manual-forced-reset', handleManualForcedReset);
     };
   }, []);
 
