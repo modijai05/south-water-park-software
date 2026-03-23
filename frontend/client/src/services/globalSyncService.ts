@@ -22,22 +22,35 @@ class GlobalSyncService {
 
   // Initialize daily reset at midnight
   private initializeDailyReset() {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    
-    const msUntilMidnight = tomorrow.getTime() - now.getTime();
-    
-    this.dailyResetInterval = setTimeout(() => {
-      this.triggerDailyReset();
-      // Set up recurring daily reset
-      this.dailyResetInterval = setInterval(() => {
+    const checkAndTriggerReset = () => {
+      const now = new Date();
+      const today = now.toDateString();
+      const storedDate = localStorage.getItem('lastResetDate');
+      
+      // Check if we need to reset (new day or no stored date)
+      if (storedDate !== today) {
+        console.log('🌅 GlobalSync: New day detected, triggering daily reset');
         this.triggerDailyReset();
-      }, 24 * 60 * 60 * 1000); // Every 24 hours
-    }, msUntilMidnight);
-
-    console.log('🌅 GlobalSync: Daily reset scheduled for:', new Date(tomorrow));
+        localStorage.setItem('lastResetDate', today);
+      }
+      
+      // Schedule next check at next midnight
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      
+      const msUntilMidnight = tomorrow.getTime() - now.getTime();
+      
+      if (this.dailyResetInterval) {
+        clearTimeout(this.dailyResetInterval);
+      }
+      
+      this.dailyResetInterval = setTimeout(checkAndTriggerReset, msUntilMidnight);
+      console.log('🌅 GlobalSync: Next daily reset scheduled for:', new Date(tomorrow));
+    };
+    
+    // Trigger immediately on load
+    checkAndTriggerReset();
   }
 
   // Trigger daily reset event
@@ -154,7 +167,7 @@ class GlobalSyncService {
     }
     
     if (this.dailyResetInterval) {
-      clearInterval(this.dailyResetInterval);
+      clearTimeout(this.dailyResetInterval);
       this.dailyResetInterval = null;
     }
     
