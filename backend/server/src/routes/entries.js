@@ -169,6 +169,13 @@ router.get('/stats', authenticate, async (req, res) => {
           totalUpi: manualTotalStats.upiAmount,
           totalAdvance: manualTotalStats.advanceAmount,
           averageTicketValue: manualTotalStats.finalAmount / Math.max(1, totalCount),
+          // Add discount statistics
+          todayKidDiscount: manualTodayStats.kidDiscount,
+          todayAdditionalDiscount: manualTodayStats.additionalDiscount,
+          todayTotalDiscount: manualTodayStats.kidDiscount + manualTodayStats.additionalDiscount,
+          totalKidDiscount: manualTotalStats.kidDiscount,
+          totalAdditionalDiscount: manualTotalStats.additionalDiscount,
+          totalTotalDiscount: manualTotalStats.kidDiscount + manualTotalStats.additionalDiscount,
         } : {}),
         // Add coupon counts
         todayAdultsFastFoodCoupons: todayCouponCounts.todayAdultsFastFoodCoupons,

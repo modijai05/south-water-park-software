@@ -116,11 +116,20 @@ router.get('/demand', authenticate, async (req, res) => {
 /** GET /api/analytics/today - Get today's performance analytics */
 router.get('/today', authenticate, requireAdmin, async (req, res) => {
   try {
+    console.log('📊 Today analytics endpoint called by user:', req.user?.username);
+    
     const todayStart = dayjs().startOf('day').toDate();
     const todayEnd = dayjs().endOf('day').toDate();
     const todayFilter = { createdAt: { $gte: todayStart, $lte: todayEnd } };
 
+    console.log('📊 Today date range:', {
+      todayStart: todayStart.toISOString(),
+      todayEnd: todayEnd.toISOString(),
+      timezone: dayjs().format('Z')
+    });
+
     const entries = await Entry.find(todayFilter).lean();
+    console.log('📊 Today entries found:', entries.length);
 
     const ticketTypes = ['150', '300', '450', '600', '100'];
     const todayAnalytics = ticketTypes.map(type => {
@@ -164,7 +173,7 @@ router.get('/today', authenticate, requireAdmin, async (req, res) => {
     const totalAdults = entries.reduce((sum, e) => sum + (e.adults || 0), 0);
     const totalKids = entries.reduce((sum, e) => sum + (e.kids || 0), 0);
 
-    res.json({
+    const responseData = {
       todayAnalytics,
       summary: {
         totalRevenue,
@@ -175,9 +184,19 @@ router.get('/today', authenticate, requireAdmin, async (req, res) => {
         date: dayjs().format('YYYY-MM-DD'),
         lastUpdated: new Date().toISOString()
       }
+    };
+    
+    console.log('📊 Today analytics response:', {
+      totalRevenue,
+      totalEntries,
+      totalPeople,
+      ticketTypes: todayAnalytics.map(t => ({ type: t.ticketType, tickets: t.tickets }))
     });
+    
+    res.json(responseData);
   } catch (error) {
     console.error('Today analytics error:', error);
+    console.error('Today analytics error stack:', error.stack);
     res.status(500).json({ message: 'Failed to fetch today analytics' });
   }
 });
