@@ -541,19 +541,43 @@ export function AdminDashboard() {
       }
     };
 
+    // Handle force reset events (aggressive reset)
+    const handleForceReset = (data: any) => {
+      if (!cancelled) {
+        console.log('🚨 AdminDashboard: FORCE RESET triggered - clearing all data immediately');
+        
+        // Clear stats state immediately
+        setStats(null);
+        setCharts(null);
+        setRecentEntries([]);
+        
+        // Force refresh after a short delay
+        setTimeout(() => {
+          if (!cancelled) {
+            console.log('🔄 AdminDashboard: Force refreshing data after clear');
+            handleGlobalSyncTriggered({ ...data, reason: 'force-reset' });
+          }
+        }, 500);
+      }
+    };
+
     // Register listeners with global sync service
     globalSyncService.addEventListener('global-sync-triggered', handleGlobalSyncTriggered);
     globalSyncService.addEventListener('immediate-sync-required', handleImmediateSyncRequired);
     globalSyncService.addEventListener('daily-reset-complete', handleDailyReset);
+    globalSyncService.addEventListener('force-daily-reset', handleForceReset);
 
     // Also listen for DOM events for compatibility
     window.addEventListener('daily-reset', handleDailyReset);
+    window.addEventListener('force-daily-reset', handleForceReset);
 
     return () => {
       globalSyncService.removeEventListener('global-sync-triggered', handleGlobalSyncTriggered);
       globalSyncService.removeEventListener('immediate-sync-required', handleImmediateSyncRequired);
       globalSyncService.removeEventListener('daily-reset-complete', handleDailyReset);
+      globalSyncService.removeEventListener('force-daily-reset', handleForceReset);
       window.removeEventListener('daily-reset', handleDailyReset);
+      window.removeEventListener('force-daily-reset', handleForceReset);
     };
   }, []);
 

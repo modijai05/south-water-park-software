@@ -84,17 +84,36 @@ class GlobalSyncService {
     // Clear any existing localStorage date to force reset
     localStorage.removeItem('lastResetDate');
     
+    // Clear all stats-related localStorage
+    localStorage.removeItem('adminDashboardStats');
+    localStorage.removeItem('staffDashboardStats');
+    localStorage.removeItem('dashboardCache');
+    
     // Trigger immediate reset
     this.triggerDailyReset();
     
     // Store today's date
     localStorage.setItem('lastResetDate', new Date().toDateString());
     
-    // Broadcast force reset event
+    // Broadcast force reset event with clear instruction
     this.broadcastEvent('force-daily-reset', {
       timestamp: new Date().toISOString(),
-      message: 'Immediate daily reset triggered by professional developer'
+      message: 'Immediate daily reset triggered by professional developer',
+      clearCache: true,
+      forceRefresh: true
     });
+    
+    // Also dispatch DOM event for maximum compatibility
+    window.dispatchEvent(new CustomEvent('force-daily-reset', {
+      detail: {
+        timestamp: new Date().toISOString(),
+        message: 'FORCE RESET - Clear all data immediately',
+        clearCache: true,
+        forceRefresh: true
+      }
+    }));
+    
+    console.log('🧹 GlobalSync: All cache cleared, force reset events dispatched');
   }
 
   // Setup periodic sync every 60 seconds (reduced from 30 for performance)
