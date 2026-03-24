@@ -15,10 +15,69 @@ router.get('/stats', authenticate, async (req, res) => {
     console.error('📊 Entries stats API called successfully');
     const isAdmin = req.user?.role === 'admin';
     
-    // Use UTC timezone to ensure consistent date handling
+    // Check database connection
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.log('⚠️ Database not connected, returning fallback stats data');
+      return res.json({
+        success: true,
+        data: {
+          todayEntries: 0,
+          totalEntries: 0,
+          todayPeople: 0,
+          totalPeople: 0,
+          todayAdults: 0,
+          totalAdults: 0,
+          todayKids: 0,
+          totalKids: 0,
+          // Add ticket type breakdown statistics
+          today100: 0, total100: 0, today100Adults: 0, total100Adults: 0, today100Kids: 0, total100Kids: 0,
+          today150: 0, total150: 0, today150Adults: 0, total150Adults: 0, today150Kids: 0, total150Kids: 0,
+          today300: 0, total300: 0, today300Adults: 0, total300Adults: 0, today300Kids: 0, total300Kids: 0,
+          today450: 0, total450: 0, today450Adults: 0, total450Adults: 0, today450Kids: 0, total450Kids: 0,
+          today600: 0, total600: 0, today600Adults: 0, total600Adults: 0, today600Kids: 0, total600Kids: 0,
+          // Only provide financial data to admin
+          ...(isAdmin ? {
+            todayAmount: 0,
+            todayCash: 0,
+            todayUpi: 0,
+            todayAdvance: 0,
+            totalAmount: 0,
+            totalCash: 0,
+            totalUpi: 0,
+            totalAdvance: 0,
+            averageTicketValue: 0,
+            // Add discount statistics
+            todayKidDiscount: 0,
+            todayAdditionalDiscount: 0,
+            todayTotalDiscount: 0,
+            totalKidDiscount: 0,
+            totalAdditionalDiscount: 0,
+            totalTotalDiscount: 0,
+          } : {}),
+          // Add coupon counts
+          todayAdultsFastFoodCoupons: 0,
+          todayKidsFastFoodCoupons: 0,
+          todayAdultsMainFoodCoupons: 0,
+          todayKidsMainFoodCoupons: 0,
+          todayTotalFastFoodCoupons: 0,
+          todayTotalMainFoodCoupons: 0,
+          todayTotalFoodCoupons: 0,
+          totalAdultsFastFoodCoupons: 0,
+          totalKidsFastFoodCoupons: 0,
+          totalAdultsMainFoodCoupons: 0,
+          totalKidsMainFoodCoupons: 0,
+          totalFastFoodCoupons: 0,
+          totalMainFoodCoupons: 0,
+          totalFoodCoupons: 0,
+        }
+      });
+    }
+    
+    // Use local timezone for consistent date handling
     const now = dayjs();
-    const todayStart = now.startOf('day').utc().toDate();
-    const todayEnd = now.endOf('day').utc().toDate();
+    const todayStart = now.startOf('day').toDate();
+    const todayEnd = now.endOf('day').toDate();
     const todayFilter = { createdAt: { $gte: todayStart, $lte: todayEnd } };
 
     console.log('📊 Today date range:', {
