@@ -15,6 +15,11 @@ router.get('/stats', authenticate, async (req, res) => {
     console.error('📊 Entries stats API called successfully');
     const isAdmin = req.user?.role === 'admin';
     
+    // Add cache-busting headers
+    res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.header('Pragma', 'no-cache');
+    res.header('Expires', '0');
+    
     // Check database connection
     const mongoose = require('mongoose');
     if (mongoose.connection.readyState !== 1) {
@@ -74,18 +79,28 @@ router.get('/stats', authenticate, async (req, res) => {
       });
     }
     
-    // Use local timezone for consistent date handling
+    // Use server's local timezone for consistent date handling
+    // Force fresh calculation every time
     const now = dayjs();
     const todayStart = now.startOf('day').toDate();
     const todayEnd = now.endOf('day').toDate();
     const todayFilter = { createdAt: { $gte: todayStart, $lte: todayEnd } };
 
-    console.log('📊 Today date range:', {
+    console.log('📊 Today date range (FRESH CALCULATION):', {
       todayStart: todayStart.toISOString(),
       todayEnd: todayEnd.toISOString(),
       currentTime: now.toISOString(),
-      timezone: now.format('Z')
+      timezone: now.format('Z'),
+      serverTime: new Date().toISOString(),
+      todayDate: now.format('YYYY-MM-DD'),
+      forceRefresh: req.query.force === 'true',
+      timestamp: req.query.t
     });
+
+    // If force refresh is requested, log it
+    if (req.query.force === 'true') {
+      console.log('🔄 FORCE REFRESH REQUESTED - Ignoring any cache');
+    }
 
     // For staff, filter by their own entries
     const staffFilter = isAdmin ? {} : { createdBy: req.user?._id };

@@ -120,8 +120,12 @@ export const entriesApi = {
     .then(response => response),
   clearAll: () => api<{ success: boolean; message: string }>('/entries/clear-all', { method: 'DELETE' })
     .then(response => response),
-  stats: () => api<{ success: boolean; data: Record<string, number> }>(`/entries/stats?t=${Date.now()}`)
-    .then(response => response.data),
+  stats: (forceRefresh: boolean = false) => {
+    const timestamp = Date.now();
+    const forceParam = forceRefresh ? '&force=true' : '';
+    return api<{ success: boolean; data: Record<string, number> }>(`/entries/stats?t=${timestamp}${forceParam}`)
+      .then(response => response.data)
+  },
   charts: () =>
     api<{ success: boolean; data: { last7Days: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number }[]; monthly: { _id: string; count: number; amount: number }[] } }>(`/entries/charts?t=${Date.now()}`)
     .then(response => response.data),
