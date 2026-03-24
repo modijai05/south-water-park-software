@@ -11,6 +11,8 @@ const JWT_SECRET = process.env.JWT_SECRET ?? 'south-water-park-secret-change-in-
 router.post('/login', async (req, res) => {
   try {
     console.log('🔐 Login attempt started');
+    console.log('🔐 Request body:', JSON.stringify(req.body));
+    console.log('🔐 Request headers:', JSON.stringify(req.headers));
     const { username, password } = req.body ?? {};
     console.log('🔐 Login attempt:', { username, passwordProvided: !!password });
     console.log('🔐 Database connection state:', mongoose.connection.readyState);
@@ -26,13 +28,14 @@ router.post('/login', async (req, res) => {
       
       // Fallback authentication for testing
       if (username === 'admin1' && password === 'admin1') {
+        console.log('🔐 Using fallback admin authentication');
         const token = jwt.sign(
           { userId: 'fallback-admin', username: 'admin1', role: 'admin' },
           JWT_SECRET,
           { expiresIn: '24h' }
         );
         
-        return res.json({
+        const response = {
           message: 'Login successful (fallback mode)',
           token,
           user: {
@@ -42,17 +45,24 @@ router.post('/login', async (req, res) => {
             role: 'admin',
             active: true
           }
-        });
+        };
+        
+        console.log('🔐 Fallback admin login successful');
+        // Set CORS headers
+        res.header('Access-Control-Allow-Origin', '*');
+        res.header('Access-Control-Allow-Credentials', 'true');
+        return res.json(response);
       }
       
       if (username === 'staff1' && password === 'staff1') {
+        console.log('🔐 Using fallback staff authentication');
         const token = jwt.sign(
           { userId: 'fallback-staff', username: 'staff1', role: 'staff' },
           JWT_SECRET,
           { expiresIn: '24h' }
         );
         
-        return res.json({
+        const response = {
           message: 'Login successful (fallback mode)',
           token,
           user: {
@@ -62,7 +72,13 @@ router.post('/login', async (req, res) => {
             role: 'staff',
             active: true
           }
-        });
+        };
+        
+        console.log('🔐 Fallback staff login successful');
+        // Set CORS headers
+        res.header('Access-Control-Allow-Origin', '*');
+        res.header('Access-Control-Allow-Credentials', 'true');
+        return res.json(response);
       }
       
       return res.status(401).json({ message: 'Invalid username or password' });
