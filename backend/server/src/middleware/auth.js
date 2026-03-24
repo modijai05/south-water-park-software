@@ -55,6 +55,31 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ message: 'Invalid token - user not found' });
     }
     
+    // Handle fallback users even when database is connected
+    if (decoded.userId === 'fallback-admin') {
+      req.user = {
+        _id: 'fallback-admin',
+        username: 'admin1',
+        fullName: 'Admin User',
+        role: 'admin',
+        active: true
+      };
+      console.log('Auth: Fallback admin authenticated successfully (database connected)');
+      return next();
+    }
+    
+    if (decoded.userId === 'fallback-staff') {
+      req.user = {
+        _id: 'fallback-staff',
+        username: 'staff1',
+        fullName: 'Staff User',
+        role: 'staff',
+        active: true
+      };
+      console.log('Auth: Fallback staff authenticated successfully (database connected)');
+      return next();
+    }
+    
     // Normal database authentication
     const user = await User.findById(decoded.userId);
     if (!user) {
