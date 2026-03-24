@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 const authRoutes = require('./routes/auth.js');
 const entryRoutes = require('./routes/entries.js');
 const userRoutes = require('./routes/users.js');
@@ -15,6 +16,7 @@ const { dbHealthMonitor } = require('./utils/databaseHealth.js');
 
 dotenv.config();
 
+const JWT_SECRET = process.env.JWT_SECRET ?? 'south-water-park-secret-change-in-prod';
 const app = express();
 const PORT = process.env.PORT ?? 5000;
 
