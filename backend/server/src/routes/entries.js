@@ -146,6 +146,8 @@ router.get('/stats', authenticate, async (req, res) => {
       const ticketTypes = ['100', '150', '300', '450', '600'];
       const stats = {};
       
+      console.log(`🎫 Calculating ${prefix} ticket stats from ${entries.length} entries`);
+      
       ticketTypes.forEach(type => {
         const typeEntries = entries.filter(e => e.ticketType === type);
         const typeStats = typeEntries.reduce((acc, entry) => {
@@ -175,7 +177,12 @@ router.get('/stats', authenticate, async (req, res) => {
         stats[`${prefix}${type}`] = typeStats.entries;
         stats[`${prefix}${type}Adults`] = typeStats.adults;
         stats[`${prefix}${type}Kids`] = typeStats.kids;
+        
+        console.log(`   ${prefix}${type}: ${typeStats.entries} entries`);
       });
+      
+      const totalTicketEntries = ticketTypes.reduce((sum, type) => sum + stats[`${prefix}${type}`], 0);
+      console.log(`🎫 Total ${prefix} ticket entries calculated: ${totalTicketEntries} (should match ${entries.length})`);
       
       return stats;
     };
