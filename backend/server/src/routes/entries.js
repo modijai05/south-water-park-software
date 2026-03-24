@@ -111,8 +111,7 @@ router.get('/stats', authenticate, async (req, res) => {
     console.log('   Staff Filter:', JSON.stringify(staffFilter));
 
     // Use lean() and only select needed fields for better performance
-    const [todayCount, totalCount, todayEntries, allEntries] = await Promise.all([
-      Entry.countDocuments(todayStaffFilter).maxTimeMS(5000),
+    const [totalCount, todayEntries, allEntries] = await Promise.all([
       Entry.countDocuments(staffFilter).maxTimeMS(10000),
       Entry.find(todayStaffFilter)
         .select('ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount kidDiscount additionalDiscount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon upgrades')
@@ -123,6 +122,9 @@ router.get('/stats', authenticate, async (req, res) => {
         .lean()
         .maxTimeMS(10000)
     ]);
+
+    // Calculate todayCount from the same entries used for ticket type calculations
+    const todayCount = todayEntries.length;
 
     console.log('🔍 TODAY ENTRIES DEBUG:');
     console.log('   Today Count (from countDocuments):', todayCount);
