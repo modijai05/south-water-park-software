@@ -219,6 +219,21 @@ app.post('/api/test-auth', async (req, res) => {
   }
 });
 
+// Simple test endpoint for debugging authentication
+app.post('/api/test-login-simple', (req, res) => {
+  console.log('🔧 Simple test endpoint called');
+  console.log('🔧 Request body:', req.body);
+  console.log('🔧 Request headers:', req.headers);
+  
+  res.json({
+    success: true,
+    message: 'Test endpoint working',
+    body: req.body,
+    headers: req.headers,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Root endpoint for basic connectivity test
 app.get('/', (req, res) => {
   res.json({ 
