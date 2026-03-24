@@ -148,8 +148,28 @@ router.get('/stats', authenticate, async (req, res) => {
       
       console.log(`🎫 Calculating ${prefix} ticket stats from ${entries.length} entries`);
       
+      // Track entries with missing/invalid ticket types
+      const invalidEntries = [];
+      const validEntries = [];
+      
+      entries.forEach(entry => {
+        if (!entry.ticketType || !ticketTypes.includes(entry.ticketType)) {
+          invalidEntries.push({
+            id: entry._id,
+            ticketType: entry.ticketType,
+            createdAt: entry.createdAt
+          });
+        } else {
+          validEntries.push(entry);
+        }
+      });
+      
+      if (invalidEntries.length > 0) {
+        console.log(`⚠️ Found ${invalidEntries.length} entries with invalid ticket types:`, invalidEntries);
+      }
+      
       ticketTypes.forEach(type => {
-        const typeEntries = entries.filter(e => e.ticketType === type);
+        const typeEntries = validEntries.filter(e => e.ticketType === type);
         const typeStats = typeEntries.reduce((acc, entry) => {
           let entryAdults = entry.adults || 0;
           let entryKids = entry.kids || 0;
@@ -182,7 +202,8 @@ router.get('/stats', authenticate, async (req, res) => {
       });
       
       const totalTicketEntries = ticketTypes.reduce((sum, type) => sum + stats[`${prefix}${type}`], 0);
-      console.log(`🎫 Total ${prefix} ticket entries calculated: ${totalTicketEntries} (should match ${entries.length})`);
+      console.log(`🎫 Total ${prefix} ticket entries calculated: ${totalTicketEntries} (should match ${validEntries.length})`);
+      console.log(`🎫 Invalid ${prefix} entries: ${invalidEntries.length}`);
       
       return stats;
     };
