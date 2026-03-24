@@ -546,7 +546,7 @@ export function AdminDashboard() {
             ]);
             
             if (!cancelled) {
-              setStats(s as Stats); // Cast to Stats interface
+              setStats(s as unknown as Stats); // Proper casting for Stats interface
               setTicketConfigs(c); // c is TicketConfig[]
               setError(null);
               console.log('📊 Dashboard: Raw stats data after daily reset:', s);
@@ -716,7 +716,7 @@ export function AdminDashboard() {
                         <div>
                           <p className="text-sm font-medium text-gray-600 mb-1">Total Entries</p>
                           <p className="text-3xl font-bold text-gray-900">
-                            {!stats ? '0' : <AnimatedCounter value={stats.todayEntries ?? 0} />}
+                            <AnimatedCounter value={stats?.todayEntries ?? 0} />
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -756,7 +756,7 @@ export function AdminDashboard() {
                             {!stats || stats.todayEntries === 0 ? (
                               <span className="text-gray-400">No entries</span>
                             ) : (
-                              <AnimatedCounter value={stats.todayPeople ?? 0} />
+                              <AnimatedCounter value={stats?.todayPeople ?? 0} />
                             )}
                           </p>
                         </div>
@@ -794,7 +794,7 @@ export function AdminDashboard() {
                         <div>
                           <p className="text-sm font-medium text-gray-600 mb-1">Adults</p>
                           <p className="text-3xl font-bold text-gray-900">
-                            {!stats ? '0' : <AnimatedCounter value={stats.todayAdults ?? 0} />}
+                            <AnimatedCounter value={stats?.todayAdults ?? 0} />
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -831,7 +831,7 @@ export function AdminDashboard() {
                         <div>
                           <p className="text-sm font-medium text-gray-600 mb-1">Kids</p>
                           <p className="text-3xl font-bold text-gray-900">
-                            {!stats ? '0' : <AnimatedCounter value={stats.todayKids ?? 0} />}
+                            <AnimatedCounter value={stats?.todayKids ?? 0} />
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -871,7 +871,7 @@ export function AdminDashboard() {
                         <div>
                           <p className="text-sm font-medium text-gray-600 mb-1">₹{getCurrentTicketPrice('150')} Tickets</p>
                           <p className="text-3xl font-bold text-gray-900">
-                            {!stats ? '0' : <AnimatedCounter value={stats.today150 ?? 0} />}
+                            <AnimatedCounter value={stats?.today150 ?? 0} />
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -881,15 +881,15 @@ export function AdminDashboard() {
                       <div className="space-y-2">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">People:</span>
-                          <span className="font-semibold text-cyan-700">{!stats ? '0' : <AnimatedCounter value={stats.today150Adults ?? 0} />}</span>
+                          <span className="font-semibold text-cyan-700"><AnimatedCounter value={stats?.today150Adults ?? 0} /></span>
                         </div>
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Kids:</span>
-                          <span className="font-semibold text-cyan-700">{!stats ? '0' : <AnimatedCounter value={stats.today150Kids ?? 0} />}</span>
+                          <span className="font-semibold text-cyan-700"><AnimatedCounter value={stats?.today150Kids ?? 0} /></span>
                         </div>
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Total:</span>
-                          <span className="font-semibold text-cyan-700">{!stats ? '0' : <AnimatedCounter value={stats.today150 ?? 0} />}</span>
+                          <span className="font-semibold text-cyan-700"><AnimatedCounter value={stats?.today150 ?? 0} /></span>
                         </div>
                       </div>
                       <div className="flex items-center text-sm text-cyan-600 mt-3">
@@ -920,7 +920,7 @@ export function AdminDashboard() {
                         <div>
                           <p className="text-sm font-medium text-gray-600 mb-1">₹{getCurrentTicketPrice('300')} Tickets</p>
                           <p className="text-3xl font-bold text-gray-900">
-                            {!stats ? '0' : <AnimatedCounter value={stats.today300 ?? 0} />}
+                            <AnimatedCounter value={stats?.today300 ?? 0} />
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -930,11 +930,11 @@ export function AdminDashboard() {
                       <div className="space-y-2">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Adults:</span>
-                          <span className="font-semibold text-purple-700">{!stats ? '0' : <AnimatedCounter value={stats.today300Adults ?? 0} />}</span>
+                          <span className="font-semibold text-purple-700"><AnimatedCounter value={stats?.today300Adults ?? 0} /></span>
                         </div>
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Kids:</span>
-                          <span className="font-semibold text-purple-700">{!stats ? '0' : <AnimatedCounter value={stats.today300Kids ?? 0} />}</span>
+                          <span className="font-semibold text-purple-700"><AnimatedCounter value={stats?.today300Kids ?? 0} /></span>
                         </div>
                       </div>
                       <div className="flex items-center text-sm text-purple-600 mt-3">
@@ -965,7 +965,7 @@ export function AdminDashboard() {
                         <div>
                           <p className="text-sm font-medium text-gray-600 mb-1">₹{getCurrentTicketPrice('450')} Tickets</p>
                           <p className="text-3xl font-bold text-gray-900">
-                            {!stats ? '0' : <AnimatedCounter value={stats.today450 ?? 0} />}
+                            <AnimatedCounter value={stats?.today450 ?? 0} />
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -975,11 +975,11 @@ export function AdminDashboard() {
                       <div className="space-y-2">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Adults:</span>
-                          <span className="font-semibold text-orange-700">{!stats ? '0' : <AnimatedCounter value={stats.today450Adults ?? 0} />}</span>
+                          <span className="font-semibold text-orange-700"><AnimatedCounter value={stats?.today450Adults ?? 0} /></span>
                         </div>
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Kids:</span>
-                          <span className="font-semibold text-orange-700">{!stats ? '0' : <AnimatedCounter value={stats.today450Kids ?? 0} />}</span>
+                          <span className="font-semibold text-orange-700"><AnimatedCounter value={stats?.today450Kids ?? 0} /></span>
                         </div>
                       </div>
                       <div className="flex items-center text-sm text-orange-600 mt-3">
@@ -1010,7 +1010,7 @@ export function AdminDashboard() {
                         <div>
                           <p className="text-sm font-medium text-gray-600 mb-1">₹{getCurrentTicketPrice('600')} Tickets</p>
                           <p className="text-3xl font-bold text-gray-900">
-                            {!stats ? '0' : <AnimatedCounter value={stats.today600 ?? 0} />}
+                            <AnimatedCounter value={stats?.today600 ?? 0} />
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -1020,11 +1020,11 @@ export function AdminDashboard() {
                       <div className="space-y-2">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Adults:</span>
-                          <span className="font-semibold text-emerald-700">{!stats ? '0' : <AnimatedCounter value={stats.today600Adults ?? 0} />}</span>
+                          <span className="font-semibold text-emerald-700"><AnimatedCounter value={stats?.today600Adults ?? 0} /></span>
                         </div>
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Kids:</span>
-                          <span className="font-semibold text-emerald-700">{!stats ? '0' : <AnimatedCounter value={stats.today600Kids ?? 0} />}</span>
+                          <span className="font-semibold text-emerald-700"><AnimatedCounter value={stats?.today600Kids ?? 0} /></span>
                         </div>
                       </div>
                       <div className="flex items-center text-sm text-emerald-600 mt-3">
@@ -1055,7 +1055,7 @@ export function AdminDashboard() {
                         <div>
                           <p className="text-sm font-medium text-gray-600 mb-1">₹{getCurrentTicketPrice('100')} Tickets</p>
                           <p className="text-3xl font-bold text-gray-900">
-                            {!stats ? '0' : <AnimatedCounter value={stats.today100 ?? 0} />}
+                            <AnimatedCounter value={stats?.today100 ?? 0} />
                           </p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -1065,11 +1065,11 @@ export function AdminDashboard() {
                       <div className="space-y-2">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Adults:</span>
-                          <span className="font-semibold text-indigo-700">{!stats ? '0' : <AnimatedCounter value={stats.today100Adults ?? 0} />}</span>
+                          <span className="font-semibold text-indigo-700"><AnimatedCounter value={stats?.today100Adults ?? 0} /></span>
                         </div>
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Kids:</span>
-                          <span className="font-semibold text-indigo-700">{!stats ? '0' : <AnimatedCounter value={stats.today100Kids ?? 0} />}</span>
+                          <span className="font-semibold text-indigo-700"><AnimatedCounter value={stats?.today100Kids ?? 0} /></span>
                         </div>
                       </div>
                       <div className="flex items-center text-sm text-indigo-600 mt-3">
