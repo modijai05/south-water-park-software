@@ -150,37 +150,29 @@ router.get('/stats', authenticate, async (req, res) => {
       
       console.log(`🎫 Calculating ${prefix} ticket stats from ${entries.length} entries`);
       
-      // Track entries with missing/invalid ticket types
-      const invalidEntries = [];
-      const validEntries = [];
-      
-      entries.forEach(entry => {
-        if (!entry.ticketType || !ticketTypes.includes(entry.ticketType)) {
-          invalidEntries.push({
-            id: entry._id,
-            ticketType: entry.ticketType,
-            createdAt: entry.createdAt
-          });
-        } else {
-          validEntries.push(entry);
-        }
+      // Initialize all ticket types to 0
+      ticketTypes.forEach(type => {
+        stats[`${prefix}${type}`] = 0;
+        stats[`${prefix}${type}Adults`] = 0;
+        stats[`${prefix}${type}Kids`] = 0;
       });
       
-      if (invalidEntries.length > 0) {
-        console.log(`⚠️ Found ${invalidEntries.length} entries with invalid ticket types:`, invalidEntries);
-      }
-      
-      ticketTypes.forEach(type => {
-        const typeEntries = validEntries.filter(e => e.ticketType === type);
-        const typeStats = typeEntries.reduce((acc, entry) => {
+      // Process each entry exactly once
+      entries.forEach(entry => {
+        const ticketType = entry.ticketType;
+        
+        // Only process valid ticket types
+        if (ticketType && ticketTypes.includes(ticketType)) {
+          // Increment the count for this ticket type
+          stats[`${prefix}${ticketType}`] = (stats[`${prefix}${ticketType}`] || 0) + 1;
+          
+          // Add adults and kids
           let entryAdults = entry.adults || 0;
           let entryKids = entry.kids || 0;
-          let entryPeople = entry.totalPeople || 0;
           
           // Include people from upgrades
           if (entry.upgrades) {
             entry.upgrades.forEach((upgrade) => {
-              entryPeople += (upgrade.adults || 0) + (upgrade.kids || 0);
               if (upgrade.ticketType !== '150') {
                 entryAdults += upgrade.adults || 0;
               }
@@ -188,24 +180,22 @@ router.get('/stats', authenticate, async (req, res) => {
             });
           }
           
-          return {
-            entries: acc.entries + 1,
-            adults: acc.adults + entryAdults,
-            kids: acc.kids + entryKids,
-            people: acc.people + entryPeople
-          };
-        }, { entries: 0, adults: 0, kids: 0, people: 0 });
-        
-        stats[`${prefix}${type}`] = typeStats.entries;
-        stats[`${prefix}${type}Adults`] = typeStats.adults;
-        stats[`${prefix}${type}Kids`] = typeStats.kids;
-        
-        console.log(`   ${prefix}${type}: ${typeStats.entries} entries`);
+          stats[`${prefix}${ticketType}Adults`] = (stats[`${prefix}${ticketType}Adults}`] || 0) + entryAdults;
+          stats[`${prefix}${ticketType}Kids`] = (stats[`${prefix}${ticketType}Kids}`] || 0) + entryKids;
+          
+          console.log(`   Processed ${prefix}${ticketType}: +1 entry (Adults: ${entryAdults}, Kids: ${entryKids})`);
+        } else {
+          console.log(`   ⚠️ Skipped entry with invalid ticket type: ${ticketType}`);
+        }
       });
       
       const totalTicketEntries = ticketTypes.reduce((sum, type) => sum + stats[`${prefix}${type}`], 0);
-      console.log(`🎫 Total ${prefix} ticket entries calculated: ${totalTicketEntries} (should match ${validEntries.length})`);
-      console.log(`🎫 Invalid ${prefix} entries: ${invalidEntries.length}`);
+      console.log(`🎫 Total ${prefix} ticket entries calculated: ${totalTicketEntries} (should match ${entries.length})`);
+      
+      // Log final stats
+      ticketTypes.forEach(type => {
+        console.log(`   ${prefix}${type}: ${stats[`${prefix}${type}`]} entries`);
+      });
       
       return stats;
     };
