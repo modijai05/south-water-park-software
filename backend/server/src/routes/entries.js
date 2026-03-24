@@ -132,13 +132,13 @@ router.get('/stats', authenticate, async (req, res) => {
     const totalCouponCounts = aggregateCouponCounts(allEntries);
     
     // Calculate ticket type breakdown statistics
-    const calculateTicketTypeStats = (entries) => {
+    const calculateTicketTypeStats = (entries, prefix = 'today') => {
       const ticketTypes = ['100', '150', '300', '450', '600'];
       const stats = {};
       
       ticketTypes.forEach(type => {
         const typeEntries = entries.filter(e => e.ticketType === type);
-        const todayStats = typeEntries.reduce((acc, entry) => {
+        const typeStats = typeEntries.reduce((acc, entry) => {
           let entryAdults = entry.adults || 0;
           let entryKids = entry.kids || 0;
           let entryPeople = entry.totalPeople || 0;
@@ -154,8 +154,6 @@ router.get('/stats', authenticate, async (req, res) => {
             });
           }
           
-          // For 150 tickets, adults are counted separately in general adults count
-          // but we still track them in ticket-specific counts
           return {
             entries: acc.entries + 1,
             adults: acc.adults + entryAdults,
@@ -164,19 +162,35 @@ router.get('/stats', authenticate, async (req, res) => {
           };
         }, { entries: 0, adults: 0, kids: 0, people: 0 });
         
-        stats[`today${type}`] = todayStats.entries;
-        stats[`total${type}`] = todayStats.entries;
-        stats[`today${type}Adults`] = todayStats.adults;
-        stats[`total${type}Adults`] = todayStats.adults;
-        stats[`today${type}Kids`] = todayStats.kids;
-        stats[`total${type}Kids`] = todayStats.kids;
+        stats[`${prefix}${type}`] = typeStats.entries;
+        stats[`${prefix}${type}Adults`] = typeStats.adults;
+        stats[`${prefix}${type}Kids`] = typeStats.kids;
       });
       
       return stats;
     };
     
-    const todayTicketStats = calculateTicketTypeStats(todayEntries);
-    const totalTicketStats = calculateTicketTypeStats(allEntries);
+    const todayTicketStats = calculateTicketTypeStats(todayEntries, 'today');
+    const totalTicketStats = calculateTicketTypeStats(allEntries, 'total');
+    
+    // Log ticket type stats for debugging
+    console.log('🎫 Ticket Type Stats - Today:', {
+      today150: todayTicketStats.today150,
+      today300: todayTicketStats.today300,
+      today450: todayTicketStats.today450,
+      today600: todayTicketStats.today600,
+      today100: todayTicketStats.today100,
+      todayEntriesCount: todayEntries.length
+    });
+    
+    console.log('🎫 Ticket Type Stats - Total:', {
+      total150: totalTicketStats.total150,
+      total300: totalTicketStats.total300,
+      total450: totalTicketStats.total450,
+      total600: totalTicketStats.total600,
+      total100: totalTicketStats.total100,
+      totalEntriesCount: allEntries.length
+    });
     
     // Manual calculations for stats
     const calculatePeopleStats = (entries) => {
