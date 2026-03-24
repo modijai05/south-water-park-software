@@ -106,6 +106,10 @@ router.get('/stats', authenticate, async (req, res) => {
     const staffFilter = isAdmin ? {} : { createdBy: req.user?._id };
     const todayStaffFilter = { ...todayFilter, ...staffFilter };
 
+    console.log('🔍 DEBUGGING DATA INCONSISTENCY:');
+    console.log('   Today Filter:', JSON.stringify(todayStaffFilter));
+    console.log('   Staff Filter:', JSON.stringify(staffFilter));
+
     // Use lean() and only select needed fields for better performance
     const [todayCount, totalCount, todayEntries, allEntries] = await Promise.all([
       Entry.countDocuments(todayStaffFilter).maxTimeMS(5000),
@@ -119,6 +123,12 @@ router.get('/stats', authenticate, async (req, res) => {
         .lean()
         .maxTimeMS(10000)
     ]);
+
+    console.log('🔍 TODAY ENTRIES DEBUG:');
+    console.log('   Today Count (from countDocuments):', todayCount);
+    console.log('   Today Entries (from find):', todayEntries.length);
+    console.log('   Today Entries Sample:', JSON.stringify(todayEntries.slice(0, 3), null, 2));
+    console.log('   Ticket Types in Today Entries:', [...new Set(todayEntries.map(e => e.ticketType))]);
     
     console.log('📊 Today entries found:', todayEntries.length);
     console.log('📊 Today entries sample:', todayEntries.slice(0, 3).map(e => ({
