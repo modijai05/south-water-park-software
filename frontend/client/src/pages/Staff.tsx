@@ -284,15 +284,27 @@ export function Staff() {
     
     // Handle entry updates
     const handleEntryUpdate = async () => {
-      console.log('🔄 Staff: Handling entry update...');
+      console.log('🔄 Staff: Handling entry update - Fetching fresh MongoDB data...');
       try {
-        const res = await entriesApi.stats();
+        // Force refresh from MongoDB with timestamp to prevent caching
+        const timestamp = Date.now();
+        const res = await entriesApi.stats(true); // Force refresh parameter
         if (!cancelled) {
           setStats(res as unknown as Stats);
-          console.log('✅ Staff: Stats refreshed successfully');
+          console.log('✅ Staff: MongoDB stats refreshed successfully:', res);
+          
+          // Trigger global sync to notify other components
+          window.dispatchEvent(new CustomEvent('staff-synced', {
+            detail: {
+              action: 'stats-refreshed',
+              timestamp: new Date().toISOString(),
+              source: 'staff-dashboard',
+              stats: res
+            }
+          }));
         }
       } catch (error) {
-        console.error('❌ Staff: Failed to refresh stats:', error);
+        console.error('❌ Staff: Failed to refresh MongoDB stats:', error);
       }
     };
 

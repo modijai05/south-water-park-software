@@ -261,13 +261,13 @@ export function AdminDashboard() {
         
         // Fetch ticket configs along with other data
         const [s, c] = await Promise.all([
-          entriesApi.stats(), 
+          entriesApi.stats(true), // Force refresh from MongoDB
           entriesApi.charts(),
           fetchTicketConfigs()
         ]);
         
         if (!cancelled) {
-          console.log('📊 Dashboard: Raw stats data:', s);
+          console.log('📊 Dashboard: Raw MongoDB stats data:', s);
           console.log('📈 Dashboard: Charts data:', c);
           
           // Use backend stats directly - backend now handles all calculations correctly
