@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     buildCommand: "npm install && npm run build"
-    startCommand: "npx tsx src/index.js"
+    startCommand: "npm start"
     envVars:
       - key: NODE_ENV
         value: production
@@ -18,15 +18,14 @@ services:
         value: 10000
       - key: TZ
         value: UTC
-    healthCheckPath: /health
+    healthCheckPath: /api/test
     healthCheckTimeout: 30
     autoDeploy: true
     buildFilter:
       paths:
         - src/**
         - package.json
-        - tsconfig.json
-        - .env.example
+        - healthcheck.js
     domains:
       - south-water-park-api.onrender.com
       - south-water-park-backend.onrender.com
