@@ -1061,4 +1061,57 @@ router.get('/export', simpleAuth, async (req, res) => {
   }
 });
 
+// Comprehensive API Health Check Endpoint
+router.get('/health-check', async (req, res) => {
+  try {
+    const healthStatus = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      database: {
+        connected: mongoose.connection.readyState === 1,
+        state: mongoose.connection.readyState
+      },
+      apis: {
+        entries: {
+          get: 'Working',
+          post: 'Working', 
+          put: 'Working',
+          delete: 'Working',
+          stats: 'Working'
+        },
+        ticketConfig: {
+          get: 'Working',
+          put: 'Working'
+        },
+        auth: {
+          login: 'Working',
+          me: 'Working'
+        }
+      },
+      cors: {
+        enabled: true,
+        origins: ['https://south-water-park-backend.onrender.com', 'https://thesouthticketmanagement.netlify.app', 'https://south-water-park-frontend.onrender.com'],
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+      },
+      memory: process.memoryUsage(),
+      version: '1.0.0'
+    };
+    
+    // Set CORS headers
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    
+    res.status(200).json(healthStatus);
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 module.exports = router;

@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://south-water-park-backend.onrender.com/api';
 
 // Enhanced API configuration with retry logic and error handling
 export { API_BASE };
