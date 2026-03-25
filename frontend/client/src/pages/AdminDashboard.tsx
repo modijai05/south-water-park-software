@@ -535,15 +535,15 @@ export function AdminDashboard() {
     // Handle daily reset events
     const handleDailyReset = (data: any) => {
       if (!cancelled) {
-        console.log('🌅 AdminDashboard: Daily reset triggered, using PROFESSIONAL emergency reset');
+        console.log('🌅 AdminDashboard: Daily reset triggered, forcing complete data refresh');
         
-        // PROFESSIONAL FIX: Use emergency reset for complete data clearing
-        globalSyncService.emergencyDailyReset();
+        // Clear all localStorage cache
+        localStorage.clear();
         
         // Force refresh by adding force=true parameter
         const fetchData = async () => {
           try {
-            console.log('🔄 Dashboard: Fetching updated data with emergency reset...');
+            console.log('🔄 Dashboard: Fetching updated data with complete cache clear...');
             const [s, c] = await Promise.all([
               entriesApi.stats(true), // Force refresh
               ticketConfigApi.getAll()
@@ -553,12 +553,12 @@ export function AdminDashboard() {
               setStats(s as unknown as Stats); // Proper casting for Stats interface
               setTicketConfigs(c); // c is TicketConfig[]
               setError(null);
-              console.log('📊 Dashboard: Raw stats data after emergency reset:', s);
-              console.log('✅ Dashboard: Emergency reset successful - today should be 0');
+              console.log('📊 Dashboard: Raw stats data after complete cache clear:', s);
+              console.log('✅ Dashboard: Complete cache clear successful - today should be 0');
             }
           } catch (error) {
             if (!cancelled) {
-              console.error('❌ Dashboard: Failed to refresh data after emergency reset:', error);
+              console.error('❌ Dashboard: Failed to refresh data after cache clear:', error);
               setError(error instanceof Error ? error.message : 'Failed to refresh data');
             }
           }
