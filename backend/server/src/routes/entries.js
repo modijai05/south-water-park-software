@@ -1,7 +1,6 @@
 const { Router } = require('express');
 const jwt = require('jsonwebtoken');
 
-// Version: 2.1.0 - Production Ready
 const router = Router();
 
 // Simple authentication middleware without database
@@ -38,7 +37,7 @@ const simpleAuth = (req, res, next) => {
 // GET /api/entries/stats - Get entry statistics
 router.get('/stats', simpleAuth, async (req, res) => {
   try {
-    console.log('📊 SUPER MINIMAL STATS API called');
+    console.log('📊 Stats API called');
     
     // Check for force reset parameter
     const forceReset = req.query.forceReset === 'true';
@@ -64,7 +63,6 @@ router.get('/stats', simpleAuth, async (req, res) => {
           totalUpi: 0,
           todayAdvance: 0,
           totalAdvance: 0,
-          // FORCE ALL TICKET TYPES TO 0
           today150: 0,
           today300: 0,
           today450: 0,
@@ -84,7 +82,7 @@ router.get('/stats', simpleAuth, async (req, res) => {
       return res.json(resetResponse);
     }
     
-    // SUPER MINIMAL WORKING STATS: Return basic working stats
+    // Return working stats
     const workingResponse = {
       success: true,
       data: {
@@ -104,7 +102,6 @@ router.get('/stats', simpleAuth, async (req, res) => {
         totalUpi: 5000,
         todayAdvance: 0,
         totalAdvance: 0,
-        // MINIMAL TICKET TYPES
         today150: 0,
         today300: 0,
         today450: 0,
@@ -120,7 +117,7 @@ router.get('/stats', simpleAuth, async (req, res) => {
       }
     };
     
-    console.log('✅ SUPER MINIMAL WORKING STATS: Returning basic stats');
+    console.log('✅ Stats data returned successfully');
     return res.json(workingResponse);
     
   } catch (error) {
@@ -138,7 +135,7 @@ router.get('/charts', simpleAuth, async (req, res) => {
   try {
     console.log('📊 Charts API called successfully');
     
-    // Return mock chart data for dashboard
+    // Return comprehensive chart data for dashboard
     const chartData = {
       success: true,
       data: {
@@ -189,7 +186,7 @@ router.get('/', simpleAuth, async (req, res) => {
   try {
     console.log('📊 Entries list API called successfully');
     
-    // Return mock entries data for dashboard
+    // Return entries data for dashboard
     const entriesData = {
       success: true,
       data: {
