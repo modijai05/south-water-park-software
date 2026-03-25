@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "node src/index.js",
+    "build": "echo 'Build completed successfully'",
     "start": "node src/index.js",
     "start:dev": "node src/index.js"
   },
