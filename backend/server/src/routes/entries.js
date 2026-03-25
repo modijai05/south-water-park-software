@@ -124,87 +124,48 @@ router.get('/stats', authenticate, async (req, res) => {
     console.log('   Today Start:', todayStart.toISOString());
     console.log('   Today End:', todayEnd.toISOString());
 
-    // FINAL PROFESSIONAL FIX: Force fresh database queries with bypass
-    const [totalCount, todayEntries, allEntries] = await Promise.all([
-      Entry.countDocuments(staffFilter).maxTimeMS(10000),
-      Entry.find(todayStaffFilter)
-        .select('ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount kidDiscount additionalDiscount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon upgrades createdAt')
-        .lean()
-        .maxTimeMS(5000),
-      Entry.find(staffFilter)
-        .select('ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount kidDiscount additionalDiscount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon upgrades')
-        .lean()
-        .maxTimeMS(10000)
-    ]);
-
-    // FINAL PROFESSIONAL FIX: Calculate todayCount from fresh data
-    const todayCount = todayEntries.length;
+    // ULTIMATE PROFESSIONAL FIX: Direct database query to identify all entries
+    console.log('🚨 ULTIMATE PROFESSIONAL FIX: Direct database investigation');
     
-    console.log('🚨 FINAL PROFESSIONAL FIX: Fresh database queries completed');
-    console.log(`📊 Fresh data: Today entries = ${todayCount}, All entries = ${allEntries.length}`);
-
-    console.log('🔍 TODAY ENTRIES DEBUG:');
-    console.log('   Today Count (from countDocuments):', todayCount);
-    console.log('   Today Entries (from find):', todayEntries.length);
-    console.log('   Today Entries Sample:', JSON.stringify(todayEntries.slice(0, 3), null, 2));
-    console.log('   Ticket Types in Today Entries:', [...new Set(todayEntries.map(e => e.ticketType))]);
+    // Get all entries for today with direct query
+    const allTodayEntries = await Entry.find(todayStaffFilter).lean();
+    console.log(`🔍 DIRECT QUERY: Found ${allTodayEntries.length} entries for today`);
     
-    // Log detailed info about each today entry
-    if (todayEntries.length > 0) {
-      console.log('📅 TODAY ENTRIES DATES:');
-      todayEntries.forEach((entry, index) => {
-        console.log(`   Entry ${index + 1}: Created at ${entry.createdAt}, Ticket: ${entry.ticketType}`);
+    // Log all today entries with full details
+    allTodayEntries.forEach((entry, index) => {
+      console.log(`📅 Entry ${index + 1}:`, {
+        id: entry._id,
+        createdAt: entry.createdAt,
+        ticketType: entry.ticketType,
+        adults: entry.adults,
+        kids: entry.kids,
+        finalAmount: entry.finalAmount
       });
-    } else {
-      console.log('✅ NO TODAY ENTRIES FOUND - Daily reset working correctly!');
-    }
+    });
     
-    console.log('📊 Today entries found:', todayEntries.length);
-    console.log('📊 Today entries sample:', todayEntries.slice(0, 3).map(e => ({
-      id: e._id,
-      createdAt: e.createdAt,
-      ticketType: e.ticketType,
-      finalAmount: e.finalAmount
-    })));
+    // ULTIMATE PROFESSIONAL FIX: Force todayCount from direct query
+    const todayCount = allTodayEntries.length;
     
-    const todayCouponCounts = aggregateCouponCounts(todayEntries);
-    const totalCouponCounts = aggregateCouponCounts(allEntries);
+    // Get all entries for total calculation
+    const allEntries = await Entry.find(staffFilter).lean();
     
-    // Calculate ticket type breakdown statistics
+    // ULTIMATE PROFESSIONAL FIX: Calculate ticket types function
     const calculateTicketTypeStats = (entries, prefix = 'today') => {
       const ticketTypes = ['100', '150', '300', '450', '600'];
       const stats = {};
       
-      console.log(`🎫 PROFESSIONAL CALCULATION: ${prefix} ticket stats from ${entries.length} entries`);
+      console.log(`🎫 ULTIMATE CALCULATION: ${prefix} ticket stats from ${entries.length} entries`);
       
-      // PROFESSIONAL FIX: Force reset all stats to 0 first
+      // Initialize all ticket types to 0
       ticketTypes.forEach(type => {
         stats[`${prefix}${type}`] = 0;
         stats[`${prefix}${type}Adults`] = 0;
         stats[`${prefix}${type}Kids`] = 0;
       });
       
-      // PROFESSIONAL FIX: Only process entries if it's today's data
-      if (prefix === 'today' && entries.length === 0) {
-        console.log('✅ PROFESSIONAL RESET: No today entries found, all today stats set to 0');
-        return stats;
-      }
-      
-      // Process each entry exactly once with validation
+      // Process each entry exactly once
       entries.forEach((entry, index) => {
         const ticketType = entry.ticketType;
-        
-        // PROFESSIONAL FIX: Validate entry date for today's calculation
-        if (prefix === 'today') {
-          const entryDate = new Date(entry.createdAt);
-          const today = new Date();
-          const isToday = entryDate.toDateString() === today.toDateString();
-          
-          if (!isToday) {
-            console.log(`⚠️ PROFESSIONAL VALIDATION: Skipping entry ${index} - not from today (${entryDate.toISOString()})`);
-            return; // Skip this entry
-          }
-        }
         
         // Only process valid ticket types
         if (ticketType && ticketTypes.includes(ticketType)) {
@@ -235,17 +196,13 @@ router.get('/stats', authenticate, async (req, res) => {
       });
       
       const totalTicketEntries = ticketTypes.reduce((sum, type) => sum + stats[`${prefix}${type}`], 0);
-      console.log(`🎫 PROFESSIONAL RESULT: Total ${prefix} ticket entries: ${totalTicketEntries} (from ${entries.length} entries)`);
-      
-      // Log final stats
-      ticketTypes.forEach(type => {
-        console.log(`   ${prefix}${type}: ${stats[`${prefix}${type}`]} entries`);
-      });
+      console.log(`🎫 ULTIMATE RESULT: Total ${prefix} ticket entries: ${totalTicketEntries} (from ${entries.length} entries)`);
       
       return stats;
     };
     
-    const todayTicketStats = calculateTicketTypeStats(todayEntries, 'today');
+    // ULTIMATE PROFESSIONAL FIX: Calculate ticket types from same data source
+    const todayTicketStats = calculateTicketTypeStats(allTodayEntries, 'today');
     const totalTicketStats = calculateTicketTypeStats(allEntries, 'total');
     
     // Log ticket type stats for debugging
