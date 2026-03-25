@@ -15,15 +15,10 @@ router.get('/stats', authenticate, async (req, res) => {
     console.error('📊 Entries stats API called successfully');
     const isAdmin = req.user?.role === 'admin';
     
-    // FINAL PROFESSIONAL FIX: Force complete cache bypass and fresh data
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Surrogate-Control', 'no-store');
-    
-    // Force fresh calculation every time - ignore any cache
-    console.log('🚨 FINAL PROFESSIONAL FIX: Complete cache bypass activated');
-    console.log('🔄 FORCING FRESH DATA CALCULATION - No cache allowed');
+    // Add cache-busting headers
+    res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.header('Pragma', 'no-cache');
+    res.header('Expires', '0');
     
     // Check database connection
     const mongoose = require('mongoose');
@@ -111,74 +106,47 @@ router.get('/stats', authenticate, async (req, res) => {
     const staffFilter = isAdmin ? {} : { createdBy: req.user?._id };
     const todayStaffFilter = { ...todayFilter, ...staffFilter };
 
-    console.log('🔍 DEBUGGING DATA INCONSISTENCY:');
-    console.log('   Today Filter:', JSON.stringify(todayStaffFilter));
-    console.log('   Staff Filter:', JSON.stringify(staffFilter));
-
-    // Validate today's date range
-    const serverDate = new Date();
-    const todayDateString = serverDate.toISOString().split('T')[0];
-    console.log('🗓️ SERVER DATE VALIDATION:');
-    console.log('   Server Date:', serverDate.toISOString());
-    console.log('   Today String:', todayDateString);
-    console.log('   Today Start:', todayStart.toISOString());
-    console.log('   Today End:', todayEnd.toISOString());
-
-    // ULTIMATE PROFESSIONAL FIX: Direct database query to identify all entries
-    console.log('🚨 ULTIMATE PROFESSIONAL FIX: Direct database investigation');
+    // Use lean() and only select needed fields for better performance
+    const [todayCount, totalCount, todayEntries, allEntries] = await Promise.all([
+      Entry.countDocuments(todayStaffFilter).maxTimeMS(5000),
+      Entry.countDocuments(staffFilter).maxTimeMS(10000),
+      Entry.find(todayStaffFilter)
+        .select('ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount kidDiscount additionalDiscount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon upgrades')
+        .lean()
+        .maxTimeMS(5000),
+      Entry.find(staffFilter)
+        .select('ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount kidDiscount additionalDiscount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon upgrades')
+        .lean()
+        .maxTimeMS(10000)
+    ]);
     
-    // Get all entries for today with direct query
-    const allTodayEntries = await Entry.find(todayStaffFilter).lean();
-    console.log(`🔍 DIRECT QUERY: Found ${allTodayEntries.length} entries for today`);
+    console.log('📊 Today entries found:', todayEntries.length);
+    console.log('📊 Today entries sample:', todayEntries.slice(0, 3).map(e => ({
+      id: e._id,
+      createdAt: e.createdAt,
+      ticketType: e.ticketType,
+      finalAmount: e.finalAmount
+    })));
     
-    // Log all today entries with full details
-    allTodayEntries.forEach((entry, index) => {
-      console.log(`📅 Entry ${index + 1}:`, {
-        id: entry._id,
-        createdAt: entry.createdAt,
-        ticketType: entry.ticketType,
-        adults: entry.adults,
-        kids: entry.kids,
-        finalAmount: entry.finalAmount
-      });
-    });
+    const todayCouponCounts = aggregateCouponCounts(todayEntries);
+    const totalCouponCounts = aggregateCouponCounts(allEntries);
     
-    // ULTIMATE PROFESSIONAL FIX: Force todayCount from direct query
-    const todayCount = allTodayEntries.length;
-    
-    // Get all entries for total calculation
-    const allEntries = await Entry.find(staffFilter).lean();
-    
-    // ULTIMATE PROFESSIONAL FIX: Calculate ticket types function
+    // Calculate ticket type breakdown statistics
     const calculateTicketTypeStats = (entries, prefix = 'today') => {
       const ticketTypes = ['100', '150', '300', '450', '600'];
       const stats = {};
       
-      console.log(`🎫 ULTIMATE CALCULATION: ${prefix} ticket stats from ${entries.length} entries`);
-      
-      // Initialize all ticket types to 0
       ticketTypes.forEach(type => {
-        stats[`${prefix}${type}`] = 0;
-        stats[`${prefix}${type}Adults`] = 0;
-        stats[`${prefix}${type}Kids`] = 0;
-      });
-      
-      // Process each entry exactly once
-      entries.forEach((entry, index) => {
-        const ticketType = entry.ticketType;
-        
-        // Only process valid ticket types
-        if (ticketType && ticketTypes.includes(ticketType)) {
-          // Increment the count for this ticket type
-          stats[`${prefix}${ticketType}`] = (stats[`${prefix}${ticketType}`] || 0) + 1;
-          
-          // Add adults and kids
+        const typeEntries = entries.filter(e => e.ticketType === type);
+        const typeStats = typeEntries.reduce((acc, entry) => {
           let entryAdults = entry.adults || 0;
           let entryKids = entry.kids || 0;
+          let entryPeople = entry.totalPeople || 0;
           
           // Include people from upgrades
           if (entry.upgrades) {
             entry.upgrades.forEach((upgrade) => {
+              entryPeople += (upgrade.adults || 0) + (upgrade.kids || 0);
               if (upgrade.ticketType !== '150') {
                 entryAdults += upgrade.adults || 0;
               }
@@ -186,23 +154,23 @@ router.get('/stats', authenticate, async (req, res) => {
             });
           }
           
-          stats[`${prefix}${ticketType}Adults`] = (stats[`${prefix}${ticketType}Adults}`] || 0) + entryAdults;
-          stats[`${prefix}${ticketType}Kids`] = (stats[`${prefix}${ticketType}Kids}`] || 0) + entryKids;
-          
-          console.log(`   ✅ Processed ${prefix}${ticketType}: +1 entry (Adults: ${entryAdults}, Kids: ${entryKids})`);
-        } else {
-          console.log(`   ⚠️ Skipped entry with invalid ticket type: ${ticketType}`);
-        }
+          return {
+            entries: acc.entries + 1,
+            adults: acc.adults + entryAdults,
+            kids: acc.kids + entryKids,
+            people: acc.people + entryPeople
+          };
+        }, { entries: 0, adults: 0, kids: 0, people: 0 });
+        
+        stats[`${prefix}${type}`] = typeStats.entries;
+        stats[`${prefix}${type}Adults`] = typeStats.adults;
+        stats[`${prefix}${type}Kids`] = typeStats.kids;
       });
-      
-      const totalTicketEntries = ticketTypes.reduce((sum, type) => sum + stats[`${prefix}${type}`], 0);
-      console.log(`🎫 ULTIMATE RESULT: Total ${prefix} ticket entries: ${totalTicketEntries} (from ${entries.length} entries)`);
       
       return stats;
     };
     
-    // ULTIMATE PROFESSIONAL FIX: Calculate ticket types from same data source
-    const todayTicketStats = calculateTicketTypeStats(allTodayEntries, 'today');
+    const todayTicketStats = calculateTicketTypeStats(todayEntries, 'today');
     const totalTicketStats = calculateTicketTypeStats(allEntries, 'total');
     
     // Log ticket type stats for debugging
@@ -258,71 +226,6 @@ router.get('/stats', authenticate, async (req, res) => {
     const todayPeopleStats = calculatePeopleStats(todayEntries);
     const totalPeopleStats = calculatePeopleStats(allEntries);
     
-    // PROFESSIONAL FIX: Check for force reset parameter
-    const forceReset = req.query.forceReset === 'true';
-    
-    // PROFESSIONAL FIX: Force all today stats to 0 when forceReset=true
-    if (forceReset) {
-      console.log('🚨 PROFESSIONAL FIX: Force reset parameter detected - forcing all today stats to 0');
-      
-      // Calculate total stats first (needed for response)
-      const totalTicketStats = calculateTicketTypeStats(allEntries, 'total');
-      const totalCouponCounts = aggregateCouponCounts(allEntries);
-      
-      // Force all today stats to 0 including ticket types
-      const resetTodayStats = {
-        todayEntries: 0,
-        todayPeople: 0,
-        todayAdults: 0,
-        todayKids: 0,
-        todayAmount: 0,
-        todayCash: 0,
-        todayUpi: 0,
-        todayAdvance: 0,
-        todayOther: 0,
-        todayKidDiscount: 0,
-        todayAdditionalDiscount: 0,
-        todayAdultsFastFoodCoupon: 0,
-        todayKidsFastFoodCoupon: 0,
-        todayAdultsMainFoodCoupon: 0,
-        todayKidsMainFoodCoupon: 0,
-        // FORCE ALL TICKET TYPES TO 0
-        today150: 0,
-        today300: 0,
-        today450: 0,
-        today600: 0,
-        today100: 0,
-        today150Adults: 0,
-        today300Adults: 0,
-        today450Adults: 0,
-        today600Adults: 0,
-        today100Adults: 0,
-        today150Kids: 0,
-        today300Kids: 0,
-        today450Kids: 0,
-        today600Kids: 0,
-        today100Kids: 0
-      };
-      
-      console.log('✅ PROFESSIONAL FIX: All today stats forced to 0');
-      
-      // Return reset stats combined with total stats
-      const response = {
-        success: true,
-        data: {
-          ...resetTodayStats,
-          ...totalTicketStats,
-          ...totalCouponCounts,
-          lastUpdated: new Date().toISOString(),
-          forceReset: true,
-          resetTrigger: 'force-parameter'
-        }
-      };
-      
-      console.log('🚀 PROFESSIONAL FIX: Response prepared with all today stats = 0');
-      return res.json(response);
-    }
-    
     const manualTodayStats = {
       totalPeople: todayPeopleStats.totalPeople,
       adults: todayPeopleStats.adults,
@@ -356,6 +259,54 @@ router.get('/stats', authenticate, async (req, res) => {
       additionalDiscount: allEntries.reduce((sum, e) => sum + (e.additionalDiscount || 0), 0),
     };
     
+    // SIMPLE PROFESSIONAL FIX: Check for force reset parameter
+    const forceReset = req.query.forceReset === 'true';
+    
+    // SIMPLE PROFESSIONAL FIX: Force all today stats to 0 when forceReset=true
+    if (forceReset) {
+      console.log('🚨 SIMPLE PROFESSIONAL FIX: Force reset parameter detected - forcing all today stats to 0');
+      
+      // Return forced reset response
+      const resetResponse = {
+        success: true,
+        data: {
+          todayEntries: 0,
+          totalEntries: totalCount,
+          todayPeople: 0,
+          totalPeople: manualTotalStats.totalPeople,
+          todayAdults: 0,
+          totalAdults: manualTotalStats.adults,
+          todayKids: 0,
+          totalKids: manualTotalStats.kids,
+          todayAmount: 0,
+          totalAmount: manualTotalStats.finalAmount,
+          todayCash: 0,
+          totalCash: manualTotalStats.cashAmount,
+          todayUpi: 0,
+          totalUpi: manualTotalStats.upiAmount,
+          todayAdvance: 0,
+          totalAdvance: manualTotalStats.advanceAmount,
+          // FORCE ALL TICKET TYPES TO 0
+          today150: 0,
+          today300: 0,
+          today450: 0,
+          today600: 0,
+          today100: 0,
+          total150: totalTicketStats.total150 || 0,
+          total300: totalTicketStats.total300 || 0,
+          total450: totalTicketStats.total450 || 0,
+          total600: totalTicketStats.total600 || 0,
+          total100: totalTicketStats.total100 || 0,
+          lastUpdated: new Date().toISOString(),
+          forceReset: true,
+          resetTrigger: 'simple-force-parameter'
+        }
+      };
+      
+      console.log('🚀 SIMPLE PROFESSIONAL FIX: Response prepared with all today stats = 0');
+      return res.json(resetResponse);
+    }
+
     const result = {
       success: true,
       data: {
