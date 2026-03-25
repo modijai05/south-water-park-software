@@ -18,6 +18,16 @@ dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'south-water-park-secret-change-in-prod';
 const app = express();
+
+// Add minimal test endpoint
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Backend is working!',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development'
+  });
+});
 const PORT = process.env.PORT ?? 5000;
 
 // Configure Express for Render deployment with enhanced CORS
