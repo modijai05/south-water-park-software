@@ -258,6 +258,63 @@ router.get('/stats', authenticate, async (req, res) => {
     const todayPeopleStats = calculatePeopleStats(todayEntries);
     const totalPeopleStats = calculatePeopleStats(allEntries);
     
+    // PROFESSIONAL COMPLETE RESET: Force all today stats to 0 when no today entries exist
+    if (todayCount === 0) {
+      console.log('🚨 PROFESSIONAL COMPLETE RESET: No today entries found - forcing all today stats to 0');
+      
+      // Force all today stats to 0 including ticket types
+      const resetTodayStats = {
+        todayEntries: 0,
+        todayPeople: 0,
+        todayAdults: 0,
+        todayKids: 0,
+        todayAmount: 0,
+        todayCash: 0,
+        todayUpi: 0,
+        todayAdvance: 0,
+        todayOther: 0,
+        todayKidDiscount: 0,
+        todayAdditionalDiscount: 0,
+        todayAdultsFastFoodCoupon: 0,
+        todayKidsFastFoodCoupon: 0,
+        todayAdultsMainFoodCoupon: 0,
+        todayKidsMainFoodCoupon: 0,
+        // FORCE ALL TICKET TYPES TO 0 - PROFESSIONAL RESET
+        today150: 0,
+        today300: 0,
+        today450: 0,
+        today600: 0,
+        today100: 0,
+        today150Adults: 0,
+        today300Adults: 0,
+        today450Adults: 0,
+        today600Adults: 0,
+        today100Adults: 0,
+        today150Kids: 0,
+        today300Kids: 0,
+        today450Kids: 0,
+        today600Kids: 0,
+        today100Kids: 0
+      };
+      
+      console.log('✅ PROFESSIONAL COMPLETE RESET: All today stats forced to 0');
+      
+      // Return reset stats combined with total stats
+      const response = {
+        success: true,
+        data: {
+          ...resetTodayStats,
+          ...totalTicketStats,
+          ...totalCouponCounts,
+          lastUpdated: new Date().toISOString(),
+          forceReset: true
+        }
+      };
+      
+      console.log('🚀 PROFESSIONAL COMPLETE RESET: Response prepared with all today stats = 0');
+      return res.json(response);
+    }
+    
     const manualTodayStats = {
       totalPeople: todayPeopleStats.totalPeople,
       adults: todayPeopleStats.adults,
