@@ -1,0 +1,40 @@
+{
+  "env": {
+    "node": true,
+    "es2021": true,
+    "mocha": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "commonjs"
+  },
+  "rules": {
+    "no-console": "off",
+    "no-unused-vars": "off",
+    "semi": "off",
+    "quotes": "off",
+    "indent": "off",
+    "no-empty": "off",
+    "no-undef": "off"
+  },
+  "globals": {
+    "dayjs": "readonly",
+    "mongoose": "readonly",
+    "Entry": "readonly",
+    "User": "readonly",
+    "TicketConfig": "readonly",
+    "jwt": "readonly",
+    "bcryptjs": "readonly",
+    "cors": "readonly",
+    "express": "readonly",
+    "dotenv": "readonly"
+  },
+  "ignorePatterns": [
+    "node_modules/**",
+    "**/*.test.js",
+    "**/*.spec.js"
+  ]
+}

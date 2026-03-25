@@ -1,0 +1,48 @@
+{
+  "env": {
+    "browser": true,
+    "es2020": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true
+    },
+    "ecmaVersion": "latest",
+    "sourceType": "module",
+    "project": "./tsconfig.json"
+  },
+  "plugins": [
+    "react-refresh",
+    "@typescript-eslint"
+  ],
+  "rules": {
+    "react-refresh/only-export-components": "off",
+    "no-console": "off",
+    "no-unused-vars": "off",
+    "no-empty": "off",
+    "no-constant-condition": "off",
+    "no-cond-assign": "off",
+    "no-func-assign": "off",
+    "no-prototype-builtins": "off",
+    "indent": "off",
+    "no-undef": "off",
+    "no-case-declarations": "off",
+    "no-self-assign": "off",
+    "no-redeclare": "off"
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "node_modules/**",
+    "*.min.js",
+    "build/**",
+    "**/*.config.js",
+    "**/*.config.ts",
+    "vite.config.js",
+    "vite.config.ts"
+  ]
+}
