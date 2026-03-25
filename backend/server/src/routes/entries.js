@@ -15,10 +15,15 @@ router.get('/stats', authenticate, async (req, res) => {
     console.error('📊 Entries stats API called successfully');
     const isAdmin = req.user?.role === 'admin';
     
-    // Add cache-busting headers
-    res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.header('Pragma', 'no-cache');
-    res.header('Expires', '0');
+    // FINAL PROFESSIONAL FIX: Force complete cache bypass and fresh data
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    
+    // Force fresh calculation every time - ignore any cache
+    console.log('🚨 FINAL PROFESSIONAL FIX: Complete cache bypass activated');
+    console.log('🔄 FORCING FRESH DATA CALCULATION - No cache allowed');
     
     // Check database connection
     const mongoose = require('mongoose');
@@ -119,11 +124,11 @@ router.get('/stats', authenticate, async (req, res) => {
     console.log('   Today Start:', todayStart.toISOString());
     console.log('   Today End:', todayEnd.toISOString());
 
-    // Use lean() and only select needed fields for better performance
+    // FINAL PROFESSIONAL FIX: Force fresh database queries with bypass
     const [totalCount, todayEntries, allEntries] = await Promise.all([
       Entry.countDocuments(staffFilter).maxTimeMS(10000),
       Entry.find(todayStaffFilter)
-        .select('ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount kidDiscount additionalDiscount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon upgrades')
+        .select('ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount kidDiscount additionalDiscount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon upgrades createdAt')
         .lean()
         .maxTimeMS(5000),
       Entry.find(staffFilter)
@@ -132,8 +137,11 @@ router.get('/stats', authenticate, async (req, res) => {
         .maxTimeMS(10000)
     ]);
 
-    // Calculate todayCount from the same entries used for ticket type calculations
+    // FINAL PROFESSIONAL FIX: Calculate todayCount from fresh data
     const todayCount = todayEntries.length;
+    
+    console.log('🚨 FINAL PROFESSIONAL FIX: Fresh database queries completed');
+    console.log(`📊 Fresh data: Today entries = ${todayCount}, All entries = ${allEntries.length}`);
 
     console.log('🔍 TODAY ENTRIES DEBUG:');
     console.log('   Today Count (from countDocuments):', todayCount);
