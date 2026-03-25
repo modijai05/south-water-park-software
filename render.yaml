@@ -6,40 +6,32 @@ services:
     name: south-water-park-backend
     env: node
     plan: free
-    buildCommand: "npm install"
-    startCommand: "npm start"
-    healthCheckPath: /
+    buildCommand: "cd backend/server && npm install"
+    startCommand: "cd backend/server && npm start"
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: 10000
       - key: MONGODB_URI
-        fromDatabase:
-          name: south-water-park-db
-          property: connectionString
+        value: mongodb+srv://jaimodi05bapa_db_user:SgKNnsz19WTuvHp3@cluster.nckewmo.mongodb.net/?appName=Cluster
       - key: JWT_SECRET
-        generateValue: true
-      - key: CORS_ORIGIN
-        value: https://thesouthticketmanagement.netlify.app
+        value: south-water-park-production-secret-2024-secure
+      - key: CLIENT_URL
+        value: https://endearing-kleicha-b78d8e.netlify.app
+      - key: TZ
+        value: UTC
     domains:
       - south-water-park-backend.onrender.com
-
-  # Database Service Configuration
-  - type: postgres
-    name: south-water-park-db
-    plan: free
-    ipAllowList: []
-    databaseName: south_water_park
-    user: south_water_park_user
 
   # Frontend Service Configuration (Optional - can use Netlify)
   - type: web
     name: south-water-park-frontend
     env: static
     plan: free
-    buildCommand: "cd frontend && npm install && npm run build"
-    staticPublishPath: frontend/dist
+    buildCommand: "cd frontend/client && npm install && npm run build"
+    staticPublishPath: frontend/client/dist
     envVars:
       - key: VITE_API_URL
         value: https://south-water-park-backend.onrender.com/api

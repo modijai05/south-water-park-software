@@ -22,8 +22,7 @@
     "concurrently": "^8.2.2"
   },
   "workspaces": {
-    "packages": ["frontend/client", "backend/server"],
-    "nohoist": ["@rollup/rollup-linux-x64-gnu"]
+    "packages": ["frontend/client", "backend/server"]
   },
   "keywords": [
     "water-park",
