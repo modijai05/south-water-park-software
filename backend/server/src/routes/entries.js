@@ -12,7 +12,7 @@ const router = Router();
 // GET /api/entries/stats - Get entry statistics
 router.get('/stats', authenticate, async (req, res) => {
   try {
-    console.error('📊 Entries stats API called successfully');
+    console.log('📊 Entries stats API called successfully');
     const isAdmin = req.user?.role === 'admin';
     
     // MINIMAL PROFESSIONAL FIX: Check for force reset parameter first
@@ -67,7 +67,7 @@ router.get('/stats', authenticate, async (req, res) => {
     // Check database connection
     const mongoose = require('mongoose');
     if (mongoose.connection.readyState !== 1) {
-      console.log('ÔÜá´©Å Database not connected, returning fallback stats data');
+      console.log('Database not connected, returning fallback stats data');
       return res.json({
         success: true,
         data: {
