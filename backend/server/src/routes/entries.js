@@ -129,6 +129,300 @@ const calculateStatsFromEntries = (entries) => {
   return stats;
 };
 
+// GET /api/entries/:id - Get single entry (PUBLIC ACCESS) - MUST BE FIRST
+router.get('/:id', async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    const { id } = req.params;
+    console.log('🔍 Fetching single entry:', id);
+    
+    // Try database find, fallback to success response
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const entry = await Entry.findOne({ _id: id });
+        
+        if (!entry) {
+          return res.status(404).json({
+            success: false,
+            message: 'Entry not found'
+          });
+        }
+        
+        console.log('✅ Entry found:', entry.receiptNumber);
+        
+        return res.json({
+          success: true,
+          data: entry
+        });
+      } else {
+        console.log('⚠️ Database not connected, connection state:', mongoose.connection.readyState);
+      }
+    } catch (dbError) {
+      console.error('❌ Database find failed:', dbError.message);
+    }
+    
+    // Fallback response
+    res.json({
+      success: true,
+      data: {
+        _id: id,
+        name: 'Unknown',
+        mobile: 'Unknown',
+        ticketType: '150',
+        adults: 1,
+        kids: 0,
+        totalPeople: 1,
+        finalAmount: 150,
+        cashAmount: 150,
+        upiAmount: 0,
+        advanceAmount: 0,
+        receiptNumber: 'REC' + Date.now(),
+        createdAt: new Date(),
+        fallbackMode: true
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Entry fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch entry',
+      error: error.message
+    });
+  }
+});
+
+// PUT /api/entries/:id - Update entry (PUBLIC ACCESS) - MUST BE SECOND
+router.put('/:id', async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    const { id } = req.params;
+    const {
+      name,
+      mobile,
+      ticketType,
+      adults,
+      kids,
+      adultsFastFoodCoupon,
+      kidsFastFoodCoupon,
+      adultsMainFoodCoupon,
+      kidsMainFoodCoupon,
+      upgrades,
+      filledBy,
+      filledByFullName,
+      totalPeople,
+      baseAmount,
+      kidDiscount,
+      additionalDiscount,
+      finalAmount,
+      cashAmount,
+      upiAmount,
+      advanceAmount,
+      otherAmount,
+      notes
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !mobile || !ticketType || !adults) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: name, mobile, ticketType, adults'
+      });
+    }
+
+    // Try database update, fallback to success response
+    try {
+      if (mongoose.connection.readyState === 1) {
+        console.log('🔗 Database connected, attempting to update entry:', id);
+        
+        const updateData = {
+          name: name.trim(),
+          mobile: mobile.trim(),
+          ticketType,
+          adults: parseInt(adults) || 0,
+          kids: parseInt(kids) || 0,
+          adultsFastFoodCoupon: adultsFastFoodCoupon?.trim() || '',
+          kidsFastFoodCoupon: kidsFastFoodCoupon?.trim() || '',
+          adultsMainFoodCoupon: adultsMainFoodCoupon?.trim() || '',
+          kidsMainFoodCoupon: kidsMainFoodCoupon?.trim() || '',
+          upgrades: Array.isArray(upgrades) ? upgrades : [],
+          filledBy: filledBy?.trim() || 'Unknown',
+          filledByFullName: filledByFullName?.trim() || filledBy?.trim() || 'Unknown',
+          totalPeople: parseInt(totalPeople) || (parseInt(adults) + parseInt(kids)) || 0,
+          baseAmount: parseFloat(baseAmount) || 0,
+          kidDiscount: parseFloat(kidDiscount) || 0,
+          additionalDiscount: parseFloat(additionalDiscount) || 0,
+          finalAmount: parseFloat(finalAmount) || 0,
+          cashAmount: parseFloat(cashAmount) || 0,
+          upiAmount: parseFloat(upiAmount) || 0,
+          advanceAmount: parseFloat(advanceAmount) || 0,
+          otherAmount: parseFloat(otherAmount) || 0,
+          notes: notes?.trim() || ''
+        };
+
+        const updatedEntry = await Entry.findOneAndUpdate(
+          { _id: id },
+          { $set: updateData },
+          { new: true, runValidators: true }
+        );
+        
+        if (!updatedEntry) {
+          return res.status(404).json({
+            success: false,
+            message: 'Entry not found'
+          });
+        }
+        
+        console.log('✅ Entry updated successfully:', updatedEntry._id);
+        
+        return res.json({
+          success: true,
+          message: 'Entry updated successfully',
+          data: {
+            id: updatedEntry._id,
+            receiptNumber: updatedEntry.receiptNumber,
+            name: updatedEntry.name,
+            mobile: updatedEntry.mobile,
+            ticketType: updatedEntry.ticketType,
+            adults: updatedEntry.adults,
+            kids: updatedEntry.kids,
+            totalPeople: updatedEntry.totalPeople,
+            finalAmount: updatedEntry.finalAmount,
+            cashAmount: updatedEntry.cashAmount,
+            upiAmount: updatedEntry.upiAmount,
+            advanceAmount: updatedEntry.advanceAmount,
+            createdAt: updatedEntry.createdAt,
+            updatedAt: updatedEntry.updatedAt,
+            databaseUpdated: true
+          }
+        });
+      } else {
+        console.log('⚠️ Database not connected, connection state:', mongoose.connection.readyState);
+      }
+    } catch (dbError) {
+      console.error('❌ Database update failed:', dbError.message);
+      console.error('❌ Database update error stack:', dbError.stack);
+    }
+    
+    // Fallback success response
+    res.json({
+      success: true,
+      message: 'Entry updated successfully (fallback mode)',
+      data: {
+        id: id,
+        name: name,
+        mobile: mobile,
+        ticketType: ticketType,
+        adults: adults,
+        kids: kids,
+        totalPeople: totalPeople || (parseInt(adults) + parseInt(kids)),
+        finalAmount: finalAmount,
+        cashAmount: cashAmount,
+        upiAmount: upiAmount,
+        advanceAmount: advanceAmount,
+        updatedAt: new Date(),
+        fallbackMode: true
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Entry update error:', error);
+    // Always return success for frontend compatibility
+    res.json({
+      success: true,
+      message: 'Entry updated successfully (error fallback)',
+      data: {
+        id: req.params.id,
+        name: req.body.name,
+        mobile: req.body.mobile,
+        ticketType: req.body.ticketType,
+        adults: req.body.adults,
+        kids: req.body.kids,
+        totalPeople: req.body.totalPeople || (parseInt(req.body.adults) + parseInt(req.body.kids)),
+        finalAmount: req.body.finalAmount,
+        cashAmount: req.body.cashAmount,
+        upiAmount: req.body.upiAmount,
+        advanceAmount: req.body.advanceAmount,
+        updatedAt: new Date(),
+        errorFallback: true
+      }
+    });
+  }
+});
+
+// DELETE /api/entries/:id - Delete entry (PUBLIC ACCESS) - MUST BE THIRD
+router.delete('/:id', async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    const { id } = req.params;
+    console.log('🗑️ Attempting to delete entry:', id);
+    
+    // Try database delete, fallback to success response
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const deletedEntry = await Entry.findOneAndDelete({ _id: id });
+        
+        if (!deletedEntry) {
+          return res.status(404).json({
+            success: false,
+            message: 'Entry not found'
+          });
+        }
+        
+        console.log('✅ Entry deleted successfully:', deletedEntry.receiptNumber);
+        
+        return res.json({
+          success: true,
+          message: 'Entry deleted successfully',
+          data: {
+            id: deletedEntry._id,
+            receiptNumber: deletedEntry.receiptNumber,
+            databaseDeleted: true
+          }
+        });
+      } else {
+        console.log('⚠️ Database not connected, connection state:', mongoose.connection.readyState);
+      }
+    } catch (dbError) {
+      console.error('❌ Database delete failed:', dbError.message);
+      console.error('❌ Database delete error stack:', dbError.stack);
+    }
+    
+    // Fallback success response
+    res.json({
+      success: true,
+      message: 'Entry deleted successfully (fallback mode)',
+      data: {
+        id: id,
+        deletedAt: new Date(),
+        fallbackMode: true
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Entry delete error:', error);
+    // Always return success for frontend compatibility
+    res.json({
+      success: true,
+      message: 'Entry deleted successfully (error fallback)',
+      data: {
+        id: req.params.id,
+        deletedAt: new Date(),
+        errorFallback: true
+      }
+    });
+  }
+});
+
 // GET /api/entries/stats - Get entry statistics (PUBLIC ACCESS)
 router.get('/stats', async (req, res) => {
   try {
@@ -446,7 +740,7 @@ router.get('/charts', simpleAuth, async (req, res) => {
   }
 });
 
-// GET /api/entries - Get all entries (admin/staff)
+// GET /api/entries - Get all entries (admin/staff) - MUST BE LAST
 router.get('/', simpleAuth, async (req, res) => {
   try {
     
@@ -763,300 +1057,6 @@ router.get('/export', simpleAuth, async (req, res) => {
       success: false,
       message: 'Failed to export entries',
       error: error.message
-    });
-  }
-});
-
-// GET /api/entries/:id - Get single entry (PUBLIC ACCESS)
-router.get('/:id', async (req, res) => {
-  try {
-    // Set CORS headers for all origins
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Credentials', 'false');
-    
-    const { id } = req.params;
-    console.log('🔍 Fetching single entry:', id);
-    
-    // Try database find, fallback to success response
-    try {
-      if (mongoose.connection.readyState === 1) {
-        const entry = await Entry.findOne({ _id: id });
-        
-        if (!entry) {
-          return res.status(404).json({
-            success: false,
-            message: 'Entry not found'
-          });
-        }
-        
-        console.log('✅ Entry found:', entry.receiptNumber);
-        
-        return res.json({
-          success: true,
-          data: entry
-        });
-      } else {
-        console.log('⚠️ Database not connected, connection state:', mongoose.connection.readyState);
-      }
-    } catch (dbError) {
-      console.error('❌ Database find failed:', dbError.message);
-    }
-    
-    // Fallback response
-    res.json({
-      success: true,
-      data: {
-        _id: id,
-        name: 'Unknown',
-        mobile: 'Unknown',
-        ticketType: '150',
-        adults: 1,
-        kids: 0,
-        totalPeople: 1,
-        finalAmount: 150,
-        cashAmount: 150,
-        upiAmount: 0,
-        advanceAmount: 0,
-        receiptNumber: 'REC' + Date.now(),
-        createdAt: new Date(),
-        fallbackMode: true
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Entry fetch error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch entry',
-      error: error.message
-    });
-  }
-});
-
-// PUT /api/entries/:id - Update entry (PUBLIC ACCESS)
-router.put('/:id', async (req, res) => {
-  try {
-    // Set CORS headers for all origins
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Credentials', 'false');
-    
-    const { id } = req.params;
-    const {
-      name,
-      mobile,
-      ticketType,
-      adults,
-      kids,
-      adultsFastFoodCoupon,
-      kidsFastFoodCoupon,
-      adultsMainFoodCoupon,
-      kidsMainFoodCoupon,
-      upgrades,
-      filledBy,
-      filledByFullName,
-      totalPeople,
-      baseAmount,
-      kidDiscount,
-      additionalDiscount,
-      finalAmount,
-      cashAmount,
-      upiAmount,
-      advanceAmount,
-      otherAmount,
-      notes
-    } = req.body;
-
-    // Validate required fields
-    if (!name || !mobile || !ticketType || !adults) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: name, mobile, ticketType, adults'
-      });
-    }
-
-    // Try database update, fallback to success response
-    try {
-      if (mongoose.connection.readyState === 1) {
-        console.log('🔗 Database connected, attempting to update entry:', id);
-        
-        const updateData = {
-          name: name.trim(),
-          mobile: mobile.trim(),
-          ticketType,
-          adults: parseInt(adults) || 0,
-          kids: parseInt(kids) || 0,
-          adultsFastFoodCoupon: adultsFastFoodCoupon?.trim() || '',
-          kidsFastFoodCoupon: kidsFastFoodCoupon?.trim() || '',
-          adultsMainFoodCoupon: adultsMainFoodCoupon?.trim() || '',
-          kidsMainFoodCoupon: kidsMainFoodCoupon?.trim() || '',
-          upgrades: Array.isArray(upgrades) ? upgrades : [],
-          filledBy: filledBy?.trim() || 'Unknown',
-          filledByFullName: filledByFullName?.trim() || filledBy?.trim() || 'Unknown',
-          totalPeople: parseInt(totalPeople) || (parseInt(adults) + parseInt(kids)) || 0,
-          baseAmount: parseFloat(baseAmount) || 0,
-          kidDiscount: parseFloat(kidDiscount) || 0,
-          additionalDiscount: parseFloat(additionalDiscount) || 0,
-          finalAmount: parseFloat(finalAmount) || 0,
-          cashAmount: parseFloat(cashAmount) || 0,
-          upiAmount: parseFloat(upiAmount) || 0,
-          advanceAmount: parseFloat(advanceAmount) || 0,
-          otherAmount: parseFloat(otherAmount) || 0,
-          notes: notes?.trim() || ''
-        };
-
-        const updatedEntry = await Entry.findOneAndUpdate(
-          { _id: id },
-          { $set: updateData },
-          { new: true, runValidators: true }
-        );
-        
-        if (!updatedEntry) {
-          return res.status(404).json({
-            success: false,
-            message: 'Entry not found'
-          });
-        }
-        
-        console.log('✅ Entry updated successfully:', updatedEntry._id);
-        
-        return res.json({
-          success: true,
-          message: 'Entry updated successfully',
-          data: {
-            id: updatedEntry._id,
-            receiptNumber: updatedEntry.receiptNumber,
-            name: updatedEntry.name,
-            mobile: updatedEntry.mobile,
-            ticketType: updatedEntry.ticketType,
-            adults: updatedEntry.adults,
-            kids: updatedEntry.kids,
-            totalPeople: updatedEntry.totalPeople,
-            finalAmount: updatedEntry.finalAmount,
-            cashAmount: updatedEntry.cashAmount,
-            upiAmount: updatedEntry.upiAmount,
-            advanceAmount: updatedEntry.advanceAmount,
-            createdAt: updatedEntry.createdAt,
-            updatedAt: updatedEntry.updatedAt,
-            databaseUpdated: true
-          }
-        });
-      } else {
-        console.log('⚠️ Database not connected, connection state:', mongoose.connection.readyState);
-      }
-    } catch (dbError) {
-      console.error('❌ Database update failed:', dbError.message);
-      console.error('❌ Database update error stack:', dbError.stack);
-    }
-    
-    // Fallback success response
-    res.json({
-      success: true,
-      message: 'Entry updated successfully (fallback mode)',
-      data: {
-        id: id,
-        name: name,
-        mobile: mobile,
-        ticketType: ticketType,
-        adults: adults,
-        kids: kids,
-        totalPeople: totalPeople || (parseInt(adults) + parseInt(kids)),
-        finalAmount: finalAmount,
-        cashAmount: cashAmount,
-        upiAmount: upiAmount,
-        advanceAmount: advanceAmount,
-        updatedAt: new Date(),
-        fallbackMode: true
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Entry update error:', error);
-    // Always return success for frontend compatibility
-    res.json({
-      success: true,
-      message: 'Entry updated successfully (error fallback)',
-      data: {
-        id: req.params.id,
-        name: req.body.name,
-        mobile: req.body.mobile,
-        ticketType: req.body.ticketType,
-        adults: req.body.adults,
-        kids: req.body.kids,
-        totalPeople: req.body.totalPeople || (parseInt(req.body.adults) + parseInt(req.body.kids)),
-        finalAmount: req.body.finalAmount,
-        cashAmount: req.body.cashAmount,
-        upiAmount: req.body.upiAmount,
-        advanceAmount: req.body.advanceAmount,
-        updatedAt: new Date(),
-        errorFallback: true
-      }
-    });
-  }
-});
-
-// DELETE /api/entries/:id - Delete entry (PUBLIC ACCESS)
-router.delete('/:id', async (req, res) => {
-  try {
-    // Set CORS headers for all origins
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Credentials', 'false');
-    
-    const { id } = req.params;
-    console.log('🗑️ Attempting to delete entry:', id);
-    
-    // Try database delete, fallback to success response
-    try {
-      if (mongoose.connection.readyState === 1) {
-        const deletedEntry = await Entry.findOneAndDelete({ _id: id });
-        
-        if (!deletedEntry) {
-          return res.status(404).json({
-            success: false,
-            message: 'Entry not found'
-          });
-        }
-        
-        console.log('✅ Entry deleted successfully:', deletedEntry.receiptNumber);
-        
-        return res.json({
-          success: true,
-          message: 'Entry deleted successfully',
-          data: {
-            id: deletedEntry._id,
-            receiptNumber: deletedEntry.receiptNumber,
-            databaseDeleted: true
-          }
-        });
-      } else {
-        console.log('⚠️ Database not connected, connection state:', mongoose.connection.readyState);
-      }
-    } catch (dbError) {
-      console.error('❌ Database delete failed:', dbError.message);
-      console.error('❌ Database delete error stack:', dbError.stack);
-    }
-    
-    // Fallback success response
-    res.json({
-      success: true,
-      message: 'Entry deleted successfully (fallback mode)',
-      data: {
-        id: id,
-        deletedAt: new Date(),
-        fallbackMode: true
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Entry delete error:', error);
-    // Always return success for frontend compatibility
-    res.json({
-      success: true,
-      message: 'Entry deleted successfully (error fallback)',
-      data: {
-        id: req.params.id,
-        deletedAt: new Date(),
-        errorFallback: true
-      }
     });
   }
 });
