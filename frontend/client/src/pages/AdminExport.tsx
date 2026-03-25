@@ -33,13 +33,12 @@ export function AdminExport() {
     const fetchEntriesCount = async () => {
       try {
         const { from: f, to: t } = getDateRange();
-        const res = await entriesApi.list({
+        const exportData = await entriesApi.export({
           from: `${f}T00:00:00.000Z`,
           to: `${t}T23:59:59.999Z`,
-          limit: 10000, // Get all entries to show correct count
+          limit: 1, // Just get count for efficiency
         });
-        const entries = (res.entries as EntryRecord[]) ?? [];
-        setEntriesCount(entries.length);
+        setEntriesCount(exportData.total || 0);
       } catch (error) {
         console.error('Failed to fetch entries count:', error);
         setEntriesCount(null);
@@ -64,26 +63,25 @@ export function AdminExport() {
       const fetchEntriesCount = async () => {
         try {
           const { from: f, to: t } = getDateRange();
-          const res = await entriesApi.list({
+          const exportData = await entriesApi.export({
             from: `${f}T00:00:00.000Z`,
             to: `${t}T23:59:59.999Z`,
-            limit: 10000, // Get all entries to show correct count
+            limit: 1, // Just get count for efficiency
           });
-          const entries = (res.entries as EntryRecord[]) ?? [];
-          setEntriesCount(entries.length);
+          setEntriesCount(exportData.total || 0);
           setLastSyncTime(dayjs().format('HH:mm:ss'));
           setSyncStatus('active');
           
-          console.log('✅ Export: Entries count updated:', entries.length);
+          console.log('✅ Export: Entries count updated:', exportData.total);
           
           // Trigger global sync events
           window.dispatchEvent(new CustomEvent('export-synced', {
-            detail: { timestamp: new Date().toISOString(), count: entries.length }
+            detail: { timestamp: new Date().toISOString(), count: exportData.total }
           }));
           
           // Also trigger excel-synced event for Excel components
           window.dispatchEvent(new CustomEvent('excel-synced', {
-            detail: { timestamp: new Date().toISOString(), count: entries.length, entries: entries }
+            detail: { timestamp: new Date().toISOString(), count: exportData.total, entries: [] }
           }));
           
         } catch (error) {
@@ -188,20 +186,28 @@ export function AdminExport() {
     try {
       const { from: f, to: t } = getDateRange();
       
-      // Fetch real entries from API
-      const res = await entriesApi.list({
+      // Use the dedicated export API with proper filtering
+      const exportData = await entriesApi.export({
         from: `${f}T00:00:00.000Z`,
         to: `${t}T23:59:59.999Z`,
-        limit: 10000,
+        limit: 10000, // Get all entries for export
       });
       
-      const entries = (res.entries as EntryRecord[]) ?? [];
+      const entries = (exportData.entries as EntryRecord[]) ?? [];
       
       // Update entries count for display
       setEntriesCount(entries.length);
       
+      // Show export summary
+      console.log('📊 Export Summary:', {
+        query: exportData.query,
+        totalAvailable: exportData.total,
+        exported: exportData.exported,
+        exportDate: exportData.exportDate
+      });
+      
       if (entries.length === 0) {
-        alert(`No entries found for the selected date range (${f} to ${t})`);
+        alert(`No entries found for selected date range (${f} to ${t})\n\nQuery: ${JSON.stringify(exportData.query, null, 2)}`);
         return;
       }
 
@@ -1074,12 +1080,12 @@ export function AdminExport() {
   const generateBatchReceipts = async () => {
     try {
       const { from: f, to: t } = getDateRange();
-      const res = await entriesApi.list({
+      const exportData = await entriesApi.export({
         from: `${f}T00:00:00.000Z`,
         to: `${t}T23:59:59.999Z`,
         limit: 10000,
       });
-      const entries = (res.entries as EntryRecord[]) ?? [];
+      const entries = (exportData.entries as EntryRecord[]) ?? [];
       
       if (entries.length === 0) {
         alert('No entries found for selected date range');

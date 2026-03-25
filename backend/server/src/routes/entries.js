@@ -444,6 +444,8 @@ router.get('/', simpleAuth, async (req, res) => {
     const search = req.query.search || '';
     const ticketType = req.query.ticketType || '';
     const date = req.query.date || '';
+    const from = req.query.from || '';
+    const to = req.query.to || '';
     
     // Build query
     const query = {};
@@ -460,10 +462,24 @@ router.get('/', simpleAuth, async (req, res) => {
       query.ticketType = ticketType;
     }
     
+    // Handle single date filter
     if (date) {
       const startOfDay = dayjs(date).startOf('day').toDate();
       const endOfDay = dayjs(date).endOf('day').toDate();
       query.createdAt = { $gte: startOfDay, $lte: endOfDay };
+    }
+    
+    // Handle date range filter (from/to)
+    if (from && to) {
+      const startDate = dayjs(from).startOf('day').toDate();
+      const endDate = dayjs(to).endOf('day').toDate();
+      query.createdAt = { $gte: startDate, $lte: endDate };
+    } else if (from) {
+      const startDate = dayjs(from).startOf('day').toDate();
+      query.createdAt = { $gte: startDate };
+    } else if (to) {
+      const endDate = dayjs(to).endOf('day').toDate();
+      query.createdAt = { $lte: endDate };
     }
     
     // Get entries with pagination
@@ -495,6 +511,86 @@ router.get('/', simpleAuth, async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch entries',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/entries/export - Export entries with filtering
+router.get('/export', simpleAuth, async (req, res) => {
+  try {
+    console.log('📊 Export API called - Using real MongoDB data');
+    
+    const search = req.query.search || '';
+    const ticketType = req.query.ticketType || '';
+    const from = req.query.from || '';
+    const to = req.query.to || '';
+    const limit = parseInt(req.query.limit) || 10000; // Higher limit for exports
+    
+    // Build query
+    const query = {};
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { mobile: { $regex: search, $options: 'i' } },
+        { receiptNumber: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (ticketType) {
+      query.ticketType = ticketType;
+    }
+    
+    // Handle date range filter (from/to)
+    if (from && to) {
+      const startDate = dayjs(from).startOf('day').toDate();
+      const endDate = dayjs(to).endOf('day').toDate();
+      query.createdAt = { $gte: startDate, $lte: endDate };
+    } else if (from) {
+      const startDate = dayjs(from).startOf('day').toDate();
+      query.createdAt = { $gte: startDate };
+    } else if (to) {
+      const endDate = dayjs(to).endOf('day').toDate();
+      query.createdAt = { $lte: endDate };
+    }
+    
+    console.log('🔍 Export query:', JSON.stringify(query, null, 2));
+    
+    // Get entries without pagination for export
+    const entries = await Entry.find(query)
+      .populate('createdBy', 'fullName')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+    
+    const total = await Entry.countDocuments(query);
+    
+    const exportData = {
+      success: true,
+      data: {
+        entries: entries,
+        total: total,
+        exported: entries.length,
+        query: {
+          search,
+          ticketType,
+          from,
+          to,
+          limit
+        },
+        exportDate: new Date().toISOString()
+      }
+    };
+    
+    console.log(`✅ Export data returned successfully: ${entries.length} entries out of ${total} total`);
+    return res.json(exportData);
+    
+  } catch (error) {
+    console.error('❌ Export API Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to export entries',
       error: error.message
     });
   }

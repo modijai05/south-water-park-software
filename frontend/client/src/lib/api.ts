@@ -129,6 +129,17 @@ export const entriesApi = {
   charts: () =>
     api<{ success: boolean; data: { last7Days: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number }[]; monthly: { _id: string; count: number; amount: number }[] } }>(`/entries/charts?t=${Date.now()}`)
     .then(response => response.data),
+  export: (params?: { search?: string; ticketType?: string; from?: string; to?: string; limit?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set('search', params.search);
+    if (params?.ticketType) q.set('ticketType', params.ticketType);
+    if (params?.from) q.set('from', params.from);
+    if (params?.to) q.set('to', params.to);
+    if (params?.limit != null) q.set('limit', String(params.limit));
+    const query = q.toString();
+    return api<{ success: boolean; data: { entries: unknown[]; total: number; exported: number; query: any; exportDate: string } }>(`/entries/export${query ? `?${query}` : ''}`)
+      .then(response => response.data);
+  },
 };
 
 export const usersApi = {
