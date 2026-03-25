@@ -263,7 +263,11 @@ router.get('/stats', authenticate, async (req, res) => {
     
     // PROFESSIONAL FIX: Force all today stats to 0 when forceReset=true
     if (forceReset) {
-      console.log('� PROFESSIONAL FIX: Force reset parameter detected - forcing all today stats to 0');
+      console.log('🚨 PROFESSIONAL FIX: Force reset parameter detected - forcing all today stats to 0');
+      
+      // Calculate total stats first (needed for response)
+      const totalTicketStats = calculateTicketTypeStats(allEntries, 'total');
+      const totalCouponCounts = aggregateCouponCounts(allEntries);
       
       // Force all today stats to 0 including ticket types
       const resetTodayStats = {
