@@ -188,25 +188,25 @@ export function TicketForm() {
       ? ticketConfigs
           .filter(config => config.isActive)
           .map(config => {
-        const baseLabel = config.label || `${config.ticketType} Ticket`;
-        const priceDisplay = `₹${config.basePrice}`;
-        const features = [];
-        
-        if (config.hasKids) features.push('Kids Allowed');
-        if (config.foodIncluded) features.push('Food Included');
-        if (config.timeLimit) features.push(`${config.timeLimit} Hours`);
-        
-        const featureText = features.length > 0 ? ` – ${features.join(', ')}` : '';
-        const label = `${priceDisplay} – ${baseLabel}${featureText}`;
-        
-        return {
-          value: config.ticketType,
-          label,
-          price: config.basePrice,
-          hasKids: config.hasKids
-        };
-      })
-      .sort((a, b) => a.price - b.price) // Sort by price
+            const baseLabel = config.label || `${config.ticketType} Ticket`;
+            const priceDisplay = `₹${config.basePrice}`;
+            const features = [];
+            
+            if (config.hasKids) features.push('Kids Allowed');
+            if (config.foodIncluded) features.push('Food Included');
+            if (config.timeLimit) features.push(`${config.timeLimit} Hours`);
+            
+            const featureText = features.length > 0 ? ` – ${features.join(', ')}` : '';
+            const label = `${priceDisplay} – ${baseLabel}${featureText}`;
+            
+            return {
+              value: config.ticketType,
+              label,
+              price: config.basePrice,
+              hasKids: config.hasKids
+            };
+          })
+          .sort((a, b) => a.price - b.price) // Sort by price
       : []; // Fallback to empty array if ticketConfigs is not an array
   }, [ticketConfigs.length, Array.isArray(ticketConfigs) ? ticketConfigs.map(c => `${c.ticketType}-${c.basePrice}-${c.isActive}`).join(',') : '']); // Stable dependency
 

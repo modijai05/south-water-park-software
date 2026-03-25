@@ -550,7 +550,9 @@ export function Payment() {
         
         // Remove after animation completes
         setTimeout(() => {
-          document.body.removeChild(successToast);
+          if (successToast && successToast.parentNode === document.body) {
+            document.body.removeChild(successToast);
+          }
         }, 300);
       }, 100);
 
@@ -560,7 +562,9 @@ export function Payment() {
         
         // Remove after animation completes
         setTimeout(() => {
-          document.body.removeChild(successToast);
+          if (successToast && successToast.parentNode === document.body) {
+            document.body.removeChild(successToast);
+          }
         }, 300);
       }, 2000);
 

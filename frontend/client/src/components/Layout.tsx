@@ -83,7 +83,9 @@ export function Layout({ children, title }: LayoutProps) {
     document.head.appendChild(style);
     
     return () => {
-      document.head.removeChild(style);
+      if (style && style.parentNode === document.head) {
+        document.head.removeChild(style);
+      }
     };
   }, []);
 

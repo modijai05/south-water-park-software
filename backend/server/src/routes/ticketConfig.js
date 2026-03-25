@@ -14,66 +14,91 @@ router.get('/', async (req, res) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Credentials', 'false');
     
-    // Try to get from database, fallback to default data if not connected
-    let configs = [];
+    // Always return default configs first, then try to enhance with database data
+    let configs = [
+      {
+        ticketType: '100',
+        basePrice: 100,
+        label: 'Sitting Only',
+        hasKids: false,
+        description: 'Sitting arrangement without any activities',
+        isActive: true
+      },
+      {
+        ticketType: '150',
+        basePrice: 150,
+        label: 'Without Food 1hr',
+        hasKids: true,
+        description: '1 hour access to park activities without food',
+        isActive: true
+      },
+      {
+        ticketType: '300',
+        basePrice: 350,
+        label: 'Without Food 3-4hr',
+        hasKids: true,
+        description: '3-4 hours access to park activities without food',
+        isActive: true
+      },
+      {
+        ticketType: '450',
+        basePrice: 500,
+        label: 'With Fast Food',
+        hasKids: true,
+        description: 'Full day access with fast food coupons',
+        isActive: true
+      },
+      {
+        ticketType: '600',
+        basePrice: 700,
+        label: 'With Main Food',
+        hasKids: true,
+        description: 'Full day access with main food coupons',
+        isActive: true
+      }
+    ];
+    
+    // Try to get from database and merge with defaults
     try {
-      configs = await TicketConfig.find().sort({ ticketType: 1 });
-    } catch (dbError) {
-      console.log('Database not available, using default configs');
-      // Default fallback configurations
-      configs = [
-        {
-          ticketType: '100',
-          basePrice: 100,
-          label: 'Sitting Only',
-          hasKids: false,
-          description: 'Sitting arrangement without any activities',
-          isActive: true
-        },
-        {
-          ticketType: '150',
-          basePrice: 150,
-          label: 'Without Food 1hr',
-          hasKids: true,
-          description: '1 hour access to park activities without food',
-          isActive: true
-        },
-        {
-          ticketType: '300',
-          basePrice: 350,
-          label: 'Without Food 3-4hr',
-          hasKids: true,
-          description: '3-4 hours access to park activities without food',
-          isActive: true
-        },
-        {
-          ticketType: '450',
-          basePrice: 500,
-          label: 'With Fast Food',
-          hasKids: true,
-          description: 'Full day access with fast food coupons',
-          isActive: true
-        },
-        {
-          ticketType: '600',
-          basePrice: 700,
-          label: 'With Main Food',
-          hasKids: true,
-          description: 'Full day access with main food coupons',
-          isActive: true
+      if (mongoose.connection.readyState === 1) {
+        const dbConfigs = await TicketConfig.find().sort({ ticketType: 1 });
+        if (dbConfigs && Array.isArray(dbConfigs) && dbConfigs.length > 0) {
+          console.log('✅ Using database configs');
+          configs = dbConfigs;
+        } else {
+          console.log('⚠️ Database empty, using default configs');
         }
-      ];
+      } else {
+        console.log('⚠️ Database not connected, using default configs');
+      }
+    } catch (dbError) {
+      console.error('❌ Database error:', dbError.message);
+      console.log('🔄 Using default configs due to database error');
+    }
+    
+    // Ensure configs is always an array
+    if (!Array.isArray(configs)) {
+      console.error('❌ Configs is not an array, resetting to empty array');
+      configs = [];
     }
     
     const result = {
       success: true,
-      data: configs || []
+      data: configs
     };
+    
+    console.log('📤 Sending ticket configs:', {
+      success: result.success,
+      isArray: Array.isArray(configs),
+      length: configs.length,
+      data: configs.map(c => ({ ticketType: c.ticketType, label: c.label }))
+    });
     
     res.json(result);
   } catch (error) {
-    console.error('Ticket config list API error:', error);
-    // Always return success with fallback data
+    console.error('❌ Ticket config list API error:', error);
+    console.error('❌ Error stack:', error.stack);
+    // Always return success with empty array to prevent frontend errors
     res.json({ 
       success: true, 
       data: []
