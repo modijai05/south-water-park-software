@@ -5,10 +5,10 @@
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {
-    "dev": "npx tsx src/index.js",
+    "dev": "node src/index.js",
     "build": "npx tsc --noEmit --strict",
-    "start": "npx tsx src/index.js",
-    "start:dev": "npx tsx src/index.js"
+    "start": "node src/index.js",
+    "start:dev": "node src/index.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

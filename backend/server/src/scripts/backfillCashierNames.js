@@ -38,6 +38,9 @@ if (require.main === module) {
   backfillCashierNames().then(() => {
     console.log('Script completed');
     process.exit(0);
+  }).catch((error) => {
+    console.error('Script failed:', error);
+    process.exit(1);
   });
 }
 
