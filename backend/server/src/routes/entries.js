@@ -167,18 +167,36 @@ router.get('/stats', authenticate, async (req, res) => {
       const ticketTypes = ['100', '150', '300', '450', '600'];
       const stats = {};
       
-      console.log(`🎫 Calculating ${prefix} ticket stats from ${entries.length} entries`);
+      console.log(`🎫 PROFESSIONAL CALCULATION: ${prefix} ticket stats from ${entries.length} entries`);
       
-      // Initialize all ticket types to 0
+      // PROFESSIONAL FIX: Force reset all stats to 0 first
       ticketTypes.forEach(type => {
         stats[`${prefix}${type}`] = 0;
         stats[`${prefix}${type}Adults`] = 0;
         stats[`${prefix}${type}Kids`] = 0;
       });
       
-      // Process each entry exactly once
-      entries.forEach(entry => {
+      // PROFESSIONAL FIX: Only process entries if it's today's data
+      if (prefix === 'today' && entries.length === 0) {
+        console.log('✅ PROFESSIONAL RESET: No today entries found, all today stats set to 0');
+        return stats;
+      }
+      
+      // Process each entry exactly once with validation
+      entries.forEach((entry, index) => {
         const ticketType = entry.ticketType;
+        
+        // PROFESSIONAL FIX: Validate entry date for today's calculation
+        if (prefix === 'today') {
+          const entryDate = new Date(entry.createdAt);
+          const today = new Date();
+          const isToday = entryDate.toDateString() === today.toDateString();
+          
+          if (!isToday) {
+            console.log(`⚠️ PROFESSIONAL VALIDATION: Skipping entry ${index} - not from today (${entryDate.toISOString()})`);
+            return; // Skip this entry
+          }
+        }
         
         // Only process valid ticket types
         if (ticketType && ticketTypes.includes(ticketType)) {
@@ -202,14 +220,14 @@ router.get('/stats', authenticate, async (req, res) => {
           stats[`${prefix}${ticketType}Adults`] = (stats[`${prefix}${ticketType}Adults}`] || 0) + entryAdults;
           stats[`${prefix}${ticketType}Kids`] = (stats[`${prefix}${ticketType}Kids}`] || 0) + entryKids;
           
-          console.log(`   Processed ${prefix}${ticketType}: +1 entry (Adults: ${entryAdults}, Kids: ${entryKids})`);
+          console.log(`   ✅ Processed ${prefix}${ticketType}: +1 entry (Adults: ${entryAdults}, Kids: ${entryKids})`);
         } else {
           console.log(`   ⚠️ Skipped entry with invalid ticket type: ${ticketType}`);
         }
       });
       
       const totalTicketEntries = ticketTypes.reduce((sum, type) => sum + stats[`${prefix}${type}`], 0);
-      console.log(`🎫 Total ${prefix} ticket entries calculated: ${totalTicketEntries} (should match ${entries.length})`);
+      console.log(`🎫 PROFESSIONAL RESULT: Total ${prefix} ticket entries: ${totalTicketEntries} (from ${entries.length} entries)`);
       
       // Log final stats
       ticketTypes.forEach(type => {
