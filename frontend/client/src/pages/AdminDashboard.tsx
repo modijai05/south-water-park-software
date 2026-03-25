@@ -543,7 +543,7 @@ export function AdminDashboard() {
         // Force refresh by adding force=true parameter
         const fetchData = async () => {
           try {
-            console.log('🔄 Dashboard: Fetching updated data with complete cache clear...');
+            console.log('🔄 Dashboard: Fetching updated data with complete cache clear and force reset...');
             const [s, c] = await Promise.all([
               entriesApi.stats(true), // Force refresh
               ticketConfigApi.getAll()
@@ -555,6 +555,20 @@ export function AdminDashboard() {
               setError(null);
               console.log('📊 Dashboard: Raw stats data after complete cache clear:', s);
               console.log('✅ Dashboard: Complete cache clear successful - today should be 0');
+              
+              // PROFESSIONAL FIX: Force reset API call if today stats not reset
+              if (s.todayEntries === 0 && (s.today150 > 0 || s.today300 > 0 || s.today450 > 0 || s.today600 > 0 || s.today100 > 0)) {
+                console.log('🚨 PROFESSIONAL FIX: Today entries = 0 but ticket types > 0, forcing reset...');
+                try {
+                  const resetStats = await api.get(`/entries/stats?forceReset=true&t=${Date.now()}`);
+                  if (resetStats.data.forceReset) {
+                    console.log('✅ PROFESSIONAL FIX: Force reset successful, updating stats...');
+                    setStats(resetStats.data as unknown as Stats);
+                  }
+                } catch (resetError) {
+                  console.error('❌ PROFESSIONAL FIX: Force reset failed:', resetError);
+                }
+              }
             }
           } catch (error) {
             if (!cancelled) {

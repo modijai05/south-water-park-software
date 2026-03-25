@@ -258,9 +258,11 @@ router.get('/stats', authenticate, async (req, res) => {
     const todayPeopleStats = calculatePeopleStats(todayEntries);
     const totalPeopleStats = calculatePeopleStats(allEntries);
     
-    // PROFESSIONAL COMPLETE RESET: Force all today stats to 0 when no today entries exist
-    if (todayCount === 0) {
-      console.log('🚨 PROFESSIONAL COMPLETE RESET: No today entries found - forcing all today stats to 0');
+    // PROFESSIONAL COMPLETE RESET: Force all today stats to 0 when no today entries exist OR force reset requested
+    const forceReset = req.query.forceReset === 'true';
+    if (todayCount === 0 || forceReset) {
+      console.log('🚨 PROFESSIONAL COMPLETE RESET: No today entries found OR force reset requested - forcing all today stats to 0');
+      console.log(`🔧 Reset triggered by: ${forceReset ? 'Force parameter' : 'No today entries'}`);
       
       // Force all today stats to 0 including ticket types
       const resetTodayStats = {
@@ -307,7 +309,8 @@ router.get('/stats', authenticate, async (req, res) => {
           ...totalTicketStats,
           ...totalCouponCounts,
           lastUpdated: new Date().toISOString(),
-          forceReset: true
+          forceReset: true,
+          resetTrigger: forceReset ? 'force-parameter' : 'no-entries'
         }
       };
       
