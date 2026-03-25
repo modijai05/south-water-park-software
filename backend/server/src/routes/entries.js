@@ -110,6 +110,15 @@ router.get('/stats', authenticate, async (req, res) => {
     console.log('   Today Filter:', JSON.stringify(todayStaffFilter));
     console.log('   Staff Filter:', JSON.stringify(staffFilter));
 
+    // Validate today's date range
+    const serverDate = new Date();
+    const todayDateString = serverDate.toISOString().split('T')[0];
+    console.log('🗓️ SERVER DATE VALIDATION:');
+    console.log('   Server Date:', serverDate.toISOString());
+    console.log('   Today String:', todayDateString);
+    console.log('   Today Start:', todayStart.toISOString());
+    console.log('   Today End:', todayEnd.toISOString());
+
     // Use lean() and only select needed fields for better performance
     const [totalCount, todayEntries, allEntries] = await Promise.all([
       Entry.countDocuments(staffFilter).maxTimeMS(10000),
@@ -131,6 +140,16 @@ router.get('/stats', authenticate, async (req, res) => {
     console.log('   Today Entries (from find):', todayEntries.length);
     console.log('   Today Entries Sample:', JSON.stringify(todayEntries.slice(0, 3), null, 2));
     console.log('   Ticket Types in Today Entries:', [...new Set(todayEntries.map(e => e.ticketType))]);
+    
+    // Log detailed info about each today entry
+    if (todayEntries.length > 0) {
+      console.log('📅 TODAY ENTRIES DATES:');
+      todayEntries.forEach((entry, index) => {
+        console.log(`   Entry ${index + 1}: Created at ${entry.createdAt}, Ticket: ${entry.ticketType}`);
+      });
+    } else {
+      console.log('✅ NO TODAY ENTRIES FOUND - Daily reset working correctly!');
+    }
     
     console.log('📊 Today entries found:', todayEntries.length);
     console.log('📊 Today entries sample:', todayEntries.slice(0, 3).map(e => ({
