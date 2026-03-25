@@ -258,70 +258,12 @@ router.get('/stats', authenticate, async (req, res) => {
     const todayPeopleStats = calculatePeopleStats(todayEntries);
     const totalPeopleStats = calculatePeopleStats(allEntries);
     
-    // ULTIMATE PROFESSIONAL FIX: Force all today stats to 0 when forceReset=true (bypass all conditions)
+    // PROFESSIONAL FIX: Check for force reset parameter
     const forceReset = req.query.forceReset === 'true';
-    if (forceReset) {
-      console.log('🚨 ULTIMATE PROFESSIONAL FIX: Force reset parameter detected - BYPASSING ALL CONDITIONS');
-      console.log('🔧 Forcing all today stats to 0 regardless of database state');
-      
-      // Force all today stats to 0 including ticket types - ULTIMATE RESET
-      const resetTodayStats = {
-        todayEntries: 0,
-        todayPeople: 0,
-        todayAdults: 0,
-        todayKids: 0,
-        todayAmount: 0,
-        todayCash: 0,
-        todayUpi: 0,
-        todayAdvance: 0,
-        todayOther: 0,
-        todayKidDiscount: 0,
-        todayAdditionalDiscount: 0,
-        todayAdultsFastFoodCoupon: 0,
-        todayKidsFastFoodCoupon: 0,
-        todayAdultsMainFoodCoupon: 0,
-        todayKidsMainFoodCoupon: 0,
-        // FORCE ALL TICKET TYPES TO 0 - ULTIMATE PROFESSIONAL RESET
-        today150: 0,
-        today300: 0,
-        today450: 0,
-        today600: 0,
-        today100: 0,
-        today150Adults: 0,
-        today300Adults: 0,
-        today450Adults: 0,
-        today600Adults: 0,
-        today100Adults: 0,
-        today150Kids: 0,
-        today300Kids: 0,
-        today450Kids: 0,
-        today600Kids: 0,
-        today100Kids: 0
-      };
-      
-      console.log('✅ ULTIMATE PROFESSIONAL RESET: All today stats forced to 0');
-      
-      // Return reset stats combined with total stats
-      const response = {
-        success: true,
-        data: {
-          ...resetTodayStats,
-          ...totalTicketStats,
-          ...totalCouponCounts,
-          lastUpdated: new Date().toISOString(),
-          forceReset: true,
-          resetTrigger: 'ultimate-force-parameter'
-        }
-      };
-      
-      console.log('🚀 ULTIMATE PROFESSIONAL RESET: Response prepared with all today stats = 0');
-      return res.json(response);
-    }
     
-    // PROFESSIONAL COMPLETE RESET: Force all today stats to 0 when no today entries exist OR force reset requested
-    if (todayCount === 0 || forceReset) {
-      console.log('🚨 PROFESSIONAL COMPLETE RESET: No today entries found OR force reset requested - forcing all today stats to 0');
-      console.log(`🔧 Reset triggered by: ${forceReset ? 'Force parameter' : 'No today entries'}`);
+    // PROFESSIONAL FIX: Force all today stats to 0 when forceReset=true
+    if (forceReset) {
+      console.log('� PROFESSIONAL FIX: Force reset parameter detected - forcing all today stats to 0');
       
       // Force all today stats to 0 including ticket types
       const resetTodayStats = {
@@ -340,7 +282,7 @@ router.get('/stats', authenticate, async (req, res) => {
         todayKidsFastFoodCoupon: 0,
         todayAdultsMainFoodCoupon: 0,
         todayKidsMainFoodCoupon: 0,
-        // FORCE ALL TICKET TYPES TO 0 - PROFESSIONAL RESET
+        // FORCE ALL TICKET TYPES TO 0
         today150: 0,
         today300: 0,
         today450: 0,
@@ -358,7 +300,7 @@ router.get('/stats', authenticate, async (req, res) => {
         today100Kids: 0
       };
       
-      console.log('✅ PROFESSIONAL COMPLETE RESET: All today stats forced to 0');
+      console.log('✅ PROFESSIONAL FIX: All today stats forced to 0');
       
       // Return reset stats combined with total stats
       const response = {
@@ -369,11 +311,11 @@ router.get('/stats', authenticate, async (req, res) => {
           ...totalCouponCounts,
           lastUpdated: new Date().toISOString(),
           forceReset: true,
-          resetTrigger: forceReset ? 'force-parameter' : 'no-entries'
+          resetTrigger: 'force-parameter'
         }
       };
       
-      console.log('🚀 PROFESSIONAL COMPLETE RESET: Response prepared with all today stats = 0');
+      console.log('🚀 PROFESSIONAL FIX: Response prepared with all today stats = 0');
       return res.json(response);
     }
     
