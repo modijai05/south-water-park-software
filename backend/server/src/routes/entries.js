@@ -12,8 +12,52 @@ const router = Router();
 // GET /api/entries/stats - Get entry statistics
 router.get('/stats', authenticate, async (req, res) => {
   try {
-    console.error('­ƒôè Entries stats API called successfully');
+    console.error('📊 Entries stats API called successfully');
     const isAdmin = req.user?.role === 'admin';
+    
+    // MINIMAL PROFESSIONAL FIX: Check for force reset parameter first
+    const forceReset = req.query.forceReset === 'true';
+    if (forceReset) {
+      console.log('🚨 MINIMAL PROFESSIONAL FIX: Force reset detected - returning all today stats as 0');
+      
+      const resetResponse = {
+        success: true,
+        data: {
+          todayEntries: 0,
+          totalEntries: 0,
+          todayPeople: 0,
+          totalPeople: 0,
+          todayAdults: 0,
+          totalAdults: 0,
+          todayKids: 0,
+          totalKids: 0,
+          todayAmount: 0,
+          totalAmount: 0,
+          todayCash: 0,
+          totalCash: 0,
+          todayUpi: 0,
+          totalUpi: 0,
+          todayAdvance: 0,
+          totalAdvance: 0,
+          // FORCE ALL TICKET TYPES TO 0
+          today150: 0,
+          today300: 0,
+          today450: 0,
+          today600: 0,
+          today100: 0,
+          total150: 0,
+          total300: 0,
+          total450: 0,
+          total600: 0,
+          total100: 0,
+          lastUpdated: new Date().toISOString(),
+          forceReset: true,
+          resetTrigger: 'minimal-force-parameter'
+        }
+      };
+      
+      return res.json(resetResponse);
+    }
     
     // Add cache-busting headers
     res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
