@@ -4,6 +4,9 @@
   "description": "Backend for The South Water Park – Ticket Entry System",
   "main": "src/index.js",
   "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "node src/index.js",
     "build": "npx tsc --noEmit --strict",
