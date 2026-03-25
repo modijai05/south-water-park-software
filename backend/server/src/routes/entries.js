@@ -568,8 +568,11 @@ router.post('/', async (req, res) => {
     // Try database save, fallback to success response
     try {
       if (mongoose.connection.readyState === 1) {
-        const { generateReceiptNumber } = require('../utils/receiptNumberGenerator.js');
-        const receiptNumber = generateReceiptNumber();
+        console.log('🔗 Database connected, attempting to save entry');
+        
+        const { generateUniqueReceiptNumber } = require('../utils/receiptNumberGenerator.js');
+        const receiptNumber = await generateUniqueReceiptNumber();
+        console.log('📄 Generated receipt number:', receiptNumber);
 
         const newEntry = new Entry({
           name: name.trim(),
@@ -581,9 +584,9 @@ router.post('/', async (req, res) => {
           kidsFastFoodCoupon: kidsFastFoodCoupon?.trim() || '',
           adultsMainFoodCoupon: adultsMainFoodCoupon?.trim() || '',
           kidsMainFoodCoupon: kidsMainFoodCoupon?.trim() || '',
-          upgrades: upgrades || [],
-          filledBy: filledBy || 'Unknown',
-          filledByFullName: filledByFullName || filledBy || 'Unknown',
+          upgrades: Array.isArray(upgrades) ? upgrades : [],
+          filledBy: filledBy?.trim() || 'Unknown',
+          filledByFullName: filledByFullName?.trim() || filledBy?.trim() || 'Unknown',
           totalPeople: parseInt(totalPeople) || (parseInt(adults) + parseInt(kids)) || 0,
           baseAmount: parseFloat(baseAmount) || 0,
           kidDiscount: parseFloat(kidDiscount) || 0,
@@ -597,8 +600,19 @@ router.post('/', async (req, res) => {
           receiptNumber,
           createdAt: new Date()
         });
+        
+        console.log('💾 Attempting to save entry:', {
+          name: newEntry.name,
+          mobile: newEntry.mobile,
+          ticketType: newEntry.ticketType,
+          adults: newEntry.adults,
+          kids: newEntry.kids,
+          finalAmount: newEntry.finalAmount,
+          receiptNumber: newEntry.receiptNumber
+        });
 
         const savedEntry = await newEntry.save();
+        console.log('✅ Entry saved successfully:', savedEntry.receiptNumber);
         
         return res.status(201).json({
           success: true,
@@ -616,12 +630,16 @@ router.post('/', async (req, res) => {
             cashAmount: savedEntry.cashAmount,
             upiAmount: savedEntry.upiAmount,
             advanceAmount: savedEntry.advanceAmount,
-            createdAt: savedEntry.createdAt
+            createdAt: savedEntry.createdAt,
+            databaseSaved: true
           }
         });
+      } else {
+        console.log('⚠️ Database not connected, connection state:', mongoose.connection.readyState);
       }
     } catch (dbError) {
-      console.log('Database save failed, using fallback response');
+      console.error('❌ Database save failed:', dbError.message);
+      console.error('❌ Database save error stack:', dbError.stack);
     }
     
     // Fallback success response
