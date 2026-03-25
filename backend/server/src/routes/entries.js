@@ -132,4 +132,85 @@ router.get('/stats', simpleAuth, async (req, res) => {
   }
 });
 
+// GET /api/entries/charts - Get chart data
+router.get('/charts', simpleAuth, async (req, res) => {
+  try {
+    console.log('📊 Charts API called successfully');
+    
+    // Return mock chart data for dashboard
+    const chartData = {
+      success: true,
+      data: {
+        last7Days: [
+          { _id: '2026-03-19', count: 15, amount: 2250 },
+          { _id: '2026-03-20', count: 22, amount: 3300 },
+          { _id: '2026-03-21', count: 18, amount: 2700 },
+          { _id: '2026-03-22', count: 25, amount: 3750 },
+          { _id: '2026-03-23', count: 30, amount: 4500 },
+          { _id: '2026-03-24', count: 28, amount: 4200 },
+          { _id: '2026-03-25', count: 0, amount: 0 }
+        ],
+        ticketDistribution: [
+          { _id: '100', count: 5 },
+          { _id: '150', count: 50 },
+          { _id: '300', count: 30 },
+          { _id: '450', count: 10 },
+          { _id: '600', count: 5 }
+        ],
+        upgradeDistribution: [
+          { _id: '150', count: 8 },
+          { _id: '300', count: 5 },
+          { _id: '450', count: 3 }
+        ],
+        monthly: [
+          { _id: '2026-01', count: 450, amount: 67500 },
+          { _id: '2026-02', count: 520, amount: 78000 },
+          { _id: '2026-03', count: 138, amount: 20700 }
+        ]
+      }
+    };
+    
+    console.log('✅ Charts data returned successfully');
+    return res.json(chartData);
+    
+  } catch (error) {
+    console.error('❌ Charts API Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch chart data',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/entries - Get all entries (admin/staff)
+router.get('/', simpleAuth, async (req, res) => {
+  try {
+    console.log('📊 Entries list API called successfully');
+    
+    // Return mock entries data for dashboard
+    const entriesData = {
+      success: true,
+      data: {
+        entries: [],
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 0
+      }
+    };
+    
+    console.log('✅ Entries list returned successfully');
+    return res.json(entriesData);
+    
+  } catch (error) {
+    console.error('❌ Entries list API Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch entries',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
