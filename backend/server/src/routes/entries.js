@@ -1,4 +1,4 @@
-const { Router } = require('express');
+﻿const { Router } = require('express');
 const { authenticate, requireAdmin } = require('../middleware/auth.js');
 const { Entry } = require('../models/Entry.js');
 const { User } = require('../models/User.js');
@@ -12,7 +12,7 @@ const router = Router();
 // GET /api/entries/stats - Get entry statistics
 router.get('/stats', authenticate, async (req, res) => {
   try {
-    console.error('📊 Entries stats API called successfully');
+    console.error('­ƒôè Entries stats API called successfully');
     const isAdmin = req.user?.role === 'admin';
     
     // Add cache-busting headers
@@ -23,7 +23,7 @@ router.get('/stats', authenticate, async (req, res) => {
     // Check database connection
     const mongoose = require('mongoose');
     if (mongoose.connection.readyState !== 1) {
-      console.log('⚠️ Database not connected, returning fallback stats data');
+      console.log('ÔÜá´©Å Database not connected, returning fallback stats data');
       return res.json({
         success: true,
         data: {
@@ -86,7 +86,7 @@ router.get('/stats', authenticate, async (req, res) => {
     const todayEnd = now.endOf('day').toDate();
     const todayFilter = { createdAt: { $gte: todayStart, $lte: todayEnd } };
 
-    console.log('📊 Today date range (FRESH CALCULATION):', {
+    console.log('­ƒôè Today date range (FRESH CALCULATION):', {
       todayStart: todayStart.toISOString(),
       todayEnd: todayEnd.toISOString(),
       currentTime: now.toISOString(),
@@ -99,7 +99,7 @@ router.get('/stats', authenticate, async (req, res) => {
 
     // If force refresh is requested, log it
     if (req.query.force === 'true') {
-      console.log('🔄 FORCE REFRESH REQUESTED - Ignoring any cache');
+      console.log('­ƒöä FORCE REFRESH REQUESTED - Ignoring any cache');
     }
 
     // For staff, filter by their own entries
@@ -120,8 +120,8 @@ router.get('/stats', authenticate, async (req, res) => {
         .maxTimeMS(10000)
     ]);
     
-    console.log('📊 Today entries found:', todayEntries.length);
-    console.log('📊 Today entries sample:', todayEntries.slice(0, 3).map(e => ({
+    console.log('­ƒôè Today entries found:', todayEntries.length);
+    console.log('­ƒôè Today entries sample:', todayEntries.slice(0, 3).map(e => ({
       id: e._id,
       createdAt: e.createdAt,
       ticketType: e.ticketType,
@@ -174,7 +174,7 @@ router.get('/stats', authenticate, async (req, res) => {
     const totalTicketStats = calculateTicketTypeStats(allEntries, 'total');
     
     // Log ticket type stats for debugging
-    console.log('🎫 Ticket Type Stats - Today:', {
+    console.log('­ƒÄ½ Ticket Type Stats - Today:', {
       today150: todayTicketStats.today150,
       today300: todayTicketStats.today300,
       today450: todayTicketStats.today450,
@@ -183,7 +183,7 @@ router.get('/stats', authenticate, async (req, res) => {
       todayEntriesCount: todayEntries.length
     });
     
-    console.log('🎫 Ticket Type Stats - Total:', {
+    console.log('­ƒÄ½ Ticket Type Stats - Total:', {
       total150: totalTicketStats.total150,
       total300: totalTicketStats.total300,
       total450: totalTicketStats.total450,
@@ -238,7 +238,7 @@ router.get('/stats', authenticate, async (req, res) => {
       additionalDiscount: todayEntries.reduce((sum, e) => sum + (e.additionalDiscount || 0), 0),
     };
     
-    console.log('📊 Manual today stats calculated:', {
+    console.log('­ƒôè Manual today stats calculated:', {
       totalEntries: todayEntries.length,
       totalPeople: manualTodayStats.totalPeople,
       totalRevenue: manualTodayStats.finalAmount,
@@ -264,7 +264,7 @@ router.get('/stats', authenticate, async (req, res) => {
     
     // SIMPLE PROFESSIONAL FIX: Force all today stats to 0 when forceReset=true
     if (forceReset) {
-      console.log('🚨 SIMPLE PROFESSIONAL FIX: Force reset parameter detected - forcing all today stats to 0');
+      console.log('­ƒÜ¿ SIMPLE PROFESSIONAL FIX: Force reset parameter detected - forcing all today stats to 0');
       
       // Return forced reset response
       const resetResponse = {
@@ -292,18 +292,18 @@ router.get('/stats', authenticate, async (req, res) => {
           today450: 0,
           today600: 0,
           today100: 0,
-          total150: 0,
-          total300: 0,
-          total450: 0,
-          total600: 0,
-          total100: 0,
+          total150: totalTicketStats.total150 || 0,
+          total300: totalTicketStats.total300 || 0,
+          total450: totalTicketStats.total450 || 0,
+          total600: totalTicketStats.total600 || 0,
+          total100: totalTicketStats.total100 || 0,
           lastUpdated: new Date().toISOString(),
           forceReset: true,
           resetTrigger: 'simple-force-parameter'
         }
       };
       
-      console.log('🚀 SIMPLE PROFESSIONAL FIX: Response prepared with all today stats = 0');
+      console.log('­ƒÜÇ SIMPLE PROFESSIONAL FIX: Response prepared with all today stats = 0');
       return res.json(resetResponse);
     }
 
