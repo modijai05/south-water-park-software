@@ -117,18 +117,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Request logging middleware with enhanced tracking for Render
+  // Request logging middleware with enhanced tracking for Render
 const requestCounts = new Map();
 app.use((req, res, next) => {
   const key = `${req.method}:${req.path}`;
   requestCounts.set(key, (requestCounts.get(key) || 0) + 1);
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - IP: ${req.ip} - Count: ${requestCounts.get(key)}`);
   
   // Add response time tracking
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Status: ${res.statusCode} - Duration: ${duration}ms`);
   });
   
   next();
@@ -137,16 +135,12 @@ app.use((req, res, next) => {
 // Simple test endpoint for debugging
 app.get('/api/test-db', async (req, res) => {
   try {
-    console.log('🔐 Database test endpoint called');
-    console.log('🔐 Database connection state:', mongoose.connection.readyState);
     
     // Test basic database operation
     const userCount = await User.countDocuments();
-    console.log('🔐 User count:', userCount);
     
     // Test user lookup
     const testUser = await User.findOne({ username: 'admin1' });
-    console.log('🔐 Test user found:', !!testUser);
     
     res.json({ 
       success: true,
@@ -173,18 +167,14 @@ app.get('/api/test-db', async (req, res) => {
 // Simple auth test endpoint
 app.post('/api/test-auth', async (req, res) => {
   try {
-    console.log('🔐 Auth test endpoint called');
     const { username, password } = req.body;
     
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password required' });
     }
     
-    console.log('🔐 Database connection state:', mongoose.connection.readyState);
-    
     // Test user lookup
     const user = await User.findOne({ username: String(username).trim() });
-    console.log('🔐 User found:', !!user);
     
     if (!user) {
       return res.status(401).json({ message: 'Invalid username or password' });
@@ -192,7 +182,6 @@ app.post('/api/test-auth', async (req, res) => {
     
     // Test password comparison
     const match = await user.comparePassword(String(password));
-    console.log('🔐 Password match result:', match);
     
     if (!match) {
       return res.status(401).json({ message: 'Invalid username or password' });
@@ -231,9 +220,6 @@ app.post('/api/test-auth', async (req, res) => {
 
 // Simple test endpoint for debugging authentication
 app.post('/api/test-login-simple', (req, res) => {
-  console.log('🔧 Simple test endpoint called');
-  console.log('🔧 Request body:', req.body);
-  console.log('🔧 Request headers:', req.headers);
   
   res.json({
     success: true,
@@ -257,11 +243,6 @@ app.get('/', (req, res) => {
 // PROFESSIONAL SAVE ENDPOINT - Actually updates database
 app.put('/api/save-ticket/:ticketType', async (req, res) => {
   try {
-    console.log('🔧 PROFESSIONAL SAVE ENDPOINT - Working');
-    const { ticketType } = req.params;
-    console.log('🔧 Save request for ticket type:', ticketType);
-    console.log('🔧 Save request data:', req.body);
-    console.log('🔧 Request headers:', req.headers);
     
     // Set ALL CORS headers manually for maximum compatibility
     res.header('Access-Control-Allow-Origin', '*');
@@ -272,7 +253,6 @@ app.put('/api/save-ticket/:ticketType', async (req, res) => {
     
     // Check database connection
     if (mongoose.connection.readyState !== 1) {
-      console.log('⚠️ Database not connected, using fallback response');
       return res.status(200).json({
         success: true,
         message: 'Ticket configuration saved successfully (fallback mode)',
@@ -293,7 +273,6 @@ app.put('/api/save-ticket/:ticketType', async (req, res) => {
     const existingConfig = await TicketConfig.findOne({ ticketType });
     
     if (!existingConfig) {
-      console.log('❌ No ticket config found for:', ticketType);
       return res.status(404).json({
         success: false,
         message: 'Ticket configuration not found',
@@ -303,16 +282,14 @@ app.put('/api/save-ticket/:ticketType', async (req, res) => {
     
     // Update the configuration
     const updateData = { ...req.body };
-    delete updateData._id; // Don't update the ID
-    delete updateData.ticketType; // Don't update the ticket type
+    delete updateData._id;
+    delete updateData.ticketType;
     
     const updatedConfig = await TicketConfig.findOneAndUpdate(
       { ticketType },
       { $set: updateData },
       { new: true, runValidators: true }
     );
-    
-    console.log('✅ Database updated successfully:', updatedConfig);
     
     // Success response with actual data
     const responseData = {
@@ -328,11 +305,9 @@ app.put('/api/save-ticket/:ticketType', async (req, res) => {
       }
     };
     
-    console.log('🔧 Sending response:', responseData);
     res.status(200).json(responseData);
     
   } catch (error) {
-    console.error('❌ Save endpoint error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to save ticket configuration',
@@ -388,10 +363,7 @@ app.get('/api/database-health', (req, res) => {
 
 // SUPER SIMPLE ENDPOINT - Guaranteed to work - MUST be before route mounting
 app.put('/api/ticket-config/save/:ticketType', (req, res) => {
-  console.log('🔧 SUPER SIMPLE ENDPOINT - Guaranteed to work');
   const { ticketType } = req.params;
-  console.log('🔧 Save request for ticket type:', ticketType);
-  console.log('🔧 Save request data:', req.body);
   
   // Set all CORS headers manually
   res.header('Access-Control-Allow-Origin', '*');
@@ -425,10 +397,7 @@ app.use(errorHandler);
 
 // Ultra-simple endpoint for immediate fix - Added before all other routes
 app.put('/api/ticket-config/fix/:ticketType', (req, res) => {
-  console.log('🔧 ULTRA SIMPLE ENDPOINT - Immediate fix');
   const { ticketType } = req.params;
-  console.log('🔧 Fix update for ticket type:', ticketType);
-  console.log('🔧 Fix update data:', req.body);
   
   // Set CORS headers manually
   res.header('Access-Control-Allow-Origin', 'https://thesouthticketmanagement.netlify.app');
@@ -450,10 +419,7 @@ app.put('/api/ticket-config/fix/:ticketType', (req, res) => {
 
 // Simple test endpoint for immediate fix
 app.put('/api/ticket-config/simple/:ticketType', (req, res) => {
-  console.log('🔧 SIMPLE ENDPOINT - No database, no authentication');
   const { ticketType } = req.params;
-  console.log('🔧 Simple update for ticket type:', ticketType);
-  console.log('🔧 Simple update data:', req.body);
   
   // Immediate response without any processing
   res.json({
@@ -469,18 +435,12 @@ app.put('/api/ticket-config/simple/:ticketType', (req, res) => {
 
 // Start server immediately - Render needs to detect open PORT
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log('🚀 Server started successfully');
-  console.log('📍 Server URL:', `http://0.0.0.0:${PORT}`);
-  console.log('🔐 Environment:', process.env.NODE_ENV || 'development');
-  console.log('🔍 Health Check: http://0.0.0.0:' + PORT + '/health');
-  console.log('🔍 API Health Check: http://0.0.0.0:' + PORT + '/api/health');
 });
 
 // Try to connect to MongoDB in background without blocking server start
 setTimeout(async () => {
   try {
     const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://jaimodi05bapa_db_user:SgKNnsz19WTuvHp3@cluster.nckewmo.mongodb.net/south_water_park?retryWrites=true&w=majority';
-    console.log('🔄 Attempting MongoDB connection in background...');
     
     await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 5000,
@@ -491,71 +451,47 @@ setTimeout(async () => {
       w: 'majority'
     });
     
-    console.log('✅ MongoDB connected successfully');
-    console.log(`🔧 Host: ${mongoose.connection.host}`);
-    console.log(`🔧 Database: ${mongoose.connection.name}`);
-    
-    // Test the connection
-    await mongoose.connection.db.admin().ping();
-    console.log('✅ MongoDB connection verified with ping');
-    
   } catch (error) {
-    console.log('⚠️ MongoDB connection failed, server running in fallback mode');
-    console.log('🔧 Authentication will work with hardcoded users');
-    console.log('🔧 Database error:', error.message);
+    // MongoDB connection failed, server running in fallback mode
   }
 }, 2000); // Start connection attempt after 2 seconds
 
 // Handle server errors
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`❌ Port ${PORT} is already in use`);
-  } else {
-    console.error('❌ Server error:', err);
+    process.exit(1);
   }
-  process.exit(1);
 });
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-  console.log('\n🛑 SIGINT received - Starting graceful shutdown...');
   
   try {
     if (mongoose.connection.readyState === 1) {
       await mongoose.connection.close();
-      console.log('✅ MongoDB connection closed');
     }
-    
-    console.log('✅ Graceful shutdown completed');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error during graceful shutdown:', error);
     process.exit(1);
   }
 });
 
 process.on('SIGTERM', async () => {
-  console.log('\n🛑 SIGTERM received - Starting graceful shutdown...');
   
   try {
     if (mongoose.connection.readyState === 1) {
       await mongoose.connection.close();
     }
-    
-    console.log('✅ Graceful shutdown completed');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error during graceful shutdown:', error);
     process.exit(1);
   }
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('💥 Uncaught Exception:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });

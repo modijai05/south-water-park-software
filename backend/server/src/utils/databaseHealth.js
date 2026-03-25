@@ -31,7 +31,6 @@ class DatabaseHealthMonitor {
     try {
       if (mongoose.connection.readyState !== 1) {
         this.isHealthy = false;
-        console.warn('⚠️ Database not connected, readyState:', mongoose.connection.readyState);
         return;
       }
 
@@ -41,18 +40,9 @@ class DatabaseHealthMonitor {
       this.isHealthy = true;
       this.lastHealthCheck = new Date();
       
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('💚 Database health check passed');
-      }
+      // Health check passed
     } catch (error) {
       this.isHealthy = false;
-      console.error('❌ Database health check failed:', error instanceof Error ? error.message : error);
-      
-      // In production, we might want to attempt reconnection
-      if (process.env.NODE_ENV === 'production') {
-        console.log('🔄 Production mode: Attempting to reconnect...');
-        // The connection retry logic in index.js will handle reconnection
-      }
     }
   }
 

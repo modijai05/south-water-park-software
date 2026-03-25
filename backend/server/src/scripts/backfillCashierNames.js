@@ -7,14 +7,11 @@ const UserModel = require('../models/User.js').User;
  */
 async function backfillCashierNames() {
   try {
-    console.log('Starting backfill of cashier names...');
     
-    // Find all entries that don't have filledByFullName but have createdBy
+    // Find entries to backfill
     const entries = await EntryModel.find({ 
       filledByFullName: { $exists: false } 
     }).populate('createdBy', 'username fullName');
-    
-    console.log(`Found ${entries.length} entries to backfill`);
     
     for (const entry of entries) {
       const user = entry.createdBy;
@@ -23,23 +20,19 @@ async function backfillCashierNames() {
         await EntryModel.findByIdAndUpdate(entry._id, { 
           filledByFullName: fullName 
         });
-        console.log(`Updated entry ${entry._id} with cashier name: ${fullName}`);
       }
     }
     
-    console.log('Backfill completed successfully!');
+    // Backfill completed
   } catch (error) {
-    console.error('Error during backfill:', error);
   }
 }
 
 // Run backfill if this file is executed directly
 if (require.main === module) {
   backfillCashierNames().then(() => {
-    console.log('Script completed');
     process.exit(0);
   }).catch((error) => {
-    console.error('Script failed:', error);
     process.exit(1);
   });
 }

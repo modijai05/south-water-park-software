@@ -36,7 +36,7 @@ const entrySchema = new mongoose.Schema({
   notes: String,
   filledByFullName: String,
   receiptNumber: { type: String, unique: true, sparse: true },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
 entrySchema.index({ createdAt: -1 });
