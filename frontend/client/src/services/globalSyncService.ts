@@ -13,21 +13,46 @@ class GlobalSyncService {
     this.setupPeriodicSync();
   }
 
-  // Emergency complete reset (immediate fix)
-  public emergencyResetAllData() {
-    console.log('🚨🚨 EMERGENCY RESET: Clearing ALL data immediately');
+  // PROFESSIONAL FIX: Emergency complete reset for daily reset
+  public emergencyDailyReset() {
+    console.log('🚨 PROFESSIONAL EMERGENCY DAILY RESET: Clearing ALL stats data');
     
-    // Clear ALL localStorage
+    // Clear ALL localStorage data
     localStorage.clear();
     
     // Clear all stats-related cache specifically
-    localStorage.removeItem('lastResetDate');
-    localStorage.removeItem('adminDashboardStats');
-    localStorage.removeItem('staffDashboardStats');
-    localStorage.removeItem('dashboardCache');
-    localStorage.removeItem('ticketConfigs');
-    localStorage.removeItem('recentEntries');
-    localStorage.removeItem('searchResults');
+    const keysToRemove = [
+      'lastResetDate',
+      'adminDashboardStats',
+      'staffDashboardStats',
+      'dashboardCache',
+      'ticketConfigs',
+      'recentEntries',
+      'searchResults',
+      'entriesCache',
+      'statsCache',
+      'todayStats',
+      'totalStats'
+    ];
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+    });
+    
+    // Force browser cache clear
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => {
+          caches.delete(name);
+        });
+      });
+    }
+    
+    // Trigger immediate reset event
+    this.triggerDailyReset();
+    
+    console.log('✅ PROFESSIONAL EMERGENCY RESET: All data cleared and reset triggered');
+  }
     
     // Trigger multiple reset events
     this.triggerDailyReset();
