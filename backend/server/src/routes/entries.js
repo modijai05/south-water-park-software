@@ -73,7 +73,18 @@ const calculateStatsFromEntries = (entries) => {
     total300: 0,
     total450: 0,
     total600: 0,
-    total100: 0
+    total100: 0,
+    // Per-ticket-type adult and kid counts
+    today150Adults: 0,
+    today150Kids: 0,
+    today300Adults: 0,
+    today300Kids: 0,
+    today450Adults: 0,
+    today450Kids: 0,
+    today600Adults: 0,
+    today600Kids: 0,
+    today100Adults: 0,
+    today100Kids: 0
   };
 
   entries.forEach(entry => {
@@ -86,13 +97,33 @@ const calculateStatsFromEntries = (entries) => {
     stats.todayAdults += entry.adults || 0;
     stats.todayKids += entry.kids || 0;
 
-    // Today's ticket types
+    // Today's ticket types and per-ticket-type adult/kid counts
     switch(entry.ticketType) {
-      case '150': stats.today150 += 1; break;
-      case '300': stats.today300 += 1; break;
-      case '450': stats.today450 += 1; break;
-      case '600': stats.today600 += 1; break;
-      case '100': stats.today100 += 1; break;
+      case '150': 
+        stats.today150 += 1;
+        stats.today150Adults += entry.adults || 0;
+        stats.today150Kids += entry.kids || 0;
+        break;
+      case '300': 
+        stats.today300 += 1;
+        stats.today300Adults += entry.adults || 0;
+        stats.today300Kids += entry.kids || 0;
+        break;
+      case '450': 
+        stats.today450 += 1;
+        stats.today450Adults += entry.adults || 0;
+        stats.today450Kids += entry.kids || 0;
+        break;
+      case '600': 
+        stats.today600 += 1;
+        stats.today600Adults += entry.adults || 0;
+        stats.today600Kids += entry.kids || 0;
+        break;
+      case '100': 
+        stats.today100 += 1;
+        stats.today100Adults += entry.adults || 0;
+        stats.today100Kids += entry.kids || 0;
+        break;
     }
   });
 
@@ -138,6 +169,26 @@ router.get('/stats', simpleAuth, async (req, res) => {
           total450: 0,
           total600: 0,
           total100: 0,
+          today150Adults: 0,
+          today150Kids: 0,
+          today300Adults: 0,
+          today300Kids: 0,
+          today450Adults: 0,
+          today450Kids: 0,
+          today600Adults: 0,
+          today600Kids: 0,
+          today100Adults: 0,
+          today100Kids: 0,
+          total150Adults: 0,
+          total150Kids: 0,
+          total300Adults: 0,
+          total300Kids: 0,
+          total450Adults: 0,
+          total450Kids: 0,
+          total600Adults: 0,
+          total600Kids: 0,
+          total100Adults: 0,
+          total100Kids: 0,
           lastUpdated: new Date().toISOString(),
           forceReset: true,
           resetTrigger: 'force-parameter'
@@ -185,7 +236,9 @@ router.get('/stats', simpleAuth, async (req, res) => {
       {
         $group: {
           _id: '$ticketType',
-          count: { $sum: 1 }
+          count: { $sum: 1 },
+          adults: { $sum: '$adults' },
+          kids: { $sum: '$kids' }
         }
       }
     ]);
@@ -193,6 +246,8 @@ router.get('/stats', simpleAuth, async (req, res) => {
     const ticketStats = {};
     ticketTypeCounts.forEach(item => {
       ticketStats[`total${item._id}`] = item.count;
+      ticketStats[`total${item._id}Adults`] = item.adults || 0;
+      ticketStats[`total${item._id}Kids`] = item.kids || 0;
     });
     
     const response = {
@@ -224,6 +279,27 @@ router.get('/stats', simpleAuth, async (req, res) => {
         total450: ticketStats.total450 || 0,
         total600: ticketStats.total600 || 0,
         total100: ticketStats.total100 || 0,
+        // Per-ticket-type adult and kid counts
+        today150Adults: todayStats.today150Adults,
+        today150Kids: todayStats.today150Kids,
+        today300Adults: todayStats.today300Adults,
+        today300Kids: todayStats.today300Kids,
+        today450Adults: todayStats.today450Adults,
+        today450Kids: todayStats.today450Kids,
+        today600Adults: todayStats.today600Adults,
+        today600Kids: todayStats.today600Kids,
+        today100Adults: todayStats.today100Adults,
+        today100Kids: todayStats.today100Kids,
+        total150Adults: ticketStats.total150Adults || 0,
+        total150Kids: ticketStats.total150Kids || 0,
+        total300Adults: ticketStats.total300Adults || 0,
+        total300Kids: ticketStats.total300Kids || 0,
+        total450Adults: ticketStats.total450Adults || 0,
+        total450Kids: ticketStats.total450Kids || 0,
+        total600Adults: ticketStats.total600Adults || 0,
+        total600Kids: ticketStats.total600Kids || 0,
+        total100Adults: ticketStats.total100Adults || 0,
+        total100Kids: ticketStats.total100Kids || 0,
         lastUpdated: new Date().toISOString(),
         forceReset: false
       }

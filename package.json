@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/package",
   "name": "south-water-park",
   "version": "1.0.0",
   "description": "South Water Park Management System - Complete ticketing and admin solution",
