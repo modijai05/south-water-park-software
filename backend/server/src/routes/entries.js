@@ -1,9 +1,10 @@
 const { Router } = require('express');
+const { authenticate } = require('../middleware/auth.js');
 
 const router = Router();
 
 // GET /api/entries/stats - Get entry statistics
-router.get('/stats', async (req, res) => {
+router.get('/stats', authenticate, async (req, res) => {
   try {
     console.log('📊 SUPER MINIMAL STATS API called');
     
