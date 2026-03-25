@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const jwt = require('jsonwebtoken');
 
+// Version: 2.1.0 - Production Ready
 const router = Router();
 
 // Simple authentication middleware without database
