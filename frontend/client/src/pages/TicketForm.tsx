@@ -89,10 +89,10 @@ export function TicketForm() {
   // Fetch ticket configurations
   const fetchConfigs = async () => {
     try {
-      console.log('🔄 TicketForm: Fetching ticket configs...');
+      console.log('TicketForm: Fetching ticket configs...');
       // Use the same API as dashboard to get full configs with all day-wise pricing
       const result = await ticketConfigApi.getAll();
-      console.log('✅ TicketForm: Fetched configs:', result);
+      console.log('TicketForm: Fetched configs:', result);
       // Handle both old format (direct array) and new format (success/data wrapper)
       const configs = Array.isArray(result) ? result : ((result as any)?.data || []);
       setTicketConfigs(configs);
@@ -112,21 +112,21 @@ export function TicketForm() {
   // Listen for real-time ticket config updates from admin panel
   useEffect(() => {
     const handleTicketConfigUpdate = (event: CustomEvent) => {
-      console.log('🎉 TicketForm: Received ticket config update event:', event.detail);
+      console.log('TicketForm: Received ticket config update event:', event.detail);
       setConfigUpdateNotification('🔄 Ticket prices updated by admin!');
       
-      console.log('🔄 TicketForm: Clearing price cache and fetching updated configs...');
+      console.log('TicketForm: Clearing price cache and fetching updated configs...');
       // Clear price cache to force recalculation with new pricing
       priceCacheRef.current.clear();
       
       // Fetch updated configs
       fetchConfigs().then(() => {
-        console.log('✅ TicketForm: Configs updated after event');
+        console.log('TicketForm: Configs updated after event');
         setTimeout(() => setConfigUpdateNotification(null), 3000);
       });
     };
 
-    console.log('👂 TicketForm: Setting up ticket-config-updated event listener');
+    console.log('TicketForm: Setting up ticket-config-updated event listener');
     // Add event listener
     window.addEventListener('ticket-config-updated', handleTicketConfigUpdate as EventListener);
     
@@ -405,8 +405,9 @@ export function TicketForm() {
   // Pre-cache all ticket prices on component mount for instant calculations
   useEffect(() => {
     const allTicketTypes: TicketType[] = ['150', '300', '450', '600', '100'];
-    allTicketTypes.forEach(ticketType => {
-      if (!priceCacheRef.current.has(ticketType)) {
+    const safeTicketTypes = Array.isArray(allTicketTypes) ? allTicketTypes : [];
+    safeTicketTypes.forEach(ticketType => {
+      if (ticketType && !priceCacheRef.current.has(ticketType)) {
         priceCacheRef.current.set(ticketType, getTicketPriceSync(ticketType));
       }
     });

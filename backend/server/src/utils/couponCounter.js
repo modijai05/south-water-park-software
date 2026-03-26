@@ -60,7 +60,7 @@ function calculateCouponCounts(entry) {
 
   // Count coupons from upgrades
   if (entry.upgrades && Array.isArray(entry.upgrades)) {
-    entry.upgrades.forEach(upgrade => {
+    (entry.upgrades || []).forEach(upgrade => {
       if (upgrade.ticketType === '450' || upgrade.ticketType === '600') {
         counts.adultsFastFood += countCouponsFromRange(upgrade.adultsFastFoodCoupon) || 0;
         counts.kidsFastFood += countCouponsFromRange(upgrade.kidsFastFoodCoupon) || 0;
@@ -96,7 +96,7 @@ function aggregateCouponCounts(entries) {
     return totals;
   }
 
-  entries.forEach(entry => {
+  (entries || []).forEach(entry => {
     const counts = calculateCouponCounts(entry);
     totals.adultsFastFood += counts.adultsFastFood;
     totals.kidsFastFood += counts.kidsFastFood;

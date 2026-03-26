@@ -86,7 +86,7 @@ const calculateStatsFromEntries = (entries) => {
     today100Kids: 0
   };
 
-  entries.forEach(entry => {
+  (entries || []).forEach(entry => {
     // Today's stats
     stats.todayAmount += entry.finalAmount || 0;
     stats.todayCash += entry.cashAmount || 0;

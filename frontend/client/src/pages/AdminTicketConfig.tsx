@@ -74,7 +74,7 @@ export function AdminTicketConfig() {
         }))
       }));
       
-      console.log('🔧 AdminTicketConfig: Processed configs:', processedData);
+      console.log('AdminTicketConfig: Processed configs:', processedData.length, 'rows:', data.length);
       setConfigs(processedData);
     } catch (error) {
       console.error('❌ AdminTicketConfig: Error fetching ticket configs:', error);
@@ -328,8 +328,8 @@ export function AdminTicketConfig() {
       setTimeout(() => setSuccessNotification(null), 3000);
       
     } catch (error) {
-      console.error('❌ AdminTicketConfig: Export failed:', error);
-      alert('Failed to export ticket configurations. Please try again.');
+      console.log('AdminTicketConfig: Export failed:', error);
+      console.log('AdminTicketConfig: Failed to export ticket configurations. Please try again.');
     } finally {
       setExporting(false);
     }
@@ -359,7 +359,9 @@ export function AdminTicketConfig() {
         const data = lines.slice(1).map(line => {
           const values = line.split(',');
           const row: any = {};
-          headers.forEach((header, index) => {
+          if (headers && Array.isArray(headers)) {
+            headers.forEach((header, index) => {
+            if (!header) return; // Guard against null/undefined headers
             let value = values[index] || '';
             // Remove quotes and clean value
             value = value.replace(/^"|"$/g, '').replace(/""/g, '"');
@@ -370,6 +372,7 @@ export function AdminTicketConfig() {
               row[header] = value;
             }
           });
+          }
           return row;
         });
         
@@ -377,7 +380,7 @@ export function AdminTicketConfig() {
         
         // Import to server
         const result = await ticketConfigApi.importFromExcel(data);
-        console.log('✅ AdminTicketConfig: Import completed:', result);
+        console.log('AdminTicketConfig: Import completed:', result);
         
         setImportResults(result);
         setSuccessNotification(`Import completed: ${result.successCount} updated, ${result.failureCount} failed`);
@@ -387,8 +390,8 @@ export function AdminTicketConfig() {
         await fetchConfigs();
         
       } catch (error) {
-        console.error('❌ AdminTicketConfig: Import failed:', error);
-        alert('Failed to import ticket configurations. Please check the file format and try again.');
+        console.log('AdminTicketConfig: Import failed:', error);
+        console.log('AdminTicketConfig: Failed to import ticket configurations. Please check the file format and try again.');
       } finally {
         setImporting(false);
         // Reset file input
@@ -774,10 +777,14 @@ export function AdminTicketConfig() {
                         <button
                           onClick={() => {
                             console.log('🔧 Reset All to Base button clicked', { ticketType: config.ticketType, basePrice: config.basePrice });
-                            days.forEach(day => {
-                              console.log('🔧 Setting base price for day:', day);
-                              setDayPrice(config.ticketType, day, config.basePrice);
-                            });
+                            if (days && Array.isArray(days)) {
+                              days.forEach(day => {
+                                if (day) {
+                                  console.log('🔧 Setting base price for day:', day);
+                                  setDayPrice(config.ticketType, day, config.basePrice);
+                                }
+                              });
+                            }
                           }}
                           disabled={editingTicket === null}
                           className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
@@ -803,10 +810,14 @@ export function AdminTicketConfig() {
                         <button
                           onClick={() => {
                             console.log('🔧 Use Multipliers button clicked', { ticketType: config.ticketType });
-                            days.forEach(day => {
-                              console.log('🔧 Setting multiplier for day:', day);
-                              setDayMultiplier(config.ticketType, day, 1);
-                            });
+                            if (days && Array.isArray(days)) {
+                              days.forEach(day => {
+                                if (day) {
+                                  console.log('🔧 Setting multiplier for day:', day);
+                                  setDayMultiplier(config.ticketType, day, 1);
+                                }
+                              });
+                            }
                           }}
                           disabled={editingTicket === null}
                           className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"

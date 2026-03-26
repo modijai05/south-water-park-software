@@ -54,7 +54,7 @@ export class DataManager {
       switch (type) {
         case 'entries':
           const entriesRes = await entriesApi.list({ limit: 10000 });
-          data = entriesRes.entries;
+          data = entriesRes.data?.entries || [];
           break;
         case 'users':
           data = await usersApi.list();
@@ -64,7 +64,7 @@ export class DataManager {
             entriesApi.list({ limit: 10000 }),
             usersApi.list()
           ]);
-          data = { entries: entries.entries, users };
+          data = { entries: entries.data?.entries || [], users };
           break;
       }
 
@@ -195,10 +195,17 @@ export class DataManager {
   private async checkEntriesIntegrity(issues: string[], recommendations: string[]): Promise<void> {
     try {
       const res = await entriesApi.list({ limit: 1000 });
-      const entries = res.entries as any[];
+      const entries = res.data?.entries as any[] || [];
+
+      // Guard against undefined/null data
+      if (!entries || !Array.isArray(entries)) {
+        issues.push('Unable to fetch entries for integrity check');
+        return;
+      }
 
       // Check for missing required fields
-      entries.forEach((entry, index) => {
+      const safeEntries = Array.isArray(entries) ? entries : [];
+      safeEntries.forEach((entry, index) => {
         if (!entry.name || !entry.mobile) {
           issues.push(`Entry ${index + 1}: Missing required fields`);
         }
@@ -212,9 +219,11 @@ export class DataManager {
 
       // Check for duplicates
       const mobileCounts = new Map<string, number>();
-      entries.forEach(entry => {
+      safeEntries.forEach(entry => {
         const mobile = entry.mobile;
-        mobileCounts.set(mobile, (mobileCounts.get(mobile) || 0) + 1);
+        if (mobile) {
+          mobileCounts.set(mobile, (mobileCounts.get(mobile) || 0) + 1);
+        }
       });
 
       mobileCounts.forEach((count, mobile) => {
@@ -225,7 +234,7 @@ export class DataManager {
       });
 
       // Check data consistency
-      const totalAmount = entries.reduce((sum, entry) => sum + (entry.finalAmount || 0), 0);
+      const totalAmount = safeEntries.reduce((sum, entry) => sum + (entry.finalAmount || 0), 0);
       if (totalAmount < 0) {
         issues.push('Negative total amount detected');
         recommendations.push('Review all entry amounts for negative values');
@@ -243,20 +252,21 @@ export class DataManager {
 
       // Check for duplicate usernames
       const usernames = new Set<string>();
-      users.forEach((user, index) => {
+      const safeUsers = Array.isArray(users) ? users : [];
+      safeUsers.forEach((user, index) => {
         if (!user.username) {
           issues.push(`User ${index + 1}: Missing username`);
         }
-        if (usernames.has(user.username)) {
+        if (user.username && usernames.has(user.username)) {
           issues.push(`Duplicate username: ${user.username}`);
           recommendations.push('Resolve duplicate usernames');
-        } else {
+        } else if (user.username) {
           usernames.add(user.username);
         }
       });
 
       // Check for admin users
-      const adminUsers = users.filter(user => user.role === 'admin');
+      const adminUsers = safeUsers.filter(user => user.role === 'admin');
       if (adminUsers.length === 0) {
         issues.push('No admin users found');
         recommendations.push('Create at least one admin user');

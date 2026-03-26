@@ -11,6 +11,52 @@ import type { EntryRecord, TicketType } from '@/types';
 
 type Range = 'today' | 'yesterday' | 'week' | 'month' | 'custom' | 'particular_day' | 'all_time';
 
+// Custom event types for better type safety
+interface GlobalSyncEvent extends Event {
+  detail: {
+    timestamp: string;
+    count: number;
+  };
+}
+
+interface ExportSyncEvent extends Event {
+  detail: {
+    timestamp: string;
+    count: number;
+    entries: EntryRecord[];
+  };
+}
+
+interface ReceiptEvent extends Event {
+  detail: {
+    receiptNumber?: string;
+    name: string;
+    mobile: string;
+    ticketType: string;
+    adults: number;
+    kids: number;
+    upgrades: any[];
+    baseAmount: number;
+    kidDiscount: number;
+    additionalDiscount: number;
+    finalAmount: number;
+    totalPeople: number;
+    cashAmount: number;
+    upiAmount: number;
+    advanceAmount: number;
+    otherAmount: number;
+    filledBy?: {
+      username?: string;
+      fullName?: string;
+    };
+    createdAt: string;
+    adultsFastFoodCoupon?: string;
+    kidsFastFoodCoupon?: string;
+    adultsMainFoodCoupon?: string;
+    kidsMainFoodCoupon?: string;
+  };
+}
+
 export function AdminExport() {
   const [range, setRange] = useState<Range>('today');
   const [from, setFrom] = useState('');
@@ -54,7 +100,7 @@ export function AdminExport() {
     let cancelled = false;
     
     const handleEntryUpdate = () => {
-      console.log('🔄 Export: Syncing entries count...');
+      console.log('Export: Syncing entries count...');
       
       // Set sync status to syncing
       setSyncStatus('syncing');
@@ -72,7 +118,7 @@ export function AdminExport() {
           setLastSyncTime(dayjs().format('HH:mm:ss'));
           setSyncStatus('active');
           
-          console.log('✅ Export: Entries count updated:', exportData.total);
+          console.log('Export: Entries count updated:', exportData.total);
           
           // Trigger global sync events
           window.dispatchEvent(new CustomEvent('export-synced', {
@@ -85,7 +131,7 @@ export function AdminExport() {
           }));
           
         } catch (error) {
-          console.error('❌ Export: Failed to refresh entries count:', error);
+          console.error('Export: Failed to refresh entries count:', (error as Error).message);
           setSyncStatus('error');
         }
       };
@@ -94,16 +140,21 @@ export function AdminExport() {
     };
 
     // Listen for global sync events
-    const handleGlobalSync = () => {
-      console.log('🌐 Export: Received global sync event');
+    const handleGlobalSync = (event: GlobalSyncEvent) => {
+      console.log('Export: Received global sync event');
       handleEntryUpdate();
     };
 
-    const handleExportSync = () => {
-      console.log('🌐 Export: Received export sync event');
+    const handleExportSync = (event: ExportSyncEvent) => {
+      console.log('Export: Received export sync event:', event.detail);
       handleEntryUpdate();
     };
 
+    const handleReceiptEvent = (event: ReceiptEvent) => {
+      console.log('Export: Receipt event received:', event.detail);
+      handleEntryUpdate();
+    };
+    
     // Add event listeners for all update events
     window.addEventListener('global-sync', handleGlobalSync);
     window.addEventListener('export-sync-required', handleExportSync);
@@ -114,12 +165,6 @@ export function AdminExport() {
     window.addEventListener('dashboard-synced', handleEntryUpdate);
     window.addEventListener('payment-completed', handleEntryUpdate);
     window.addEventListener('export-refresh', handleEntryUpdate); // Listen for admin sync coordinator
-    
-    // Listen for receipt events from staff dashboard
-    const handleReceiptEvent = (event: any) => {
-      console.log('🧾 AdminExport: Receipt event received:', event.detail);
-      handleEntryUpdate();
-    };
     
     window.addEventListener('receipt-generated', handleReceiptEvent);
     window.addEventListener('receipt-printed', handleReceiptEvent);
@@ -199,11 +244,10 @@ export function AdminExport() {
       setEntriesCount(entries.length);
       
       // Show export summary
-      console.log('📊 Export Summary:', {
+      console.log('Export: Export Summary:', {
         query: exportData.query,
         totalAvailable: exportData.total,
-        exported: exportData.exported,
-        exportDate: exportData.exportDate
+        exported: exportData.exported
       });
       
       if (entries.length === 0) {
@@ -626,8 +670,9 @@ export function AdminExport() {
         let kidsMainFoodCoupon = (e as any).kidsMainFoodCoupon || '';
         
         // Collect food coupons from upgrade tickets
-        if (e.upgrades && e.upgrades.length > 0) {
-          e.upgrades.forEach((upgrade: any, index: number) => {
+        if (e.upgrades && Array.isArray(e.upgrades) && e.upgrades.length > 0) {
+          (e.upgrades || []).forEach((upgrade: any, index: number) => {
+            if (!upgrade) return; // Guard against null/undefined upgrades
             // Only collect coupons from food-related upgrade tickets (450, 600)
             if (upgrade.ticketType === '450' || upgrade.ticketType === '600') {
               if (upgrade.adultsFastFoodCoupon) {
@@ -767,8 +812,9 @@ export function AdminExport() {
               people += (e.totalPeople || (e.adults || 0) + (e.kids || 0));
             }
           }
-          if (e.upgrades) {
-            e.upgrades.forEach((upgrade: any) => {
+          if (e.upgrades && Array.isArray(e.upgrades)) {
+            (e.upgrades || []).forEach((upgrade: any) => {
+              if (!upgrade) return; // Guard against null/undefined upgrades
               if (upgrade.ticketType === ticketType) people += (upgrade.adults || 0) + (upgrade.kids || 0);
             });
           }
@@ -787,8 +833,9 @@ export function AdminExport() {
         if (e.ticketType === '450' || e.ticketType === '600') {
           count += countCouponsFromRange(e.adultsFastFoodCoupon);
         }
-        if (e.upgrades) {
+        if (e.upgrades && Array.isArray(e.upgrades)) {
           e.upgrades.forEach((upgrade: any) => {
+            if (!upgrade) return; // Guard against null/undefined upgrades
             if (upgrade.ticketType === '450' || upgrade.ticketType === '600') {
               count += countCouponsFromRange(upgrade.adultsFastFoodCoupon);
             }
@@ -802,8 +849,9 @@ export function AdminExport() {
         if (e.ticketType === '450' || e.ticketType === '600') {
           count += countCouponsFromRange(e.kidsFastFoodCoupon);
         }
-        if (e.upgrades) {
+        if (e.upgrades && Array.isArray(e.upgrades)) {
           e.upgrades.forEach((upgrade: any) => {
+            if (!upgrade) return; // Guard against null/undefined upgrades
             if (upgrade.ticketType === '450' || upgrade.ticketType === '600') {
               count += countCouponsFromRange(upgrade.kidsFastFoodCoupon);
             }
@@ -817,8 +865,9 @@ export function AdminExport() {
         if (e.ticketType === '450' || e.ticketType === '600') {
           count += countCouponsFromRange(e.adultsMainFoodCoupon);
         }
-        if (e.upgrades) {
+        if (e.upgrades && Array.isArray(e.upgrades)) {
           e.upgrades.forEach((upgrade: any) => {
+            if (!upgrade) return; // Guard against null/undefined upgrades
             if (upgrade.ticketType === '450' || upgrade.ticketType === '600') {
               count += countCouponsFromRange(upgrade.adultsMainFoodCoupon);
             }
@@ -832,8 +881,9 @@ export function AdminExport() {
         if (e.ticketType === '450' || e.ticketType === '600') {
           count += countCouponsFromRange(e.kidsMainFoodCoupon);
         }
-        if (e.upgrades) {
+        if (e.upgrades && Array.isArray(e.upgrades)) {
           e.upgrades.forEach((upgrade: any) => {
+            if (!upgrade) return; // Guard against null/undefined upgrades
             if (upgrade.ticketType === '450' || upgrade.ticketType === '600') {
               count += countCouponsFromRange(upgrade.kidsMainFoodCoupon);
             }
@@ -930,7 +980,7 @@ export function AdminExport() {
       });
       
       // Auto-adjust column widths
-      sheet.columns.forEach((column) => {
+      (sheet.columns || []).forEach((column) => {
         if (column.width) {
           column.width = column.width;
         }
@@ -946,9 +996,9 @@ export function AdminExport() {
           // This would require Microsoft Graph API setup
           // const result = await uploadToOneDrive(blob, fileName);
           console.log('OneDrive upload would happen here');
-          alert(`Successfully uploaded ${entries.length} entries to OneDrive!`);
+          console.log('Export: Successfully uploaded to OneDrive!');
         } catch (error) {
-          console.error('OneDrive upload failed:', error);
+          console.log('Export: OneDrive upload failed:', error);
           // Fallback to local download
           downloadFile(blob, fileName);
         }
@@ -995,15 +1045,15 @@ export function AdminExport() {
       
       const entry = (res.entries as any[])[0];
       if (entry) {
-        console.log('🔍 AdminExport: Entry found for receipt:', entry);
-        console.log('🔍 AdminExport: Entry created by:', entry.createdBy);
+        console.log('Export: Entry found for receipt:', entry);
+        console.log('Export: Entry created by:', entry.createdBy);
         console.log('🔍 AdminExport: Entry filledByFullName:', (entry as any).filledByFullName);
         
         // Generate receipt number if it doesn't exist
         let receiptNumber = entry.receiptNumber;
         if (!receiptNumber) {
           try {
-            console.log('🔍 AdminExport: Generating receipt number for existing entry...');
+            console.log('Export: Generating receipt number for existing entry...');
             const receiptRes = await fetch(`/api/entries/${entry.id}/generate-receipt`, {
               method: 'POST',
               headers: {
@@ -1014,9 +1064,10 @@ export function AdminExport() {
             if (receiptRes.ok) {
               const receiptData = await receiptRes.json();
               receiptNumber = receiptData.receiptNumber;
-              console.log('🔍 AdminExport: Receipt number generated:', receiptNumber);
+              console.log('Export: Receipt number generated:', receiptNumber);
             } else {
-              console.error('🔍 AdminExport: Failed to generate receipt number, response:', receiptRes.status);
+              const errorText = await receiptRes.text();
+              console.log('Export: Failed to generate receipt number:', errorText);
               // Generate fallback receipt number locally
               const today = new Date();
               const dateStr = today.getFullYear().toString() +
@@ -1027,7 +1078,7 @@ export function AdminExport() {
               console.log('🔍 AdminExport: Using fallback receipt number:', receiptNumber);
             }
           } catch (error) {
-            console.error('🔍 AdminExport: Error generating receipt number:', error);
+            console.log('Export: Error generating receipt number:', error);
             // Generate fallback receipt number locally
             const today = new Date();
             const dateStr = today.getFullYear().toString() +
@@ -1139,7 +1190,7 @@ export function AdminExport() {
       setReceiptData(batchReceiptData);
       setShowReceipt(true);
     } catch (error) {
-      console.error('Failed to generate batch receipts:', error);
+      console.log('Export: Failed to generate batch receipts:', (error as Error).message);
       alert('Failed to generate batch receipts. Please try again.');
     }
   };

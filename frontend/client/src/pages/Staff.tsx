@@ -6,81 +6,16 @@ import { entriesApi } from '@/lib/api';
 import { ticketConfigApi } from '@/lib/ticketApi';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import Receipt from '@/components/Receipt';
-import type { TicketConfig } from '@/types';
+import Logger from '@/lib/logger';
+import type { TicketConfig, EntryRecord as Entry, Stats as StaffStats, CustomEventData } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { TICKET_OPTIONS } from '@/types';
 import { invalidateTicketConfigCache } from '@/lib/ticketUtils';
 import { globalSyncService } from '@/services/globalSyncService';
 
-interface Stats {
-  todayEntries: number;
-  totalEntries: number;
-  todayPeople: number;
-  totalPeople: number;
-  todayAdults: number;
-  totalAdults: number;
-  todayKids: number;
-  totalKids: number;
-  // 150 tickets
-  today150: number;
-  total150: number;
-  today150Adults: number;
-  total150Adults: number;
-  today150Kids: number;
-  total150Kids: number;
-  // 300 tickets
-  today300: number;
-  total300: number;
-  today300Adults: number;
-  total300Adults: number;
-  today300Kids: number;
-  total300Kids: number;
-  // 450 tickets
-  today450: number;
-  total450: number;
-  today450Adults: number;
-  total450Adults: number;
-  today450Kids: number;
-  total450Kids: number;
-  // 600 tickets
-  today600: number;
-  total600: number;
-  today600Adults: number;
-  total600Adults: number;
-  today600Kids: number;
-  total600Kids: number;
-  // 100 tickets
-  today100: number;
-  total100: number;
-  today100Adults: number;
-  total100Adults: number;
-  today100Kids: number;
-  total100Kids: number;
-  // Food coupon statistics for today
-  todayAdultsFastFoodCoupons: number;
-  todayKidsFastFoodCoupons: number;
-  todayAdultsMainFoodCoupons: number;
-  todayKidsMainFoodCoupons: number;
-  todayTotalFastFoodCoupons: number;
-  todayTotalMainFoodCoupons: number;
-  todayTotalFoodCoupons: number;
-  // Food coupon statistics for all time
-  totalAdultsFastFoodCoupons: number;
-  totalKidsFastFoodCoupons: number;
-  totalAdultsMainFoodCoupons: number;
-  totalKidsMainFoodCoupons: number;
-  totalFastFoodCoupons: number;
-  totalMainFoodCoupons: number;
-  totalFoodCoupons: number;
-  // Performance metrics
-  averageTicketValue: number;
-  peakHour: string;
-  conversionRate: number;
-}
-
 export function Staff() {
   const { user } = useAuthStore();
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<StaffStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
   
@@ -94,7 +29,7 @@ export function Staff() {
   // Enhanced fetch ticket configurations with proper error handling and sync
   const fetchTicketConfigs = async (): Promise<TicketConfig[]> => {
     try {
-      console.log('🔄 Staff: Fetching ticket configs...');
+      Logger.debug('Fetching ticket configs', {}, 'Staff');
       
       // Invalidate cache to ensure fresh data
       invalidateTicketConfigCache();
@@ -103,13 +38,13 @@ export function Staff() {
       await new Promise(resolve => setTimeout(resolve, 50));
       
       const configs = await ticketConfigApi.getAll();
-      console.log('✅ Staff: Fetched ticket configs:', configs);
-      console.log('🎫 Staff: Current prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
+      Logger.debug('Fetched ticket configs', { count: configs.length }, 'Staff');
+      Logger.debug('Current prices', configs.map(c => ({ type: c.ticketType, price: c.basePrice })), 'Staff');
       
       setTicketConfigs(configs);
       return configs;
     } catch (error) {
-      console.error('❌ Staff: Failed to fetch ticket configs:', error);
+      Logger.error('Failed to fetch ticket configs', error, 'Staff');
       // Return fallback configs to prevent UI errors
       const fallbackConfigs = TICKET_OPTIONS.map(option => ({
         ticketType: option.value,
@@ -128,11 +63,11 @@ export function Staff() {
 
   // Enhanced getCurrentTicketPrice with better logging and fallback handling
   const getCurrentTicketPrice = (ticketType: string): number => {
-    console.log('🎫 Staff: Getting price for ticket type:', ticketType, 'Available configs:', ticketConfigs.length);
+    Logger.debug('Getting price for ticket type', { ticketType, configCount: ticketConfigs.length }, 'Staff');
     
     const config = ticketConfigs.find(c => c.ticketType === ticketType);
     if (config) {
-      console.log('🎫 Staff: Found config for', ticketType, 'basePrice:', config.basePrice);
+      Logger.debug('Found config for ticket', { ticketType, basePrice: config.basePrice }, 'Staff');
       
       // Get current day name
       const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
@@ -142,25 +77,25 @@ export function Staff() {
         const finalPrice = todayPricing.fixedAmount !== undefined 
           ? todayPricing.fixedAmount 
           : Math.round(config.basePrice * todayPricing.priceMultiplier);
-        console.log('🎫 Staff: Using day-wise pricing for', today, 'price:', finalPrice);
+        Logger.debug('Using day-wise pricing', { today, price: finalPrice }, 'Staff');
         return finalPrice;
       }
       
       // Use base price if no day-wise pricing or not enabled
-      console.log('🎫 Staff: Using base price:', config.basePrice);
+      Logger.debug('Using base price', { basePrice: config.basePrice }, 'Staff');
       return config.basePrice;
     }
     
     // Fallback to static options (same as Admin Dashboard)
     const staticOption = TICKET_OPTIONS.find(t => t.value === ticketType);
     const fallbackPrice = staticOption?.price || 0;
-    console.log('🎫 Staff: Using fallback price for', ticketType, ':', fallbackPrice);
+    Logger.debug('Using fallback price', { ticketType, fallbackPrice }, 'Staff');
     return fallbackPrice;
   };
 
   // Enhanced sync function to force refresh all data
   const forceRefreshAllData = async () => {
-    console.log('🔄 Staff: Force refreshing all data...');
+    Logger.debug('Force refreshing all data', {}, 'Staff');
     try {
       // Invalidate cache first
       invalidateTicketConfigCache();
@@ -174,9 +109,9 @@ export function Staff() {
         fetchTicketConfigs()
       ]);
       
-      setStats(statsRes as unknown as Stats);
-      console.log('🎫 Staff: Force refreshed - New prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
-      console.log('📊 Staff: Force refreshed - New stats:', statsRes);
+      setStats(statsRes as unknown as StaffStats);
+      Logger.debug('Force refreshed - New prices', configs.map(c => ({ type: c.ticketType, price: c.basePrice })), 'Staff');
+      Logger.debug('Force refreshed - New stats', statsRes, 'Staff');
       
       // Trigger global sync event
       window.dispatchEvent(new CustomEvent('staff-synced', {
@@ -190,7 +125,7 @@ export function Staff() {
       }));
       
     } catch (error) {
-      console.error('❌ Staff: Failed to force refresh data:', error);
+      Logger.error('Failed to force refresh data', error, 'Staff');
     }
   };
 
@@ -201,7 +136,7 @@ export function Staff() {
     
     const fetchInitialData = async () => {
       try {
-        console.log('🚀 Staff: Loading initial data...');
+        Logger.debug('Loading initial data', {}, 'Staff');
         
         // Fetch both stats and ticket configs in parallel
         const [statsRes, configs] = await Promise.all([
@@ -210,12 +145,12 @@ export function Staff() {
         ]);
         
         if (!cancelled) {
-          setStats(statsRes as unknown as Stats);
+          setStats(statsRes as unknown as StaffStats);
           // Note: setTicketConfigs is already called in fetchTicketConfigs
-          console.log('✅ Staff: Initial data loaded - Stats:', statsRes, 'Configs:', configs.length);
+          Logger.debug('Initial data loaded', { stats: statsRes, configCount: configs.length }, 'Staff');
         }
       } catch (error) {
-        console.error('❌ Staff: Failed to load initial data:', error);
+        Logger.error('Failed to load initial data', error, 'Staff');
         // Set to zero if API fails
         setStats({
           todayEntries: 0,
@@ -273,7 +208,7 @@ export function Staff() {
           averageTicketValue: 0,
           peakHour: 'N/A',
           conversionRate: 0,
-        } as Stats);
+        } as StaffStats);
       } finally {
         setLoading(false);
       }
@@ -284,7 +219,7 @@ export function Staff() {
     
     // Handle entry updates
     const handleEntryUpdate = async () => {
-      console.log('🔄 Staff: Handling entry update - Fetching fresh MongoDB data...');
+      Logger.debug('Handling entry update - Fetching fresh MongoDB data', {}, 'Staff');
       try {
         // Force refresh from MongoDB with timestamp to prevent caching
         const timestamp = Date.now();
@@ -325,7 +260,7 @@ export function Staff() {
         ]);
         
         if (!cancelled) {
-          setStats(statsRes as unknown as Stats);
+          setStats(statsRes as unknown as StaffStats);
           console.log('🔄 Staff: Refreshed stats and ticket configs');
           console.log('🎫 Staff: Updated prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
           console.log('✅ Staff: Complete data refresh successful');
@@ -382,7 +317,7 @@ export function Staff() {
     
     // Listen for receipt-related events from admin dashboard
     const handleReceiptEvent = () => {
-      console.log('🧾 Staff: Receipt event received, refreshing stats...');
+      Logger.debug('Receipt event received, refreshing stats', {}, 'Staff');
       handleEntryUpdate();
     };
     
@@ -391,8 +326,8 @@ export function Staff() {
     window.addEventListener('payment-completed', handleReceiptEvent);
     
     // Add discount-specific event listeners for real-time sync
-    const handleDiscountUpdate = (event: any) => {
-      console.log('💰 Staff: Discount update event received:', event.detail);
+    const handleDiscountUpdate = (event: CustomEventData) => {
+      Logger.debug('Discount update event received', event.detail, 'Staff');
       handleEntryUpdate();
     };
     
@@ -430,20 +365,20 @@ export function Staff() {
     let cancelled = false;
 
     // Handle global sync events from sync service
-    const handleGlobalSyncTriggered = (data: any) => {
+    const handleGlobalSyncTriggered = (data: CustomEventData) => {
       if (!cancelled) {
-        console.log('🌐 Staff: Global sync triggered:', data);
+        Logger.debug('Global sync triggered', data, 'Staff');
         const fetchData = async () => {
           try {
             const [s] = await Promise.all([
               entriesApi.stats()
             ]);
             if (!cancelled) {
-              setStats(s.data as unknown as Stats);
-              console.log('✅ Staff: Data updated via global sync');
+              setStats(s as unknown as Stats);
+              Logger.debug('✅ Staff: Data updated via global sync', {}, 'Staff');
             }
           } catch (error) {
-            console.error('❌ Staff: Global sync failed:', error);
+            Logger.error('❌ Staff: Global sync failed:', error);
           }
         };
         fetchData();
@@ -451,17 +386,17 @@ export function Staff() {
     };
 
     // Handle immediate sync requirements
-    const handleImmediateSyncRequired = (data: any) => {
+    const handleImmediateSyncRequired = (data: CustomEventData) => {
       if (!cancelled) {
-        console.log('🚀 Staff: Immediate sync required:', data);
+        Logger.debug('Immediate sync required', data, 'Staff');
         handleGlobalSyncTriggered(data);
       }
     };
 
     // Handle daily reset events
-    const handleDailyReset = (data: any) => {
+    const handleDailyReset = (data: CustomEventData) => {
       if (!cancelled) {
-        console.log('🌅 Staff: Daily reset triggered, refreshing data');
+        Logger.debug('Daily reset triggered, refreshing data', data, 'Staff');
         handleGlobalSyncTriggered({ ...data, reason: 'daily-reset' });
       }
     };
@@ -484,8 +419,8 @@ export function Staff() {
   
   // Search functionality across all users for receipt generation
   const handleSearch = async (query: string) => {
-    console.log('🔍 Staff: Starting cross-user search for:', query);
-    console.log('🔍 Staff: Current user:', user?.username, 'Role:', user?.role);
+    Logger.debug('Staff: Starting cross-user search for:', query);
+    Logger.debug('Staff: Current user:', user?.username, 'Role:', user?.role);
     
     if (!query.trim()) {
       setSearchResults([]);
@@ -495,33 +430,35 @@ export function Staff() {
     setIsSearching(true);
     try {
       // Use searchAll to search across all users and admins
-      console.log('🔍 Staff: Calling cross-user search API...');
+      Logger.debug('Calling cross-user search API', { query, limit: 10 }, 'Staff');
       const response = await entriesApi.searchAll({ search: query, limit: 10 });
-      console.log('🔍 Staff: Cross-user search response:', response);
-      console.log('🔍 Staff: Response entries count:', response.entries?.length || 0);
+      Logger.debug('Cross-user search response', response, 'Staff');
+      Logger.debug('Response entries count', { count: response.entries?.length || 0 }, 'Staff');
       
       setSearchResults(response.entries || []);
       
       // Log details of found entries
-      if (response.entries && response.entries.length > 0) {
-        console.log('🔍 Staff: Found entries:');
-        response.entries.forEach((entry: any, index: number) => {
-          const createdBy = (entry as any).createdBy?.username || (entry as any).createdBy?.fullName || 'Unknown';
-          console.log(`  ${index + 1}. ${entry.name} (${entry.mobile}) - Created by: ${createdBy}`);
+      if (response.entries && Array.isArray(response.entries) && response.entries.length > 0) {
+        Logger.info('Found entries', { count: response.entries?.length || 0 }, 'Staff');
+        const safeEntries = Array.isArray(response.entries) ? response.entries : [];
+        safeEntries.forEach((entry: Entry, index: number) => {
+          if (!entry) return; // Guard against null/undefined entries
+          const createdBy = entry.createdBy?.username || entry.createdBy?.fullName || 'Unknown';
+          Logger.debug(`Entry ${index + 1}`, { name: entry.name, mobile: entry.mobile, createdBy }, 'Staff');
         });
       } else {
-        console.log('🔍 Staff: No entries found for search query:', query);
+        Logger.debug('No entries found for search query', { query }, 'Staff');
       }
     } catch (error) {
-      console.error('🔍 Staff: Cross-user search failed:', error);
+      Logger.error('Cross-user search failed', error, 'Staff');
       setSearchResults([]);
       
       // Provide user-friendly error message
-      const errorMessage = error.message || 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       if (errorMessage.includes('Not Found') || errorMessage.includes('404')) {
-        alert(`❌ Search endpoint not available.\nPlease restart the server to enable cross-user search.\nError: ${errorMessage}`);
+        alert(`Search endpoint not available.\nPlease restart the server to enable cross-user search.\nError: ${errorMessage}`);
       } else {
-        alert(`❌ Search Failed!\nError: ${errorMessage}\nPlease try again or contact support.`);
+        alert(`Search Failed!\nError: ${errorMessage}\nPlease try again or contact support.`);
       }
     } finally {
       setIsSearching(false);
@@ -529,16 +466,16 @@ export function Staff() {
   };
   
   // Enhanced receipt generation with correct pricing and professional sync
-  const generateReceiptForEntry = async (entry: any) => {
+  const generateReceiptForEntry = async (entry: Entry) => {
     try {
-      console.log('🧾 Staff: Generating receipt for entry:', entry.id);
-      console.log('🎫 Staff: Entry ticket type:', entry.ticketType, 'Current price:', getCurrentTicketPrice(entry.ticketType));
+      Logger.debug('Generating receipt for entry', { id: entry._id, ticketType: entry.ticketType }, 'Staff');
+      Logger.debug('Entry ticket price', { ticketType: entry.ticketType, price: getCurrentTicketPrice(entry.ticketType) }, 'Staff');
       
       // Generate receipt number if it doesn't exist
       let receiptNumber = entry.receiptNumber;
       if (!receiptNumber) {
         try {
-          console.log('🔍 Staff: Generating receipt number for existing entry...');
+          Logger.debug('Generating receipt number for existing entry', {}, 'Staff');
           const receiptRes = await fetch(`/api/entries/${entry.id}/generate-receipt`, {
             method: 'POST',
             headers: {
@@ -549,7 +486,7 @@ export function Staff() {
           if (receiptRes.ok) {
             const receiptData = await receiptRes.json();
             receiptNumber = receiptData.receiptNumber;
-            console.log('🔍 Staff: Receipt number generated:', receiptNumber);
+            Logger.debug('Receipt generated successfully', { receiptNumber }, 'Staff');
             
             // Trigger receipt-generated event for real-time sync
             window.dispatchEvent(new CustomEvent('receipt-generated', {
@@ -564,7 +501,7 @@ export function Staff() {
               }
             }));
           } else {
-            console.error('🔍 Staff: Failed to generate receipt number, response:', receiptRes.status);
+            Logger.error('Failed to generate receipt number', error, 'Staff');
             // Generate fallback receipt number locally
             const today = new Date();
             const dateStr = today.getFullYear().toString() +
@@ -665,6 +602,29 @@ export function Staff() {
     };
     return ticketNames[type] || type;
   };
+
+  // Loading guard
+  if (loading) {
+    return (
+      <Layout title="Dashboard">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="ml-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Data validation guard
+  if (!stats) {
+    return (
+      <Layout title="Dashboard">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-600">No data available. Please refresh.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Dashboard">

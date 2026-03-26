@@ -112,10 +112,10 @@ export function EditableTicketForm() {
       }
     };
     
-    window.addEventListener('ticket-config-updated', handleTicketConfigUpdate);
+    window.addEventListener('ticket-config-updated', handleTicketConfigUpdate as unknown as EventListener);
     
     return () => {
-      window.removeEventListener('ticket-config-updated', handleTicketConfigUpdate);
+      window.removeEventListener('ticket-config-updated', handleTicketConfigUpdate as unknown as EventListener);
     };
   }, []);
 
@@ -224,21 +224,28 @@ export function EditableTicketForm() {
 
     // Pre-populate price cache for all ticket types at once
     const uniqueTicketTypes = new Set<TicketType>();
-    selections.forEach((selection) => {
-      if (selection && (selection.adults > 0 || selection.kids > 0)) {
-        uniqueTicketTypes.add(selection.ticketType);
-      }
-    });
+    if (selections && Array.isArray(selections)) {
+      const safeSelections = Array.isArray(selections) ? selections : [];
+      safeSelections.forEach((selection) => {
+        if (selection && (selection.adults > 0 || selection.kids > 0)) {
+          uniqueTicketTypes.add(selection.ticketType);
+        }
+      });
+    }
     
     // Batch fetch prices for cache
-    uniqueTicketTypes.forEach(ticketType => {
-      if (!priceCacheRef.current.has(ticketType)) {
+    const uniqueTypesArray = Array.from(uniqueTicketTypes);
+    const safeUniqueTypes = Array.isArray(uniqueTypesArray) ? uniqueTypesArray : [];
+    safeUniqueTypes.forEach(ticketType => {
+      if (ticketType && !priceCacheRef.current.has(ticketType)) {
         priceCacheRef.current.set(ticketType, getTicketPriceSync(ticketType));
       }
     });
     
     // Fast calculation loop with cached prices
-    selections.forEach((selection) => {
+    if (selections && Array.isArray(selections)) {
+      const safeSelections = Array.isArray(selections) ? selections : [];
+      safeSelections.forEach((selection) => {
       if (!selection || (selection.adults === 0 && selection.kids === 0)) return;
       
       // Special handling for 150 tickets (no kids allowed)
@@ -263,7 +270,8 @@ export function EditableTicketForm() {
       totalBaseAmount += selectionBaseAmount;
       totalKidDiscount += selectionKidDiscount;
       totalPeople += selectionPeople;
-    });
+      });
+    }
 
     const finalAmount = Math.max(0, totalBaseAmount - totalKidDiscount - additionalDiscount);
 
@@ -283,11 +291,13 @@ export function EditableTicketForm() {
   // Pre-cache all ticket prices on component mount for instant calculations
   useEffect(() => {
     const allTicketTypes: TicketType[] = ['150', '300', '450', '600', '100'];
-    allTicketTypes.forEach(ticketType => {
-      if (!priceCacheRef.current.has(ticketType)) {
-        priceCacheRef.current.set(ticketType, getTicketPriceSync(ticketType));
-      }
-    });
+    if (Array.isArray(allTicketTypes)) {
+      allTicketTypes.forEach(ticketType => {
+        if (ticketType && !priceCacheRef.current.has(ticketType)) {
+          priceCacheRef.current.set(ticketType, getTicketPriceSync(ticketType));
+        }
+      });
+    }
   }, []);
 
   const { fields, append, remove } = useFieldArray({ control, name: 'selections' });

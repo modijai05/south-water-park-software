@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { Login } from '@/pages/Login';
 import { TicketForm } from '@/pages/TicketForm';
 import { Payment } from '@/pages/Payment';
@@ -48,7 +49,13 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        console.error('🚨 Global App Error:', error, errorInfo);
+        // You can also send error to logging service here
+      }}
+    >
+      <Routes>
       <Route path="/login" element={token && user ? <Navigate to={user.role === 'admin' ? '/admin' : '/staff'} replace /> : <Login />} />
       <Route
         path="/ticket"
@@ -133,6 +140,7 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to={token && user ? (user.role === 'admin' ? '/admin' : '/staff') : '/login'} replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </ErrorBoundary>
   );
 }
 

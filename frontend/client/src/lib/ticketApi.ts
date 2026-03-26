@@ -4,8 +4,26 @@ import { API_BASE, api } from './api';
 export const ticketConfigApi = {
   // Get all ticket configurations
   getAll: async (): Promise<TicketConfig[]> => {
-    const response = await api<{ success: boolean; data: TicketConfig[] }>('/ticket-config');
-    return response.success ? response.data : [];
+    try {
+      const response = await api<{ success: boolean; data: TicketConfig[] }>('/ticket-config');
+      console.log('🎫 Ticket API Response:', response);
+      
+      // Handle both direct array and wrapped response formats
+      if (response.success && Array.isArray(response.data)) {
+        return response.data;
+      } else if (Array.isArray(response)) {
+        // Direct array response fallback
+        return response;
+      } else if (response && Array.isArray(response.data)) {
+        return response.data;
+      } else {
+        console.warn('⚠️ Unexpected ticket config response format:', response);
+        return [];
+      }
+    } catch (error) {
+      console.error('❌ Ticket config fetch error:', error);
+      return [];
+    }
   },
 
   // Get single ticket configuration
@@ -17,7 +35,7 @@ export const ticketConfigApi = {
     });
     if (!response.ok) throw new Error('Failed to fetch ticket configuration');
     const result = await response.json();
-    return result.success ? result.data : null;
+    return (result && typeof result === 'object' && 'success' in result) ? (result.data || null) : null;
   },
 
   // Update ticket configuration

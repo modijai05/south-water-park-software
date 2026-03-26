@@ -17,23 +17,28 @@ export default defineConfig({
   },
   build: {
     outDir: '../../dist',
-    sourcemap: false,
+    sourcemap: true,
     minify: 'esbuild',
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 1500,
+    target: 'es2015',
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
-          charts: ['chart.js', 'react-chartjs-2'],
+          charts: ['chart.js', 'react-chartjs-2', 'recharts'],
           utils: ['date-fns', 'dayjs'],
           motion: ['framer-motion'],
-          forms: ['react-hook-form', '@hookform/resolvers', 'zod']
+          forms: ['react-hook-form', '@hookform/resolvers', 'zod'],
+          export: ['exceljs']
         },
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]'
       }
-    }
+    },
+    // Optimize for production
+    cssCodeSplit: true,
+    reportCompressedSize: false
   }
 });

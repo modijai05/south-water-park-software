@@ -11,6 +11,13 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, 
   PolarAngleAxis, PolarRadiusAxis, Radar, Treemap 
 } from 'recharts';
+import Logger from '@/lib/logger';
+import type { 
+  EntryRecord as Entry, 
+  AnalyticsData,
+  UpgradeItem as EntryUpgrade,
+  CustomEventData
+} from '@/types';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 const TICKET_COLORS = {
@@ -21,22 +28,22 @@ const TICKET_COLORS = {
   '100': '#8B5CF6'
 };
 
-interface AnalyticsData {
+interface DateWiseAnalyticsData {
+  todayAnalytics: Partial<Entry>[];
+  historicalAnalytics: Partial<Entry>[];
+  summary: {
+    today: Partial<AnalyticsData>;
+    historical: Partial<AnalyticsData>;
+  };
+}
+
+interface ComponentAnalyticsData {
   demandAnalysis: DemandAnalysis[];
   upgradeInsights: UpgradeInsight[];
   timeSeriesData: TimeSeriesData[];
   revenueBreakdown: RevenueBreakdown[];
   customerPreferences: CustomerPreference[];
   peakHours: PeakHourData[];
-}
-
-interface DateWiseAnalyticsData {
-  todayAnalytics: any[];
-  historicalAnalytics: any[];
-  summary: {
-    today: any;
-    historical: any;
-  };
 }
 
 interface DemandAnalysis {
@@ -61,7 +68,7 @@ interface UpgradeInsight {
 
 interface TimeSeriesData {
   date: string;
-  [key: string]: any;
+  [key: string]: string | number;
 }
 
 interface RevenueBreakdown {
@@ -88,7 +95,14 @@ interface PeakHourData {
 }
 
 export function TicketAnalytics() {
-  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [data, setData] = useState<ComponentAnalyticsData>({
+    demandAnalysis: [],
+    upgradeInsights: [],
+    timeSeriesData: [],
+    revenueBreakdown: [],
+    customerPreferences: [],
+    peakHours: []
+  });
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y' | 'today'>('30d');
   const [selectedMetric, setSelectedMetric] = useState<'revenue' | 'entries' | 'growth'>('revenue');
@@ -106,18 +120,18 @@ export function TicketAnalytics() {
       if (timeRange === 'today') {
         // Use date-wise endpoint for today's data
         response = await analyticsApi.dateWise();
-        console.log('✅ Date-wise analytics data loaded:', response);
+        Logger.info('Date-wise analytics data loaded', response, 'TicketAnalytics');
         
         // Use today's analytics from the new endpoint
-        const analyticsData: AnalyticsData = {
+        const analyticsData: ComponentAnalyticsData = {
           demandAnalysis: response.todayAnalytics || [],
           upgradeInsights: [],
           timeSeriesData: [],
-          revenueBreakdown: (response.todayAnalytics || []).map((d: any) => ({
-            ticketType: d.ticketType,
-            revenue: d.revenue,
+          revenueBreakdown: (response.todayAnalytics || []).map((d: Partial<Entry>) => ({
+            ticketType: d.ticketType || 'unknown',
+            revenue: (d as any).revenue || 0,
             percentage: 0, // Calculate percentage based on today's total
-            entries: d.tickets
+            entries: (d as any).tickets || 0
           })),
           customerPreferences: [],
           peakHours: []
@@ -134,11 +148,11 @@ export function TicketAnalytics() {
           analyticsApi.customerPreferences(timeRange)
         ]);
         
-        const analyticsData: AnalyticsData = {
+        const analyticsData: ComponentAnalyticsData = {
           demandAnalysis: demandData,
           upgradeInsights: upgradesData,
           timeSeriesData: timeSeriesData,
-          revenueBreakdown: demandData.map((d: any) => ({
+          revenueBreakdown: demandData.map((d: DemandAnalysis) => ({
             ticketType: d.ticketType,
             revenue: d.revenue,
             percentage: d.marketShare,
@@ -151,13 +165,13 @@ export function TicketAnalytics() {
         setData(analyticsData);
       }
     } catch (error) {
-      console.error('Failed to fetch analytics data:', error);
+      Logger.error('Failed to fetch analytics data', error, 'TicketAnalytics');
     } finally {
       setLoading(false);
     }
   };
 
-  const processAnalyticsData = (entries: any[], range: string): AnalyticsData => {
+  const processAnalyticsData = (entries: Entry[], range: string): ComponentAnalyticsData => {
     const now = dayjs();
     let startDate = now;
     
@@ -175,14 +189,14 @@ export function TicketAnalytics() {
     return {
       demandAnalysis: calculateDemandAnalysis(filteredEntries),
       upgradeInsights: calculateUpgradeInsights(filteredEntries),
-      timeSeriesData: calculateTimeSeriesData(filteredEntries, range),
+      timeSeriesData: calculateTimeSeriesData(filteredEntries),
       revenueBreakdown: calculateRevenueBreakdown(filteredEntries),
       customerPreferences: calculateCustomerPreferences(filteredEntries),
       peakHours: calculatePeakHours(filteredEntries)
     };
   };
 
-  const calculateDemandAnalysis = (entries: any[]): DemandAnalysis[] => {
+  const calculateDemandAnalysis = (entries: Entry[]): DemandAnalysis[] => {
     const ticketTypes = ['150', '300', '450', '600', '100'];
     
     return ticketTypes.map(type => {
@@ -221,12 +235,19 @@ export function TicketAnalytics() {
     });
   };
 
-  const calculateUpgradeInsights = (entries: any[]): UpgradeInsight[] => {
+  const calculateUpgradeInsights = (entries: Entry[]): UpgradeInsight[] => {
+    // Guard against undefined/null data
+    if (!entries || !Array.isArray(entries)) {
+      return [];
+    }
+    
     const insights: UpgradeInsight[] = [];
     
-    entries.forEach(entry => {
-      if (entry.upgrades && entry.upgrades.length > 0) {
-        entry.upgrades.forEach((upgrade: any) => {
+    const safeEntries = Array.isArray(entries) ? entries : [];
+    safeEntries.forEach(entry => {
+      if (entry.upgrades && Array.isArray(entry.upgrades) && entry.upgrades.length > 0) {
+        const safeUpgrades = Array.isArray(entry.upgrades) ? entry.upgrades : [];
+        safeUpgrades.forEach((upgrade: EntryUpgrade) => {
           const existingInsight = insights.find(i => 
             i.fromTicket === entry.ticketType && i.toTicket === upgrade.ticketType
           );
@@ -250,7 +271,8 @@ export function TicketAnalytics() {
     });
 
     // Calculate conversion rates and averages
-    insights.forEach(insight => {
+    const safeInsights = Array.isArray(insights) ? insights : [];
+    safeInsights.forEach(insight => {
       const fromTicketEntries = entries.filter(e => e.ticketType === insight.fromTicket);
       insight.conversionRate = fromTicketEntries.length > 0 
         ? (insight.upgradeCount / fromTicketEntries.length) * 100 
@@ -263,45 +285,63 @@ export function TicketAnalytics() {
     return insights.sort((a, b) => b.upgradeCount - a.upgradeCount);
   };
 
-  const calculateTimeSeriesData = (entries: any[], range: string): TimeSeriesData[] => {
-    const data: { [key: string]: any } = {};
+  const calculateTimeSeriesData = (entries: Entry[]): TimeSeriesData[] => {
+    // Guard against undefined/null data
+    if (!entries || !Array.isArray(entries)) {
+      return [];
+    }
     
-    entries.forEach(entry => {
+    const data: Record<string, TimeSeriesData> = {};
+    const safeEntries = Array.isArray(entries) ? entries : [];
+    
+    safeEntries.forEach(entry => {
+      if (!entry) return; // Guard against null/undefined entries
       const date = dayjs(entry.createdAt).format('YYYY-MM-DD');
       if (!data[date]) {
         data[date] = { date };
       }
       
       const ticketType = entry.ticketType;
-      if (!data[date][ticketType]) {
-        data[date][ticketType] = 0;
+      if (ticketType) {
+        if (!data[date][ticketType]) {
+          data[date][ticketType] = 0;
+        }
+        (data[date][ticketType] as number)++;
       }
-      data[date][ticketType] += entry.finalAmount || 0;
-      
-      if (!data[date].totalRevenue) {
-        data[date].totalRevenue = 0;
-      }
-      data[date].totalRevenue += entry.finalAmount || 0;
       
       if (!data[date].totalEntries) {
         data[date].totalEntries = 0;
       }
-      data[date].totalEntries++;
+      (data[date].totalEntries as number)++;
+      
+      if (!data[date].totalRevenue) {
+        data[date].totalRevenue = 0;
+      }
+      (data[date].totalRevenue as number) += entry.finalAmount || 0;
     });
 
     return Object.values(data).sort((a, b) => a.date.localeCompare(b.date));
   };
 
-  const calculateRevenueBreakdown = (entries: any[]): RevenueBreakdown[] => {
-    const breakdown: { [key: string]: { revenue: number; entries: number } } = {};
+  const calculateRevenueBreakdown = (entries: Entry[]): RevenueBreakdown[] => {
+    // Guard against undefined/null data
+    if (!entries || !Array.isArray(entries)) {
+      return [];
+    }
     
-    entries.forEach(entry => {
+    const breakdown: { [key: string]: { revenue: number; entries: number } } = {};
+    const safeEntries = Array.isArray(entries) ? entries : [];
+    
+    safeEntries.forEach(entry => {
+      if (!entry) return; // Guard against null/undefined entries
       const type = entry.ticketType;
-      if (!breakdown[type]) {
-        breakdown[type] = { revenue: 0, entries: 0 };
+      if (type) {
+        if (!breakdown[type]) {
+          breakdown[type] = { revenue: 0, entries: 0 };
+        }
+        breakdown[type].revenue += entry.finalAmount || 0;
+        breakdown[type].entries++;
       }
-      breakdown[type].revenue += entry.finalAmount || 0;
-      breakdown[type].entries++;
     });
 
     const totalRevenue = Object.values(breakdown).reduce((sum, b) => sum + b.revenue, 0);
@@ -314,37 +354,51 @@ export function TicketAnalytics() {
     })).sort((a, b) => b.revenue - a.revenue);
   };
 
-  const calculateCustomerPreferences = (entries: any[]): CustomerPreference[] => {
-    const preferences: { [key: string]: CustomerPreference } = {};
+  const calculateCustomerPreferences = (entries: Entry[]): CustomerPreference[] => {
+    // Guard against undefined/null data
+    if (!entries || !Array.isArray(entries)) {
+      return [];
+    }
     
-    entries.forEach(entry => {
+    const preferences: { [key: string]: CustomerPreference } = {};
+    const safeEntries = Array.isArray(entries) ? entries : [];
+    
+    safeEntries.forEach(entry => {
+      if (!entry) return; // Guard against null/undefined entries
       const type = entry.ticketType;
-      if (!preferences[type]) {
-        preferences[type] = {
-          ticketType: type,
-          adults: 0,
-          kids: 0,
-          groups: 0,
-          soloVisitors: 0,
-          repeatCustomers: 0
-        };
-      }
-      
-      preferences[type].adults += entry.adults || 0;
-      preferences[type].kids += entry.kids || 0;
-      
-      const totalPeople = (entry.adults || 0) + (entry.kids || 0);
-      if (totalPeople === 1) {
-        preferences[type].soloVisitors++;
-      } else if (totalPeople > 2) {
-        preferences[type].groups++;
+      if (type) {
+        if (!preferences[type]) {
+          preferences[type] = {
+            ticketType: type,
+            adults: 0,
+            kids: 0,
+            groups: 0,
+            soloVisitors: 0,
+            repeatCustomers: 0
+          };
+        }
+        
+        preferences[type].adults += entry.adults || 0;
+        preferences[type].kids += entry.kids || 0;
+        
+        const totalPeople = (entry.adults || 0) + (entry.kids || 0);
+        if (totalPeople === 1) {
+          preferences[type].soloVisitors++;
+        } else if (totalPeople > 2) {
+          preferences[type].groups++;
+        }
       }
     });
 
     return Object.values(preferences);
   };
 
-  const calculatePeakHours = (entries: any[]): PeakHourData[] => {
+  const calculatePeakHours = (entries: Entry[]): PeakHourData[] => {
+    // Guard against undefined/null data
+    if (!entries || !Array.isArray(entries)) {
+      return [];
+    }
+    
     const hours: { [key: number]: PeakHourData } = {};
     
     for (let i = 0; i < 24; i++) {
@@ -356,15 +410,22 @@ export function TicketAnalytics() {
       };
     }
     
-    entries.forEach(entry => {
+    const safeEntries = Array.isArray(entries) ? entries : [];
+    safeEntries.forEach(entry => {
+      if (!entry || !entry.createdAt) return; // Guard against null/undefined entries
       const hour = dayjs(entry.createdAt).hour();
-      hours[hour].entries++;
-      hours[hour].revenue += entry.finalAmount || 0;
-      
-      if (!hours[hour].ticketTypes[entry.ticketType]) {
-        hours[hour].ticketTypes[entry.ticketType] = 0;
+      if (hour >= 0 && hour < 24) {
+        hours[hour].entries++;
+        hours[hour].revenue += entry.finalAmount || 0;
+        
+        const ticketType = entry.ticketType;
+        if (ticketType) {
+          if (!hours[hour].ticketTypes[ticketType]) {
+            hours[hour].ticketTypes[ticketType] = 0;
+          }
+          hours[hour].ticketTypes[ticketType]++;
+        }
       }
-      hours[hour].ticketTypes[entry.ticketType]++;
     });
 
     return Object.values(hours);
@@ -567,7 +628,7 @@ export function TicketAnalytics() {
             <XAxis dataKey="ticketType" />
             <YAxis />
             <Tooltip 
-              formatter={(value: any, name: string) => [
+              formatter={(value: string | number, name: string) => [
                 name === 'revenue' ? `₹${value.toLocaleString()}` : value,
                 name === 'revenue' ? 'Revenue' : name === 'totalEntries' ? 'Entries' : 'Growth Rate %'
               ]}
@@ -605,7 +666,7 @@ export function TicketAnalytics() {
                   <Cell key={`cell-${index}`} fill={TICKET_COLORS[entry.ticketType as keyof typeof TICKET_COLORS] || COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: any) => [`₹${value.toLocaleString()}`, 'Revenue']} />
+              <Tooltip formatter={(value: string | number) => [`₹${value.toLocaleString()}`, 'Revenue']} />
             </PieChart>
           </ResponsiveContainer>
         </motion.div>
@@ -622,7 +683,7 @@ export function TicketAnalytics() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="toTicket" />
               <YAxis />
-              <Tooltip formatter={(value: any) => [value, 'Upgrades']} />
+              <Tooltip formatter={(value: string | number) => [value, 'Upgrades']} />
               <Bar dataKey="upgradeCount" fill="#8B5CF6" />
             </BarChart>
           </ResponsiveContainer>
@@ -662,7 +723,7 @@ export function TicketAnalytics() {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="hour" />
             <YAxis />
-            <Tooltip formatter={(value: any) => [value, 'Entries']} />
+            <Tooltip formatter={(value: string | number) => [value, 'Entries']} />
             <Legend />
             <Line type="monotone" dataKey="entries" stroke="#F59E0B" strokeWidth={2} />
           </LineChart>

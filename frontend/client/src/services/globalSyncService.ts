@@ -231,7 +231,8 @@ class GlobalSyncService {
   public syncDataTypes(dataTypes: string[]) {
     console.log('📊 GlobalSync: Syncing specific data types:', dataTypes);
     
-    dataTypes.forEach(dataType => {
+    const safeDataTypes = Array.isArray(dataTypes) ? dataTypes : [];
+    safeDataTypes.forEach(dataType => {
       this.broadcastEvent(`${dataType}-sync-required`, {
         timestamp: new Date().toISOString(),
         dataType

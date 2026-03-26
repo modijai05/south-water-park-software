@@ -15,6 +15,11 @@ import { globalSyncService } from '@/services/globalSyncService';
 
 // Helper functions for data transformation
 const generateQuarterlyData = (monthlyData: any[]) => {
+  // Guard against undefined/null data
+  if (!monthlyData || !Array.isArray(monthlyData)) {
+    return [];
+  }
+  
   const quarters = {
     'Q1': { entries: 0, revenue: 0 },
     'Q2': { entries: 0, revenue: 0 },
@@ -39,6 +44,11 @@ const generateQuarterlyData = (monthlyData: any[]) => {
 };
 
 const generateYearlyData = (monthlyData: any[]) => {
+  // Guard against undefined/null data
+  if (!monthlyData || !Array.isArray(monthlyData)) {
+    return [];
+  }
+  
   const years: { [key: string]: { entries: number; revenue: number } } = {};
 
   monthlyData.forEach(item => {
@@ -104,6 +114,13 @@ interface Stats {
   totalFastFoodCoupons: number;
   totalMainFoodCoupons: number;
   totalFoodCoupons: number;
+  // 100 ticket specific statistics
+  today100: number;
+  total100: number;
+  today100Adults: number;
+  total100Adults: number;
+  today100Kids: number;
+  total100Kids: number;
   // 150 ticket specific statistics
   today150: number;
   total150: number;
@@ -132,13 +149,6 @@ interface Stats {
   total600Adults: number;
   today600Kids: number;
   total600Kids: number;
-  // 100 ticket specific statistics
-  today100: number;
-  total100: number;
-  today100Adults: number;
-  total100Adults: number;
-  today100Kids: number;
-  total100Kids: number;
 }
 
 interface Charts {
@@ -161,13 +171,13 @@ export function AdminDashboard() {
   // Fetch ticket configurations
   const fetchTicketConfigs = async () => {
     try {
-      console.log('🔄 Dashboard: Fetching ticket configs...');
+      console.log('Dashboard: Fetching ticket configs...');
       
       // Invalidate cache to ensure fresh data
       invalidateTicketConfigCache();
       
       const configs = await ticketConfigApi.getAll();
-      console.log('✅ Dashboard: Fetched ticket configs:', configs);
+      console.log('Dashboard: Fetched ticket configs:', configs);
       setTicketConfigs(configs);
       return configs;
     } catch (error) {
@@ -178,12 +188,13 @@ export function AdminDashboard() {
 
   // Enhanced sync function to force refresh all data
   const forceRefreshAllData = async () => {
-    console.log('🔄 Admin: Force refreshing all data...');
+    console.log('Admin: Force refreshing all data...');
     try {
       // Invalidate cache first
       invalidateTicketConfigCache();
       
       // Add delay to ensure cache is cleared
+      await new Promise(resolve => setTimeout(resolve, 1000));
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Fetch everything fresh
@@ -195,9 +206,9 @@ export function AdminDashboard() {
       
       setStats(statsRes as unknown as Stats);
       setCharts(chartsRes as unknown as Charts);
-      console.log('🎫 Admin: Force refreshed - New prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
-      console.log('📊 Admin: Force refreshed - New stats:', statsRes);
-      console.log('📈 Admin: Force refreshed - New charts:', chartsRes);
+      console.log('Admin: Force refreshed - New prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
+      console.log('Admin: Force refreshed - New stats:', statsRes);
+      console.log('Admin: Force refreshed - New charts:', chartsRes);
       
       // Trigger global sync event
       window.dispatchEvent(new CustomEvent('admin-synced', {
@@ -212,7 +223,7 @@ export function AdminDashboard() {
       }));
       
     } catch (error) {
-      console.error('❌ Admin: Failed to force refresh data:', error);
+      console.error('Admin: Failed to force refresh data:', error);
     }
   };
 
@@ -257,7 +268,7 @@ export function AdminDashboard() {
       try {
         setLoading(true);
         setError(null);
-        console.log('🔄 Dashboard: Fetching data...');
+        console.log('Dashboard: Fetching data...');
         
         // Fetch ticket configs along with other data
         const [s, c] = await Promise.all([
@@ -267,8 +278,8 @@ export function AdminDashboard() {
         ]);
         
         if (!cancelled) {
-          console.log('📊 Dashboard: Raw MongoDB stats data:', s);
-          console.log('📈 Dashboard: Charts data:', c);
+          console.log('Dashboard: Raw MongoDB stats data:', s);
+          console.log('Dashboard: Charts data:', c);
           
           // Use backend stats directly - backend now handles all calculations correctly
           setStats(s as unknown as Stats);
@@ -289,7 +300,7 @@ export function AdminDashboard() {
           }
           
           setLoading(false);
-          console.log('✅ Dashboard: Data fetched and corrected successfully');
+          console.log('Dashboard: Data fetched and corrected successfully');
         }
       } catch (error) {
         console.error('❌ Dashboard: Failed to fetch data:', error);
@@ -560,10 +571,10 @@ export function AdminDashboard() {
               if (s.todayEntries === 0 && (s.today150 > 0 || s.today300 > 0 || s.today450 > 0 || s.today600 > 0 || s.today100 > 0)) {
                 console.log('🚨 PROFESSIONAL FIX: Today entries = 0 but ticket types > 0, forcing reset...');
                 try {
-                  const resetStats = await api.get(`/entries/stats?forceReset=true&t=${Date.now()}`);
-                  if (resetStats.data.forceReset) {
+                  const resetStats = await entriesApi.stats(true);
+                  if (resetStats) {
                     console.log('✅ PROFESSIONAL FIX: Force reset successful, updating stats...');
-                    setStats(resetStats.data as unknown as Stats);
+                    setStats(resetStats as unknown as Stats);
                   }
                 } catch (resetError) {
                   console.error('❌ PROFESSIONAL FIX: Force reset failed:', resetError);
@@ -599,6 +610,29 @@ export function AdminDashboard() {
   }, []);
 
   const safeCharts = charts || { last7Days: [], ticketDistribution: [], upgradeDistribution: [], comparisonData: [], monthly: [] };
+
+  // Loading guard
+  if (loading) {
+    return (
+      <Layout title="Dashboard">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="ml-4 text-gray-600">Loading admin dashboard...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Data validation guard
+  if (!stats) {
+    return (
+      <Layout title="Dashboard">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-600">No data available. Please refresh.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Dashboard">
