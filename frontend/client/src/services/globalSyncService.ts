@@ -1,16 +1,151 @@
 // Global Real-Time Sync Service
 // Ensures all dashboard components stay synchronized with real-time data
 
+import { entriesApi } from '@/lib/api';
+
 class GlobalSyncService {
   private static instance: GlobalSyncService;
   private listeners: Map<string, Function[]> = new Map();
   private lastSyncTime: number = 0;
   private syncInterval: NodeJS.Timeout | null = null;
   private dailyResetInterval: NodeJS.Timeout | null = null;
+  private syncData: any = null;
+  private isSyncing: boolean = false;
 
   private constructor() {
     this.initializeDailyReset();
     this.setupPeriodicSync();
+    this.initializeComprehensiveSync();
+  }
+
+  // Initialize comprehensive data sync
+  private async initializeComprehensiveSync() {
+    console.log('🔄 GlobalSync: Initializing comprehensive data sync...');
+    await this.performComprehensiveSync();
+  }
+
+  // Perform comprehensive data sync from MongoDB
+  private async performComprehensiveSync() {
+    if (this.isSyncing) {
+      console.log('🔄 GlobalSync: Sync already in progress, skipping...');
+      return;
+    }
+
+    this.isSyncing = true;
+    try {
+      console.log('🔄 GlobalSync: Performing comprehensive data sync...');
+      const syncData = await entriesApi.syncAll();
+      
+      // Enhanced validation of sync data
+      if (syncData && syncData.stats && typeof syncData.stats === 'object') {
+        this.syncData = {
+          ...syncData,
+          lastSyncTime: Date.now(),
+          syncStatus: 'active',
+          dataIntegrity: this.validateSyncData(syncData)
+        };
+        
+        console.log('✅ GlobalSync: Comprehensive sync completed:', {
+          totalRecords: syncData.summary?.totalRecords || 0,
+          todayRecords: syncData.summary?.todayRecords || 0,
+          recentRecords: syncData.summary?.recentRecords || 0,
+          timestamp: syncData.summary?.lastUpdated || new Date().toISOString(),
+          dataIntegrity: this.syncData.dataIntegrity
+        });
+        
+        // Broadcast comprehensive sync event to all dashboards
+        this.broadcastEvent('comprehensive-sync-complete', {
+          data: this.syncData,
+          timestamp: new Date().toISOString(),
+          source: 'global-sync-service',
+          integrity: this.syncData.dataIntegrity
+        });
+        
+        // Also broadcast individual data updates for compatibility
+        this.broadcastEvent('stats-updated', syncData.stats);
+        this.broadcastEvent('entries-updated', {
+          recentEntries: syncData.recentEntries || [],
+          todayEntries: syncData.todayEntries || []
+        });
+        
+        // Trigger dashboard refresh events
+        this.broadcastEvent('dashboard-refresh-required', {
+          reason: 'comprehensive-sync',
+          timestamp: new Date().toISOString(),
+          force: true
+        });
+        
+      } else {
+        console.error('❌ GlobalSync: Invalid sync data structure:', syncData);
+        this.broadcastEvent('comprehensive-sync-error', {
+          error: 'Invalid sync data structure',
+          timestamp: new Date().toISOString(),
+          dataReceived: syncData
+        });
+      }
+    } catch (error) {
+      console.error('❌ GlobalSync: Comprehensive sync failed:', error);
+      this.broadcastEvent('comprehensive-sync-error', {
+        error: error.message || 'Unknown sync error',
+        timestamp: new Date().toISOString(),
+        retryAvailable: true
+      });
+      
+      // Set error state
+      this.syncData = {
+        lastSyncTime: Date.now(),
+        syncStatus: 'error',
+        error: error.message || 'Unknown sync error'
+      };
+    } finally {
+      this.isSyncing = false;
+    }
+  }
+  
+  // Validate sync data integrity
+  private validateSyncData(syncData: any): 'valid' | 'corrupted' | 'partial' {
+    try {
+      if (!syncData || typeof syncData !== 'object') return 'corrupted';
+      
+      const stats = syncData.stats;
+      const summary = syncData.summary;
+      
+      // Check required fields
+      if (!stats || typeof stats !== 'object') return 'corrupted';
+      if (!summary || typeof summary !== 'object') return 'corrupted';
+      
+      // Check data consistency
+      const hasValidStats = typeof stats.totalEntries === 'number' && 
+                           typeof stats.todayEntries === 'number';
+      const hasValidSummary = typeof summary.totalRecords === 'number' && 
+                             typeof summary.todayRecords === 'number';
+      
+      if (hasValidStats && hasValidSummary) {
+        // Check for data consistency
+        if (stats.totalEntries === summary.totalRecords && 
+            stats.todayEntries === summary.todayRecords) {
+          return 'valid';
+        } else {
+          return 'partial';
+        }
+      }
+      
+      return 'corrupted';
+    } catch (error) {
+      console.error('❌ GlobalSync: Data validation error:', error);
+      return 'corrupted';
+    }
+  }
+
+  // Get current sync data
+  public getSyncData() {
+    return this.syncData;
+  }
+
+  // Force comprehensive sync
+  public async forceComprehensiveSync() {
+    console.log('🚀 GlobalSync: Force comprehensive sync triggered');
+    await this.performComprehensiveSync();
   }
 
   // Emergency complete reset (immediate fix)

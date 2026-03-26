@@ -97,33 +97,36 @@ export function Staff() {
   const forceRefreshAllData = async () => {
     Logger.debug('Force refreshing all data', {}, 'Staff');
     try {
-      // Invalidate cache first
-      invalidateTicketConfigCache();
+      // Use comprehensive sync for better data consistency
+      const syncData = await entriesApi.syncAll();
       
-      // Add delay to ensure cache is cleared
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Fetch everything fresh
-      const [statsRes, configs] = await Promise.all([
-        entriesApi.stats(),
-        fetchTicketConfigs()
-      ]);
-      
-      setStats(statsRes as unknown as StaffStats);
-      Logger.debug('Force refreshed - New prices', configs.map(c => ({ type: c.ticketType, price: c.basePrice })), 'Staff');
-      Logger.debug('Force refreshed - New stats', statsRes, 'Staff');
-      
-      // Trigger global sync event
-      window.dispatchEvent(new CustomEvent('staff-synced', {
-        detail: {
-          action: 'force-refresh',
-          timestamp: new Date().toISOString(),
-          source: 'staff-dashboard',
-          ticketConfigs: configs,
-          stats: statsRes
-        }
-      }));
-      
+      if (syncData && syncData.stats) {
+        setStats(syncData.stats as unknown as StaffStats);
+        Logger.debug('Comprehensive sync completed', {
+          totalRecords: syncData.summary.totalRecords,
+          todayRecords: syncData.summary.todayRecords,
+          timestamp: syncData.summary.lastUpdated
+        }, 'Staff');
+        
+        // Trigger global sync event with comprehensive data
+        window.dispatchEvent(new CustomEvent('staff-synced', {
+          detail: {
+            action: 'comprehensive-sync',
+            timestamp: new Date().toISOString(),
+            source: 'staff-dashboard',
+            syncData: syncData
+          }
+        }));
+      } else {
+        // Fallback to individual API calls
+        const [statsRes, configs] = await Promise.all([
+          entriesApi.stats(),
+          fetchTicketConfigs()
+        ]);
+        
+        setStats(statsRes as unknown as StaffStats);
+        Logger.debug('Fallback sync completed', { stats: statsRes, configCount: configs.length }, 'Staff');
+      }
     } catch (error) {
       Logger.error('Failed to force refresh data', error, 'Staff');
     }

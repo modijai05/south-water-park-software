@@ -250,6 +250,114 @@ export const entriesApi = {
         };
       });
   },
+  // Comprehensive data sync for all dashboards
+  syncAll: () => {
+    const timestamp = Date.now();
+    return api<{
+      success: boolean;
+      data: {
+        stats: Record<string, number>;
+        recentEntries: any[];
+        todayEntries: any[];
+        summary: {
+          totalRecords: number;
+          todayRecords: number;
+          recentRecords: number;
+          lastUpdated: string;
+        };
+      };
+      metadata: {
+        syncType: string;
+        timestamp: string;
+        dataFreshness: string;
+        source: string;
+        syncStatus: string;
+        performance?: {
+          queryTime: number;
+          cacheStatus: string;
+          dataIntegrity: string;
+        };
+      };
+    }>(`/entries/sync-all?t=${timestamp}`)
+      .then(response => {
+        if (!response || !response.success) {
+          console.error('🚨 API: Sync-all failed:', response);
+          return {
+            stats: {},
+            recentEntries: [],
+            todayEntries: [],
+            summary: {
+              totalRecords: 0,
+              todayRecords: 0,
+              recentRecords: 0,
+              lastUpdated: new Date().toISOString()
+            },
+            metadata: {
+              syncType: 'comprehensive',
+              timestamp: new Date().toISOString(),
+              dataFreshness: 'error',
+              source: 'fallback',
+              syncStatus: 'error'
+            }
+          };
+        }
+        
+        // Enhanced validation of response data
+        const safeData = {
+          stats: response.data?.stats || {},
+          recentEntries: Array.isArray(response.data?.recentEntries) ? response.data.recentEntries : [],
+          todayEntries: Array.isArray(response.data?.todayEntries) ? response.data.todayEntries : [],
+          summary: {
+            totalRecords: response.data?.summary?.totalRecords || 0,
+            todayRecords: response.data?.summary?.todayRecords || 0,
+            recentRecords: response.data?.summary?.recentRecords || 0,
+            lastUpdated: response.data?.summary?.lastUpdated || new Date().toISOString()
+          },
+          metadata: {
+            syncType: response.metadata?.syncType || 'comprehensive',
+            timestamp: response.metadata?.timestamp || new Date().toISOString(),
+            dataFreshness: response.metadata?.dataFreshness || 'unknown',
+            source: response.metadata?.source || 'api',
+            syncStatus: response.metadata?.syncStatus || 'unknown',
+            performance: response.metadata?.performance || {
+              queryTime: Date.now(),
+              cacheStatus: 'unknown',
+              dataIntegrity: 'unknown'
+            }
+          }
+        };
+        
+        console.log('🔄 API: Sync-all completed successfully:', {
+          totalRecords: safeData.summary.totalRecords,
+          todayRecords: safeData.summary.todayRecords,
+          dataFreshness: safeData.metadata.dataFreshness,
+          syncStatus: safeData.metadata.syncStatus
+        });
+        
+        return safeData;
+      })
+      .catch(error => {
+        console.error('🚨 API: Sync-all error:', error);
+        return {
+          stats: {},
+          recentEntries: [],
+          todayEntries: [],
+          summary: {
+            totalRecords: 0,
+            todayRecords: 0,
+            recentRecords: 0,
+            lastUpdated: new Date().toISOString()
+          },
+          metadata: {
+            syncType: 'comprehensive',
+            timestamp: new Date().toISOString(),
+            dataFreshness: 'error',
+            source: 'fallback',
+            syncStatus: 'error'
+          }
+        };
+      });
+  },
   charts: () =>
     api<{ success: boolean; data: { last7Days: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number }[]; monthly: { _id: string; count: number; amount: number }[] } }>(`/entries/charts?t=${Date.now()}`)
       .then(response => {
@@ -286,28 +394,121 @@ export const entriesApi = {
     if (params?.to) q.set('to', params.to);
     if (params?.limit != null) q.set('limit', String(params.limit));
     const query = q.toString();
-    return api<{ success: boolean; data: { entries: unknown[]; total: number; exported: number; query: any; exportDate: string } }>(`/entries/export${query ? `?${query}` : ''}`)
+    
+    console.log('📊 API: Making export request with params:', params);
+    
+    return api<{ 
+      success: boolean; 
+      data: { 
+        entries: unknown[]; 
+        total: number; 
+        exported: number; 
+        query: any; 
+        exportDate: string;
+        exportStats?: {
+          averageTicketValue: number;
+          totalPeople: number;
+          totalRevenue: number;
+          ticketTypeDistribution: Record<string, number>;
+        };
+      };
+      metadata?: {
+        exportVersion: string;
+        dataIntegrity: string;
+        source: string;
+        performance: {
+          queryTime: number;
+          recordCount: number;
+          cacheStatus: string;
+        };
+      };
+    }>(`/entries/export${query ? `?${query}` : ''}`)
       .then(response => {
         if (!response || !response.success || !response.data) {
           console.error('🚨 API: Export failed:', response);
-          return { entries: [], total: 0, exported: 0, query: {}, exportDate: new Date().toISOString() };
+          return { 
+            entries: [], 
+            total: 0, 
+            exported: 0, 
+            query: params || {}, 
+            exportDate: new Date().toISOString(),
+            exportStats: {
+              averageTicketValue: 0,
+              totalPeople: 0,
+              totalRevenue: 0,
+              ticketTypeDistribution: {}
+            }
+          };
         }
-        // Ensure entries is always an array
-        const safeEntries = Array.isArray(response.data.entries) ? response.data.entries : [];
-        console.log('📊 Export: Safe entries count:', safeEntries.length);
         
-        return {
+        // Enhanced validation of export data
+        const safeEntries = Array.isArray(response.data.entries) ? response.data.entries : [];
+        const safeExportStats = response.data.exportStats || {
+          averageTicketValue: 0,
+          totalPeople: 0,
+          totalRevenue: 0,
+          ticketTypeDistribution: {}
+        };
+        
+        console.log('📊 Export: Safe entries count:', safeEntries.length);
+        console.log('📊 Export: Export stats:', safeExportStats);
+        
+        const exportResult = {
           entries: safeEntries,
           total: response.data.total || 0,
           exported: response.data.exported || safeEntries.length,
-          query: response.data.query || {},
-          exportDate: response.data.exportDate || new Date().toISOString()
+          query: response.data.query || params || {},
+          exportDate: response.data.exportDate || new Date().toISOString(),
+          exportStats: safeExportStats,
+          metadata: response.metadata || {
+            exportVersion: '2.0',
+            dataIntegrity: 'verified',
+            source: 'api',
+            performance: {
+              queryTime: Date.now(),
+              recordCount: safeEntries.length,
+              cacheStatus: 'unknown'
+            }
+          }
         };
+        
+        // Log export success
+        console.log('✅ Export completed successfully:', {
+          total: exportResult.total,
+          exported: exportResult.exported,
+          averageTicketValue: exportResult.exportStats.averageTicketValue,
+          totalRevenue: exportResult.exportStats.totalRevenue,
+          dataIntegrity: exportResult.metadata.dataIntegrity
+        });
+        
+        return exportResult;
       })
       .catch(error => {
         console.error('🚨 API: Export error:', error);
-        // Return safe fallback
-        return { entries: [], total: 0, exported: 0, query: {}, exportDate: new Date().toISOString() };
+        // Return safe fallback with enhanced structure
+        return { 
+          entries: [], 
+          total: 0, 
+          exported: 0, 
+          query: params || {}, 
+          exportDate: new Date().toISOString(),
+          exportStats: {
+            averageTicketValue: 0,
+            totalPeople: 0,
+            totalRevenue: 0,
+            ticketTypeDistribution: {}
+          },
+          metadata: {
+            exportVersion: '2.0',
+            dataIntegrity: 'error',
+            source: 'fallback',
+            performance: {
+              queryTime: Date.now(),
+              recordCount: 0,
+              cacheStatus: 'error'
+            }
+          }
+        };
       });
   },
 };

@@ -98,7 +98,39 @@ interface Stats {
   uniqueCustomers: number;
   returningCustomers: number;
   conversionRate: number;
-  // Food coupon statistics for today
+  // Ticket type statistics
+  today150: number;
+  today300: number;
+  today450: number;
+  today600: number;
+  today100: number;
+  total150: number;
+  total300: number;
+  total450: number;
+  total600: number;
+  total100: number;
+  // Per-ticket-type adult and kid counts
+  today150Adults: number;
+  today150Kids: number;
+  today300Adults: number;
+  today300Kids: number;
+  today450Adults: number;
+  today450Kids: number;
+  today600Adults: number;
+  today600Kids: number;
+  today100Adults: number;
+  today100Kids: number;
+  total150Adults: number;
+  total150Kids: number;
+  total300Adults: number;
+  total300Kids: number;
+  total450Adults: number;
+  total450Kids: number;
+  total600Adults: number;
+  total600Kids: number;
+  total100Adults: number;
+  total100Kids: number;
+  // Food coupon statistics
   todayAdultsFastFoodCoupons: number;
   todayKidsFastFoodCoupons: number;
   todayAdultsMainFoodCoupons: number;
@@ -106,7 +138,6 @@ interface Stats {
   todayTotalFastFoodCoupons: number;
   todayTotalMainFoodCoupons: number;
   todayTotalFoodCoupons: number;
-  // Food coupon statistics for all time
   totalAdultsFastFoodCoupons: number;
   totalKidsFastFoodCoupons: number;
   totalAdultsMainFoodCoupons: number;
@@ -114,41 +145,11 @@ interface Stats {
   totalFastFoodCoupons: number;
   totalMainFoodCoupons: number;
   totalFoodCoupons: number;
-  // 100 ticket specific statistics
-  today100: number;
-  total100: number;
-  today100Adults: number;
-  total100Adults: number;
-  today100Kids: number;
-  total100Kids: number;
-  // 150 ticket specific statistics
-  today150: number;
-  total150: number;
-  today150Adults: number;
-  total150Adults: number;
-  today150Kids: number;
-  total150Kids: number;
-  // 300 ticket specific statistics
-  today300: number;
-  total300: number;
-  today300Adults: number;
-  total300Adults: number;
-  today300Kids: number;
-  total300Kids: number;
-  // 450 ticket specific statistics
-  today450: number;
-  total450: number;
-  today450Adults: number;
-  total450Adults: number;
-  today450Kids: number;
-  total450Kids: number;
-  // 600 ticket specific statistics
-  today600: number;
-  total600: number;
-  today600Adults: number;
-  total600Adults: number;
-  today600Kids: number;
-  total600Kids: number;
+  // Performance metrics
+  lastUpdated: string;
+  dataFreshness: string;
+  source: string;
+  syncStatus: string;
 }
 
 interface Charts {
@@ -288,7 +289,7 @@ export function AdminDashboard() {
           // Fetch recent entries
           try {
             const recentData = await entriesApi.list({ limit: 5, page: 1 });
-            const entries = (recentData.entries as any[]) ?? [];
+            const entries = (recentData.data?.entries as any[]) ?? [];
             
             // Sort by createdAt descending (most recent first) and take top 5
             const sortedEntries = entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -318,13 +319,69 @@ export function AdminDashboard() {
     };
   }, []);
 
-  // Enhanced real-time sync with event-based updates only
+  // Enhanced real-time sync with comprehensive sync service integration
   useEffect(() => {
     let cancelled = false;
     
+    // Enhanced comprehensive sync handler
+    const handleComprehensiveSync = (event: any) => {
+      if (!cancelled) {
+        console.log('🔄 Dashboard: Comprehensive sync triggered:', event.detail);
+        const fetchData = async () => {
+          try {
+            console.log('🔄 Dashboard: Fetching comprehensive sync data...');
+            
+            // Use comprehensive sync for better data integrity
+            const syncData = await entriesApi.syncAll();
+            
+            if (!cancelled && syncData && syncData.stats) {
+              console.log('📊 Dashboard: Comprehensive sync stats received:', syncData.stats);
+              console.log('📈 Dashboard: Sync metadata:', syncData.metadata);
+              
+              // Update stats from comprehensive sync
+              setStats(syncData.stats as unknown as Stats);
+              
+              // Update recent entries from sync data
+              if (syncData.recentEntries && Array.isArray(syncData.recentEntries)) {
+                const finalEntries = syncData.recentEntries.slice(0, 5);
+                setRecentEntries(finalEntries);
+              }
+              
+              // Fetch charts separately
+              const chartsData = await entriesApi.charts();
+              if (chartsData) {
+                setCharts(chartsData as unknown as Charts);
+              }
+              
+              // Log sync integrity
+              console.log('✅ Dashboard: Comprehensive sync completed successfully');
+              console.log('🔍 Dashboard: Data integrity:', (syncData.metadata as any)?.dataIntegrity || 'unknown');
+              console.log('📊 Dashboard: Sync status:', syncData.metadata?.syncStatus);
+              
+              // Dispatch comprehensive sync event for other components
+              window.dispatchEvent(new CustomEvent('dashboard-comprehensive-synced', {
+                detail: { 
+                  timestamp: new Date().toISOString(), 
+                  syncData: syncData,
+                  source: 'admin-dashboard',
+                  integrity: (syncData.metadata as any)?.dataIntegrity || 'unknown'
+                }
+              }));
+            }
+          } catch (error) {
+            console.error('❌ Dashboard: Comprehensive sync failed:', error);
+            // Fallback to regular sync
+            handleEntryUpdate();
+          }
+        };
+
+        fetchData();
+      }
+    };
+    
     const handleEntryUpdate = () => {
       if (!cancelled) {
-        console.log('🔄 Dashboard: Syncing due to entry update...');
+        console.log('🔄 Dashboard: Entry update sync triggered...');
         const fetchData = async () => {
           try {
             console.log('🔄 Dashboard: Fetching updated data...');
@@ -347,7 +404,7 @@ export function AdminDashboard() {
               // Refresh recent entries
               try {
                 const recentData = await entriesApi.list({ limit: 5, page: 1 });
-                const entries = (recentData.entries as any[]) ?? [];
+                const entries = (recentData.data?.entries as any[]) ?? [];
                 const sortedEntries = entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
                 const finalEntries = sortedEntries.slice(0, 5);
                 setRecentEntries(finalEntries);
@@ -383,7 +440,7 @@ export function AdminDashboard() {
       }
     };
 
-    // Optimized event listeners with reduced throttling for real-time sync
+    // Optimized event listeners with comprehensive sync support
     let lastUpdateTime = 0;
     const throttledHandleEntryUpdate = () => {
       const now = Date.now();
@@ -398,6 +455,10 @@ export function AdminDashboard() {
       console.log('🚀 Admin: Immediate sync triggered for entry change');
       handleEntryUpdate();
     };
+
+    // Listen for comprehensive sync events
+    window.addEventListener('comprehensive-sync-complete', handleComprehensiveSync);
+    window.addEventListener('dashboard-refresh-required', handleComprehensiveSync);
 
     // Listen for all update events including staff dashboard events
     window.addEventListener('entry-updated', throttledHandleEntryUpdate);
@@ -448,6 +509,8 @@ export function AdminDashboard() {
     
     return () => {
       cancelled = true;
+      window.removeEventListener('comprehensive-sync-complete', handleComprehensiveSync);
+      window.removeEventListener('dashboard-refresh-required', handleComprehensiveSync);
       window.removeEventListener('entry-updated', throttledHandleEntryUpdate);
       window.removeEventListener('entry-created', immediateHandleEntryUpdate);
       window.removeEventListener('entry-deleted', immediateHandleEntryUpdate);
