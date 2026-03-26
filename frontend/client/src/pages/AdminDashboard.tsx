@@ -631,7 +631,7 @@ export function AdminDashboard() {
               console.log('✅ Dashboard: Complete cache clear successful - today should be 0');
               
               // PROFESSIONAL FIX: Force reset API call if today stats not reset
-              if (s.todayEntries === 0 && (s.today150 > 0 || s.today300 > 0 || s.today450 > 0 || s.today600 > 0 || s.today100 > 0)) {
+              if ((s as any).todayEntries === 0 && ((s as any).today150 > 0 || (s as any).today300 > 0 || (s as any).today450 > 0 || (s as any).today600 > 0 || (s as any).today100 > 0)) {
                 console.log('🚨 PROFESSIONAL FIX: Today entries = 0 but ticket types > 0, forcing reset...');
                 try {
                   const resetStats = await entriesApi.stats(true);
