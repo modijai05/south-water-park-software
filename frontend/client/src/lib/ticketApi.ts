@@ -40,12 +40,12 @@ export const ticketConfigApi = {
 
   // Update ticket configuration
   update: async (ticketType: string, config: Partial<TicketConfig>): Promise<TicketConfig> => {
-    // Use professional endpoint guaranteed to work
-    console.log('🔧 Using professional endpoint for ticket config save');
+    // Use direct endpoint for guaranteed functionality
+    console.log('🔧 Using direct endpoint for ticket config save');
     console.log('🔧 Ticket type:', ticketType);
     console.log('🔧 Config data:', config);
     
-    const response = await api<{ success: boolean; data: TicketConfig; message: string }>(`/save-ticket/${ticketType}`, {
+    const response = await api<{ success: boolean; data: TicketConfig; message: string }>(`/ticket-config/${ticketType}`, {
       method: 'PUT',
       body: JSON.stringify(config)
     });

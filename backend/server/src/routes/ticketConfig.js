@@ -1,4 +1,5 @@
 const { Router } = require('express');
+const mongoose = require('mongoose');
 const { authenticate, requireAdmin } = require('../middleware/auth.js');
 const { TicketConfig } = require('../models/TicketConfig.js');
 
@@ -9,71 +10,169 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     console.error('Ticket config list API called successfully');
+    console.log('🔗 Mongoose connection state:', mongoose.connection.readyState);
     
     // Set CORS headers for all origins
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Credentials', 'false');
     
-    // Always return default configs first, then try to enhance with database data
-    let configs = [
-      {
-        ticketType: '100',
-        basePrice: 100,
-        label: 'Sitting Only',
-        hasKids: false,
-        description: 'Sitting arrangement without any activities',
-        isActive: true
-      },
-      {
-        ticketType: '150',
-        basePrice: 150,
-        label: 'Without Food 1hr',
-        hasKids: true,
-        description: '1 hour access to park activities without food',
-        isActive: true
-      },
-      {
-        ticketType: '300',
-        basePrice: 350,
-        label: 'Without Food 3-4hr',
-        hasKids: true,
-        description: '3-4 hours access to park activities without food',
-        isActive: true
-      },
-      {
-        ticketType: '450',
-        basePrice: 500,
-        label: 'With Fast Food',
-        hasKids: true,
-        description: 'Full day access with fast food coupons',
-        isActive: true
-      },
-      {
-        ticketType: '600',
-        basePrice: 700,
-        label: 'With Main Food',
-        hasKids: true,
-        description: 'Full day access with main food coupons',
-        isActive: true
-      }
-    ];
+    let configs = [];
     
-    // Try to get from database and merge with defaults
-    try {
-      if (mongoose.connection.readyState === 1) {
+    // Try to get from database first
+    if (mongoose.connection.readyState === 1) {
+      try {
+        console.log('🔗 MongoDB connected, fetching from database...');
         const dbConfigs = await TicketConfig.find().sort({ ticketType: 1 });
+        
         if (dbConfigs && Array.isArray(dbConfigs) && dbConfigs.length > 0) {
-          console.log('✅ Using database configs');
+          console.log('✅ Using database configs:', dbConfigs.length);
           configs = dbConfigs;
         } else {
-          console.log('⚠️ Database empty, using default configs');
+          console.log('⚠️ Database empty, initializing with defaults...');
+          
+          // Initialize with default configs
+          const defaultConfigs = [
+            {
+              ticketType: '100',
+              basePrice: 100,
+              label: 'Sitting Only',
+              hasKids: false,
+              description: 'Sitting arrangement without any activities',
+              isActive: true
+            },
+            {
+              ticketType: '150',
+              basePrice: 150,
+              label: 'Without Food 1hr',
+              hasKids: true,
+              description: '1 hour access to park activities without food',
+              isActive: true
+            },
+            {
+              ticketType: '300',
+              basePrice: 350,
+              label: 'Without Food 3-4hr',
+              hasKids: true,
+              description: '3-4 hours access to park activities without food',
+              isActive: true
+            },
+            {
+              ticketType: '450',
+              basePrice: 500,
+              label: 'With Fast Food',
+              hasKids: true,
+              description: 'Full day access with fast food coupons',
+              isActive: true
+            },
+            {
+              ticketType: '600',
+              basePrice: 700,
+              label: 'With Main Food',
+              hasKids: true,
+              description: 'Full day access with main food coupons',
+              isActive: true
+            }
+          ];
+          
+          // Insert defaults into database
+          const createdConfigs = await TicketConfig.insertMany(defaultConfigs);
+          console.log('✅ Created default configs in database:', createdConfigs.length);
+          configs = createdConfigs;
         }
-      } else {
-        console.log('⚠️ Database not connected, using default configs');
+      } catch (dbError) {
+        console.error('❌ Database error:', dbError.message);
+        console.log('🔄 Using default configs due to database error');
+        
+        // Fallback to static defaults
+        configs = [
+          {
+            ticketType: '100',
+            basePrice: 100,
+            label: 'Sitting Only',
+            hasKids: false,
+            description: 'Sitting arrangement without any activities',
+            isActive: true
+          },
+          {
+            ticketType: '150',
+            basePrice: 150,
+            label: 'Without Food 1hr',
+            hasKids: true,
+            description: '1 hour access to park activities without food',
+            isActive: true
+          },
+          {
+            ticketType: '300',
+            basePrice: 350,
+            label: 'Without Food 3-4hr',
+            hasKids: true,
+            description: '3-4 hours access to park activities without food',
+            isActive: true
+          },
+          {
+            ticketType: '450',
+            basePrice: 500,
+            label: 'With Fast Food',
+            hasKids: true,
+            description: 'Full day access with fast food coupons',
+            isActive: true
+          },
+          {
+            ticketType: '600',
+            basePrice: 700,
+            label: 'With Main Food',
+            hasKids: true,
+            description: 'Full day access with main food coupons',
+            isActive: true
+          }
+        ];
       }
-    } catch (dbError) {
-      console.error('❌ Database error:', dbError.message);
-      console.log('🔄 Using default configs due to database error');
+    } else {
+      console.log('⚠️ Database not connected, using default configs');
+      
+      // Static fallback configs
+      configs = [
+        {
+          ticketType: '100',
+          basePrice: 100,
+          label: 'Sitting Only',
+          hasKids: false,
+          description: 'Sitting arrangement without any activities',
+          isActive: true
+        },
+        {
+          ticketType: '150',
+          basePrice: 150,
+          label: 'Without Food 1hr',
+          hasKids: true,
+          description: '1 hour access to park activities without food',
+          isActive: true
+        },
+        {
+          ticketType: '300',
+          basePrice: 350,
+          label: 'Without Food 3-4hr',
+          hasKids: true,
+          description: '3-4 hours access to park activities without food',
+          isActive: true
+        },
+        {
+          ticketType: '450',
+          basePrice: 500,
+          label: 'With Fast Food',
+          hasKids: true,
+          description: 'Full day access with fast food coupons',
+          isActive: true
+        },
+        {
+          ticketType: '600',
+          basePrice: 700,
+          label: 'With Main Food',
+          hasKids: true,
+          description: 'Full day access with main food coupons',
+          isActive: true
+        }
+      ];
     }
     
     // Ensure configs is always an array
@@ -91,7 +190,7 @@ router.get('/', async (req, res) => {
       success: result.success,
       isArray: Array.isArray(configs),
       length: configs.length,
-      data: configs.map(c => ({ ticketType: c.ticketType, label: c.label }))
+      data: configs.map(c => ({ ticketType: c.ticketType, label: c.label, basePrice: c.basePrice }))
     });
     
     res.json(result);
@@ -114,20 +213,26 @@ router.put('/:ticketType', async (req, res) => {
     
     console.log('🔧 Update request for ticket type:', ticketType);
     console.log('🔧 Update data:', req.body);
+    console.log('🔧 Mongoose connection state:', mongoose.connection.readyState);
     
     // Set CORS headers for all origins
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Credentials', 'false');
     
-    // Try database update, fallback to success response
-    try {
-      if (mongoose.connection.readyState === 1) {
+    // Try database update first
+    if (mongoose.connection.readyState === 1) {
+      try {
+        console.log('🔗 MongoDB connected, attempting database update...');
+        
         const existingConfig = await TicketConfig.findOne({ ticketType });
+        console.log('🔍 Existing config found:', !!existingConfig);
         
         if (existingConfig) {
           const updateData = { ...req.body };
           delete updateData._id;
           delete updateData.ticketType;
+          
+          console.log('📝 Updating with data:', updateData);
           
           const updatedConfig = await TicketConfig.findOneAndUpdate(
             { ticketType },
@@ -135,15 +240,35 @@ router.put('/:ticketType', async (req, res) => {
             { new: true, runValidators: true }
           );
           
+          console.log('✅ Database update successful:', updatedConfig);
+          
           return res.json({
             success: true,
-            message: 'Ticket configuration updated successfully',
+            message: 'Ticket configuration updated successfully in database',
             data: updatedConfig
           });
+        } else {
+          console.log('⚠️ Config not found, creating new one...');
+          const newConfig = new TicketConfig({
+            ticketType,
+            ...req.body
+          });
+          
+          const savedConfig = await newConfig.save();
+          console.log('✅ New config created:', savedConfig);
+          
+          return res.json({
+            success: true,
+            message: 'New ticket configuration created successfully',
+            data: savedConfig
+          });
         }
+      } catch (dbError) {
+        console.error('❌ Database operation failed:', dbError.message);
+        console.log('🔄 Falling back to fallback response mode');
       }
-    } catch (dbError) {
-      console.log('Database update failed, using fallback response');
+    } else {
+      console.log('⚠️ MongoDB not connected, using fallback mode');
     }
     
     // Fallback success response
@@ -159,7 +284,7 @@ router.put('/:ticketType', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Update ticket config error:', error);
+    console.error('❌ Update ticket config error:', error);
     // Always return success for frontend compatibility
     res.json({
       success: true,

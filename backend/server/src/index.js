@@ -433,13 +433,11 @@ app.put('/api/ticket-config/simple/:ticketType', (req, res) => {
   });
 });
 
-// Start server immediately - Render needs to detect open PORT
-const server = app.listen(PORT, '0.0.0.0', () => {
-});
-
-// Try to connect to MongoDB in background without blocking server start
-setTimeout(async () => {
+// Start server after MongoDB connection attempt
+const startServer = async () => {
   try {
+    // Try to connect to MongoDB first
+    console.log('🔗 Connecting to MongoDB...');
     const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://jaimodi05bapa_db_user:SgKNnsz19WTuvHp3@cluster.nckewmo.mongodb.net/south_water_park?retryWrites=true&w=majority';
     
     await mongoose.connect(mongoUri, {
@@ -451,47 +449,86 @@ setTimeout(async () => {
       w: 'majority'
     });
     
+    console.log('✅ MongoDB connected successfully!');
+    
+    // Start server after successful MongoDB connection
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌐 Frontend URL: http://localhost:5174`);
+      console.log(`🔗 Backend URL: http://localhost:${PORT}`);
+    });
+    
+    // Handle server errors
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use`);
+        process.exit(1);
+      }
+    });
+    
+    return server;
+    
   } catch (error) {
-    // MongoDB connection failed, server running in fallback mode
+    console.error('❌ MongoDB connection failed:', error.message);
+    console.log('⚠️ Starting server in fallback mode without database...');
+    
+    // Start server even if MongoDB fails
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running in fallback mode on port ${PORT}`);
+      console.log(`🌐 Frontend URL: http://localhost:5174`);
+      console.log(`🔗 Backend URL: http://localhost:${PORT}`);
+      console.log('⚠️ Database features will be limited');
+    });
+    
+    // Handle server errors
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use`);
+        process.exit(1);
+      }
+    });
+    
+    return server;
   }
-}, 2000); // Start connection attempt after 2 seconds
+};
 
-// Handle server errors
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    process.exit(1);
-  }
-});
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  
-  try {
-    if (mongoose.connection.readyState === 1) {
-      await mongoose.connection.close();
+// Start the server
+startServer().then(server => {
+  // Graceful shutdown handlers
+  const gracefulShutdown = async (signal) => {
+    console.log(`\n📡 Received ${signal}, shutting down gracefully...`);
+    
+    try {
+      if (server) {
+        server.close(() => {
+          console.log('🔌 HTTP server closed');
+        });
+      }
+      
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.close();
+        console.log('🔌 MongoDB connection closed');
+      }
+      
+      process.exit(0);
+    } catch (error) {
+      console.error('❌ Error during shutdown:', error);
+      process.exit(1);
     }
-    process.exit(0);
-  } catch (error) {
-    process.exit(1);
-  }
-});
-
-process.on('SIGTERM', async () => {
+  };
   
-  try {
-    if (mongoose.connection.readyState === 1) {
-      await mongoose.connection.close();
-    }
-    process.exit(0);
-  } catch (error) {
-    process.exit(1);
-  }
-});
-
-process.on('uncaughtException', (error) => {
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    gracefulShutdown('uncaughtException');
+  });
+  
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection:', reason);
+    gracefulShutdown('unhandledRejection');
+  });
+}).catch(error => {
+  console.error('❌ Failed to start server:', error);
   process.exit(1);
 });
