@@ -28,6 +28,17 @@ app.get('/api/test', (req, res) => {
     env: process.env.NODE_ENV || 'development'
   });
 });
+
+// Add health check endpoint for Render
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    env: process.env.NODE_ENV || 'development',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
+});
 const PORT = process.env.PORT ?? 5000;
 
 // Configure Express for Render deployment with enhanced CORS
