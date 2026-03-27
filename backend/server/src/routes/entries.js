@@ -254,7 +254,132 @@ const countCouponsFromRange = (couponRange) => {
   return 0;
 };
 
-// GET /api/entries/:id - Get single entry (PUBLIC ACCESS) - MUST BE FIRST
+// GET /api/entries/stats - Get entry statistics (PUBLIC ACCESS)
+router.get('/stats', async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    console.log('📊 Stats endpoint called');
+    
+    // Check for force reset parameter
+    const forceReset = req.query.forceReset === 'true';
+    if (forceReset) {
+      const resetResponse = {
+        success: true,
+        data: {
+          todayEntries: 0, totalEntries: 0, todayPeople: 0, totalPeople: 0,
+          todayAdults: 0, totalAdults: 0, todayKids: 0, totalKids: 0,
+          todayAmount: 0, totalAmount: 0, todayCash: 0, totalCash: 0,
+          todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0,
+          today150: 0, today300: 0, today450: 0, today600: 0, today100: 0,
+          total150: 0, total300: 0, total450: 0, total600: 0, total100: 0,
+          today150Adults: 0, today150Kids: 0, today300Adults: 0, today300Kids: 0,
+          today450Adults: 0, today450Kids: 0, today600Adults: 0, today600Kids: 0,
+          today100Adults: 0, today100Kids: 0,
+          total150Adults: 0, total150Kids: 0, total300Adults: 0, total300Kids: 0,
+          total450Adults: 0, total450Kids: 0, total600Adults: 0, total600Kids: 0,
+          total100Adults: 0, total100Kids: 0,
+          // Food coupon stats
+          todayAdultsFastFoodCoupons: 0, todayKidsFastFoodCoupons: 0,
+          todayAdultsMainFoodCoupons: 0, todayKidsMainFoodCoupons: 0,
+          todayTotalFastFoodCoupons: 0, todayTotalMainFoodCoupons: 0, todayTotalFoodCoupons: 0,
+          totalAdultsFastFoodCoupons: 0, totalKidsFastFoodCoupons: 0,
+          totalAdultsMainFoodCoupons: 0, totalKidsMainFoodCoupons: 0,
+          totalFastFoodCoupons: 0, totalMainFoodCoupons: 0, totalFoodCoupons: 0,
+          // Performance metrics
+          averageTicketValue: 0, peakHour: 'N/A', conversionRate: 0,
+          lastUpdated: new Date().toISOString(),
+          dataFreshness: 'reset',
+          source: 'manual',
+          syncStatus: 'reset'
+        }
+      };
+      return res.json(resetResponse);
+    }
+    
+    // Try database fetch
+    if (mongoose.connection.readyState === 1) {
+      try {
+        console.log('🔗 MongoDB connected, fetching stats from database...');
+        
+        const { startOfDay, endOfDay } = getTodayRange();
+        
+        // Fetch today's entries and all entries
+        const [todayEntries, allEntries] = await Promise.all([
+          Entry.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).sort({ createdAt: -1 }),
+          Entry.find().sort({ createdAt: -1 })
+        ]);
+        
+        console.log(`📊 Found ${todayEntries.length} today entries, ${allEntries.length} total entries`);
+        
+        // Calculate statistics using helper function
+        const stats = calculateStatsFromEntries(todayEntries, allEntries);
+        
+        // Add metadata
+        stats.lastUpdated = new Date().toISOString();
+        stats.dataFreshness = 'real-time';
+        stats.source = 'mongodb';
+        stats.syncStatus = 'connected';
+        
+        return res.json({
+          success: true,
+          data: stats
+        });
+        
+      } catch (dbError) {
+        console.error('❌ Database stats fetch failed:', dbError.message);
+      }
+    } else {
+      console.log('⚠️ MongoDB not connected, returning fallback stats');
+    }
+    
+    // Fallback stats
+    const fallbackStats = {
+      todayEntries: 0, totalEntries: 0, todayPeople: 0, totalPeople: 0,
+      todayAdults: 0, totalAdults: 0, todayKids: 0, totalKids: 0,
+      todayAmount: 0, totalAmount: 0, todayCash: 0, totalCash: 0,
+      todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0,
+      today150: 0, today300: 0, today450: 0, today600: 0, today100: 0,
+      total150: 0, total300: 0, total450: 0, total600: 0, total100: 0,
+      today150Adults: 0, today150Kids: 0, today300Adults: 0, today300Kids: 0,
+      today450Adults: 0, today450Kids: 0, today600Adults: 0, today600Kids: 0,
+      today100Adults: 0, today100Kids: 0,
+      total150Adults: 0, total150Kids: 0, total300Adults: 0, total300Kids: 0,
+      total450Adults: 0, total450Kids: 0, total600Adults: 0, total600Kids: 0,
+      total100Adults: 0, total100Kids: 0,
+      // Food coupon stats
+      todayAdultsFastFoodCoupons: 0, todayKidsFastFoodCoupons: 0,
+      todayAdultsMainFoodCoupons: 0, todayKidsMainFoodCoupons: 0,
+      todayTotalFastFoodCoupons: 0, todayTotalMainFoodCoupons: 0, todayTotalFoodCoupons: 0,
+      totalAdultsFastFoodCoupons: 0, totalKidsFastFoodCoupons: 0,
+      totalAdultsMainFoodCoupons: 0, totalKidsMainFoodCoupons: 0,
+      totalFastFoodCoupons: 0, totalMainFoodCoupons: 0, totalFoodCoupons: 0,
+      // Performance metrics
+      averageTicketValue: 0, peakHour: 'N/A', conversionRate: 0,
+      lastUpdated: new Date().toISOString(),
+      dataFreshness: 'fallback',
+      source: 'offline',
+      syncStatus: 'disconnected'
+    };
+    
+    return res.json({
+      success: true,
+      data: fallbackStats
+    });
+    
+  } catch (error) {
+    console.error('❌ Stats endpoint error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch statistics',
+      message: error.message
+    });
+  }
+});
+
+// GET /api/entries/:id - Get single entry (PUBLIC ACCESS)
 router.get('/:id', async (req, res) => {
   try {
     // Set CORS headers for all origins
@@ -263,6 +388,14 @@ router.get('/:id', async (req, res) => {
     
     const { id } = req.params;
     console.log('🔍 Fetching single entry:', id);
+    
+    // Validate ObjectId format
+    if (id === 'stats' || id === 'health' || id === 'sync-all') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid entry ID format'
+      });
+    }
     
     // Try database find, fallback to success response
     try {
