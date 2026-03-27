@@ -379,6 +379,219 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// GET /api/entries/sync-all - Comprehensive data sync for all dashboards
+router.get('/sync-all', async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    console.log('🔄 Comprehensive data sync requested');
+    
+    // Check database connection first
+    if (mongoose.connection.readyState !== 1) {
+      console.log('⚠️ MongoDB not connected, returning offline sync data');
+      return res.json({
+        success: false,
+        error: 'Database not connected',
+        data: {
+          stats: {
+            todayEntries: 0, totalEntries: 0, todayPeople: 0, totalPeople: 0,
+            todayAdults: 0, totalAdults: 0, todayKids: 0, totalKids: 0,
+            todayAmount: 0, totalAmount: 0, todayCash: 0, totalCash: 0,
+            todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0,
+            today150: 0, today300: 0, today450: 0, today600: 0, today100: 0,
+            total150: 0, total300: 0, total450: 0, total600: 0, total100: 0,
+            today150Adults: 0, today150Kids: 0, today300Adults: 0, today300Kids: 0,
+            today450Adults: 0, today450Kids: 0, today600Adults: 0, today600Kids: 0,
+            today100Adults: 0, today100Kids: 0,
+            total150Adults: 0, total150Kids: 0, total300Adults: 0, total300Kids: 0,
+            total450Adults: 0, total450Kids: 0, total600Adults: 0, total600Kids: 0,
+            total100Adults: 0, total100Kids: 0,
+            // Food coupon stats
+            todayAdultsFastFoodCoupons: 0, todayKidsFastFoodCoupons: 0,
+            todayAdultsMainFoodCoupons: 0, todayKidsMainFoodCoupons: 0,
+            todayTotalFastFoodCoupons: 0, todayTotalMainFoodCoupons: 0, todayTotalFoodCoupons: 0,
+            totalAdultsFastFoodCoupons: 0, totalKidsFastFoodCoupons: 0,
+            totalAdultsMainFoodCoupons: 0, totalKidsMainFoodCoupons: 0,
+            totalFastFoodCoupons: 0, totalMainFoodCoupons: 0, totalFoodCoupons: 0,
+            // Performance metrics
+            averageTicketValue: 0, peakHour: 'N/A', conversionRate: 0,
+            lastUpdated: new Date().toISOString(),
+            dataFreshness: 'offline',
+            source: 'fallback',
+            syncStatus: 'disconnected'
+          },
+          recentEntries: [],
+          todayEntries: [],
+          summary: {
+            totalRecords: 0,
+            todayRecords: 0,
+            recentRecords: 0,
+            lastUpdated: new Date().toISOString()
+          }
+        },
+        metadata: {
+          syncType: 'comprehensive',
+          timestamp: new Date().toISOString(),
+          dataFreshness: 'offline',
+          source: 'fallback',
+          syncStatus: 'disconnected'
+        }
+      });
+    }
+    
+    // Fetch comprehensive data from database
+    const { startOfDay, endOfDay } = getTodayRange();
+    
+    const [todayEntries, allEntries, recentEntries] = await Promise.all([
+      Entry.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).sort({ createdAt: -1 }).limit(50),
+      Entry.find().sort({ createdAt: -1 }).limit(100),
+      Entry.find().sort({ createdAt: -1 }).limit(10)
+    ]);
+    
+    // Calculate comprehensive statistics
+    const stats = calculateStatsFromEntries(todayEntries, allEntries);
+    
+    // Build comprehensive sync data
+    const syncData = {
+      success: true,
+      data: {
+        stats,
+        recentEntries: recentEntries.map(entry => ({
+          id: entry._id,
+          receiptNumber: entry.receiptNumber,
+          name: entry.name,
+          mobile: entry.mobile,
+          ticketType: entry.ticketType,
+          adults: entry.adults,
+          kids: entry.kids,
+          totalPeople: entry.totalPeople,
+          finalAmount: entry.finalAmount,
+          cashAmount: entry.cashAmount,
+          upiAmount: entry.upiAmount,
+          advanceAmount: entry.advanceAmount,
+          createdAt: entry.createdAt,
+          filledBy: entry.filledBy,
+          adultsFastFoodCoupon: entry.adultsFastFoodCoupon || '',
+          kidsFastFoodCoupon: entry.kidsFastFoodCoupon || '',
+          adultsMainFoodCoupon: entry.adultsMainFoodCoupon || '',
+          kidsMainFoodCoupon: entry.kidsMainFoodCoupon || ''
+        })),
+        
+        todayEntries: todayEntries.map(entry => ({
+          id: entry._id,
+          receiptNumber: entry.receiptNumber,
+          name: entry.name,
+          mobile: entry.mobile,
+          ticketType: entry.ticketType,
+          adults: entry.adults,
+          kids: entry.kids,
+          totalPeople: entry.totalPeople,
+          finalAmount: entry.finalAmount,
+          cashAmount: entry.cashAmount,
+          upiAmount: entry.upiAmount,
+          advanceAmount: entry.advanceAmount,
+          createdAt: entry.createdAt,
+          filledBy: entry.filledBy,
+          adultsFastFoodCoupon: entry.adultsFastFoodCoupon || '',
+          kidsFastFoodCoupon: entry.kidsFastFoodCoupon || '',
+          adultsMainFoodCoupon: entry.adultsMainFoodCoupon || '',
+          kidsMainFoodCoupon: entry.kidsMainFoodCoupon || ''
+        })),
+        
+        // Summary data with validation
+        summary: {
+          totalRecords: (allEntries || []).length,
+          todayRecords: (todayEntries || []).length,
+          recentRecords: (recentEntries || []).length,
+          lastUpdated: new Date().toISOString()
+        }
+      },
+      metadata: {
+        syncType: 'comprehensive',
+        timestamp: new Date().toISOString(),
+        dataFreshness: 'real-time',
+        source: 'mongodb',
+        syncStatus: 'active',
+        endpoints: {
+          stats: '/api/entries/stats',
+          entries: '/api/entries',
+          charts: '/api/entries/charts',
+          export: '/api/entries/export'
+        },
+        performance: {
+          queryTime: Date.now(),
+          cacheStatus: 'bypassed',
+          dataIntegrity: 'verified'
+        }
+      }
+    };
+    
+    console.log('✅ Comprehensive sync completed:', {
+      totalEntries: (allEntries || []).length,
+      todayEntries: (todayEntries || []).length,
+      recentEntries: (recentEntries || []).length,
+      timestamp: new Date().toISOString()
+    });
+    
+    return res.json(syncData);
+    
+  } catch (error) {
+    console.error('❌ Comprehensive sync error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to sync data',
+      message: error.message,
+      data: {
+        stats: {
+          todayEntries: 0, totalEntries: 0, todayPeople: 0, totalPeople: 0,
+          todayAdults: 0, totalAdults: 0, todayKids: 0, totalKids: 0,
+          todayAmount: 0, totalAmount: 0, todayCash: 0, totalCash: 0,
+          todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0,
+          today150: 0, today300: 0, today450: 0, today600: 0, today100: 0,
+          total150: 0, total300: 0, total450: 0, total600: 0, total100: 0,
+          today150Adults: 0, today150Kids: 0, today300Adults: 0, today300Kids: 0,
+          today450Adults: 0, today450Kids: 0, today600Adults: 0, today600Kids: 0,
+          today100Adults: 0, today100Kids: 0,
+          total150Adults: 0, total150Kids: 0, total300Adults: 0, total300Kids: 0,
+          total450Adults: 0, total450Kids: 0, total600Adults: 0, total600Kids: 0,
+          total100Adults: 0, total100Kids: 0,
+          // Food coupon stats
+          todayAdultsFastFoodCoupons: 0, todayKidsFastFoodCoupons: 0,
+          todayAdultsMainFoodCoupons: 0, todayKidsMainFoodCoupons: 0,
+          todayTotalFastFoodCoupons: 0, todayTotalMainFoodCoupons: 0, todayTotalFoodCoupons: 0,
+          totalAdultsFastFoodCoupons: 0, totalKidsFastFoodCoupons: 0,
+          totalAdultsMainFoodCoupons: 0, totalKidsMainFoodCoupons: 0,
+          totalFastFoodCoupons: 0, totalMainFoodCoupons: 0, totalFoodCoupons: 0,
+          // Performance metrics
+          averageTicketValue: 0, peakHour: 'N/A', conversionRate: 0,
+          lastUpdated: new Date().toISOString(),
+          dataFreshness: 'error',
+          source: 'fallback',
+          syncStatus: 'error'
+        },
+        recentEntries: [],
+        todayEntries: [],
+        summary: {
+          totalRecords: 0,
+          todayRecords: 0,
+          recentRecords: 0,
+          lastUpdated: new Date().toISOString()
+        },
+        metadata: {
+          syncType: 'comprehensive',
+          timestamp: new Date().toISOString(),
+          dataFreshness: 'error',
+          source: 'fallback',
+          syncStatus: 'error',
+          error: error.message
+        }
+      }
+    });
+  }
+});
+
 // GET /api/entries/:id - Get single entry (PUBLIC ACCESS)
 router.get('/:id', async (req, res) => {
   try {

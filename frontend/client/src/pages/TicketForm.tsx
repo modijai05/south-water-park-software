@@ -140,7 +140,7 @@ export function TicketForm() {
   // Helper function to get current day's price for display
   const getCurrentDayPrice = (ticketType: string): number => {
     const config = ticketConfigs.find(c => c.ticketType === ticketType);
-    if (config && config.dayWisePricing.length > 0) {
+    if (config && config.dayWisePricing && config.dayWisePricing.length > 0) {
       const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
       const todayPricing = config.dayWisePricing.find(dp => dp.day === today && dp.enabled);
       
@@ -542,7 +542,7 @@ export function TicketForm() {
           {ticketConfigs.length > 0 && ticketConfigs.some(config => {
             // Get current day name
             const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-            return config.dayWisePricing.some(dp => dp.day === today && dp.enabled && (dp.fixedAmount !== undefined || dp.priceMultiplier !== 1.0));
+            return config.dayWisePricing && config.dayWisePricing.some(dp => dp.day === today && dp.enabled && (dp.fixedAmount !== undefined || dp.priceMultiplier !== 1.0));
           }) && (
             <motion.div
               initial={{ opacity: 0, y: -20 }}
