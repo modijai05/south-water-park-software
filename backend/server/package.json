@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "node src/index.js",
-    "build": "echo 'Build completed successfully'",
+    "build": "echo 'Build completed successfully - v2.0'",
     "start": "node src/index.js",
     "start:dev": "node src/index.js",
     "lint": "eslint ."
