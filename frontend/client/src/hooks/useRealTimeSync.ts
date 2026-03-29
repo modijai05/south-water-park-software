@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { API_BASE } from '@/lib/api';
 
 interface SyncEventData {
   event: string;
@@ -40,9 +41,12 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
     console.log('📡 Connecting to real-time sync...');
 
     try {
-      // Add cache-busting parameter to prevent connection issues
+      // Use full backend URL instead of relative path
       const timestamp = Date.now();
-      const eventSource = new EventSource(`/api/entries/sync?t=${timestamp}`);
+      const syncUrl = `${API_BASE}/entries/sync?t=${timestamp}`;
+      console.log('📡 Connecting to SSE endpoint:', syncUrl);
+      
+      const eventSource = new EventSource(syncUrl);
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {

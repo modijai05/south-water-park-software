@@ -325,14 +325,14 @@ export function AdminEntries() {
     setDateGroups(groups);
   }, [allEntries, groupEntriesByDate]);
   
-  // Optimized fetch with caching
+  // Optimized fetch with caching and improved error handling
   const fetchEntries = useCallback(async (forceRefresh = false) => {
     if (!isClient) return;
     
     const now = Date.now();
     const cacheDuration = 30000; // 30 seconds cache
     
-    // Use cached data if available and not force refresh
+    // Always fetch if forceRefresh or no entries exist
     if (!forceRefresh && allEntries.length > 0 && (now - lastFetchTime.current) < cacheDuration) {
       console.log('🔍 Using cached entries:', allEntries.length);
       return;
@@ -340,38 +340,56 @@ export function AdminEntries() {
     
     setInitialLoading(allEntries.length === 0); // Only show loading on first fetch
     setLoading(true);
-    console.log('🔍 AdminEntries: Fetching entries...');
+    console.log('🔍 AdminEntries: Fetching entries...', { forceRefresh, currentEntries: allEntries.length });
     
     try {
-      // First fetch to get total count and initial entries
-      const res = await entriesApi.list({ page: 1, limit: 5000 }); // Increased limit for old entries
+      // Try multiple approaches to get entries
+      let fetchedEntries: EntryRecord[] = [];
+      let totalEntries = 0;
       
-      console.log('🔍 AdminEntries: API response:', { 
-        success: res.success, 
-        entriesCount: res.data?.entries?.length || 0, 
-        total: res.data?.total || 0,
-        actualData: res.data
-      });
-      
-      let fetchedEntries = (res.data?.entries as EntryRecord[]) ?? [];
-      const totalEntries = res.data?.total ?? 0;
-      
-      console.log('🔍 AdminEntries: Initial fetch:', fetchedEntries.length, 'of', totalEntries);
-      
-      // If there are more entries than we fetched, fetch them all
-      if (totalEntries > fetchedEntries.length && totalEntries <= 10000) {
-        console.log('🔍 AdminEntries: Fetching remaining entries...');
-        const remainingRes = await entriesApi.list({ page: 1, limit: totalEntries });
-        fetchedEntries = (remainingRes.data?.entries as EntryRecord[]) ?? [];
-        console.log('🔍 AdminEntries: Total entries after full fetch:', fetchedEntries.length);
+      // First attempt: Use syncAll API for comprehensive data
+      try {
+        console.log('🔍 Trying syncAll API...');
+        const syncData = await entriesApi.syncAll();
+        if (syncData && syncData.recentEntries && syncData.recentEntries.length > 0) {
+          fetchedEntries = syncData.recentEntries as EntryRecord[];
+          totalEntries = syncData.summary.totalRecords || fetchedEntries.length;
+          console.log('🔍 SyncAll successful:', fetchedEntries.length, 'entries');
+        }
+      } catch (syncError) {
+        console.warn('🔍 SyncAll failed, trying list API:', syncError);
       }
+      
+      // Second attempt: Use list API if syncAll failed or returned no data
+      if (fetchedEntries.length === 0) {
+        console.log('🔍 Using list API...');
+        const res = await entriesApi.list({ page: 1, limit: 5000 });
+        
+        console.log('🔍 AdminEntries: API response:', { 
+          success: res.success, 
+          entriesCount: res.data?.entries?.length || 0, 
+          total: res.data?.total || 0
+        });
+        
+        fetchedEntries = (res.data?.entries as EntryRecord[]) ?? [];
+        totalEntries = res.data?.total ?? 0;
+        
+        // If there are more entries than we fetched, fetch them all
+        if (totalEntries > fetchedEntries.length && totalEntries <= 10000) {
+          console.log('🔍 AdminEntries: Fetching remaining entries...');
+          const remainingRes = await entriesApi.list({ page: 1, limit: totalEntries });
+          fetchedEntries = (remainingRes.data?.entries as EntryRecord[]) ?? [];
+        }
+      }
+      
+      console.log('🔍 AdminEntries: Final fetch result:', fetchedEntries.length, 'of', totalEntries);
       
       if (fetchedEntries.length > 0) {
         setAllEntries(fetchedEntries);
         setTotal(totalEntries);
         lastFetchTime.current = now;
         
-        // Debug first entry
+        // Debug first and last entries
         const firstEntry = fetchedEntries[0];
         const lastEntry = fetchedEntries[fetchedEntries.length - 1];
         console.log('🔍 AdminEntries: Entry range:', {
@@ -379,19 +397,32 @@ export function AdminEntries() {
           last: { id: lastEntry._id, name: lastEntry.name, createdAt: lastEntry.createdAt }
         });
       } else {
-        console.log('🔍 AdminEntries: No entries found');
+        console.log('🔍 AdminEntries: No entries found - setting empty state');
+        setAllEntries([]);
+        setTotal(0);
+        lastFetchTime.current = now;
       }
     } catch (error) {
       console.error('🔍 AdminEntries: Failed to fetch entries:', error);
+      // Set empty state on error to prevent infinite loading
+      setAllEntries([]);
+      setTotal(0);
+      setToast({ 
+        message: '⚠️ Failed to load entries. Please refresh the page.', 
+        id: 'fetch-error',
+        type: 'error'
+      });
+      setTimeout(() => setToast(null), 5000);
     } finally {
       setLoading(false);
       setInitialLoading(false);
     }
   }, [isClient, allEntries.length]);
   
-  // Initial load
+  // Initial load - always fetch on mount
   useEffect(() => {
-    fetchEntries();
+    console.log('🔍 AdminEntries: Component mounted, fetching entries...');
+    fetchEntries(true); // Force refresh on initial load
   }, []);
   
   // Handle search with debounced value
