@@ -655,7 +655,7 @@ export function TicketAnalytics() {
           className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200"
         >
           <h3 className="text-lg font-bold text-purple-900 mb-2">📈 Growth Leader</h3>
-          {data?.demandAnalysis && (
+          {data?.demandAnalysis && data.demandAnalysis.length > 0 && (
             <>
               <div className="text-2xl font-bold text-purple-800">
                 ₹{data.demandAnalysis.reduce((max, current) => 
@@ -663,7 +663,7 @@ export function TicketAnalytics() {
                 , data.demandAnalysis[0]).ticketType}
               </div>
               <div className="text-sm text-purple-600">
-                {data.demandAnalysis.length > 0 ? Math.max(...data.demandAnalysis.map(d => d.growthRate)).toFixed(1) : '0'}% growth
+                {Math.max(...data.demandAnalysis.map(d => d.growthRate)).toFixed(1)}% growth
               </div>
             </>
           )}

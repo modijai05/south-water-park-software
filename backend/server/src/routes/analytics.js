@@ -89,26 +89,64 @@ router.get('/demand', authenticate, async (req, res) => {
     const { timeRange } = req.query;
     console.log('Analytics demand request for timeRange:', timeRange);
     
-    // Mock demand data based on time range
-    const demandData = {
-      timeRange: timeRange || 'week',
-      data: [
-        { ticketType: '100', demand: 45, trend: 'increasing' },
-        { ticketType: '150', demand: 32, trend: 'stable' },
-        { ticketType: '300', demand: 78, trend: 'increasing' },
-        { ticketType: '450', demand: 25, trend: 'decreasing' },
-        { ticketType: '600', demand: 15, trend: 'stable' }
-      ],
-      summary: {
-        totalDemand: 195,
-        averageDemand: 32.5,
-        highestDemand: { ticketType: '300', count: 78 },
-        lowestDemand: { ticketType: '600', count: 15 }
-      }
-    };
+    // Calculate date range based on timeRange
+    const now = dayjs();
+    let startDate = now;
     
-    console.log('✅ Demand analytics data sent:', JSON.stringify(demandData, null, 2));
-    res.json({ success: true, data: demandData });
+    switch (timeRange) {
+      case '7d': startDate = now.subtract(7, 'day'); break;
+      case '30d': startDate = now.subtract(30, 'day'); break;
+      case '90d': startDate = now.subtract(90, 'day'); break;
+      case '1y': startDate = now.subtract(1, 'year'); break;
+      default: startDate = now.subtract(30, 'day'); // Default to 30 days
+    }
+    
+    // Get entries within the time range
+    const entries = await Entry.find({
+      createdAt: { $gte: startDate.toDate() }
+    }).lean();
+    
+    console.log(`Found ${entries.length} entries for timeRange: ${timeRange}`);
+    
+    // Calculate demand analysis for each ticket type
+    const ticketTypes = ['150', '300', '450', '600', '100'];
+    const demandData = ticketTypes.map(type => {
+      const typeEntries = entries.filter(e => e.ticketType === type);
+      const totalEntries = typeEntries.length;
+      const revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+      const totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+      const avgPeoplePerEntry = totalEntries > 0 ? totalPeople / totalEntries : 0;
+      
+      // Calculate growth rate (compare with previous period)
+      const midPoint = now.subtract(15, 'day');
+      const recentEntries = typeEntries.filter(e => dayjs(e.createdAt).isAfter(midPoint));
+      const olderEntries = typeEntries.filter(e => dayjs(e.createdAt).isBefore(midPoint));
+      const growthRate = olderEntries.length > 0 
+        ? ((recentEntries.length - olderEntries.length) / olderEntries.length) * 100 
+        : 0;
+      
+      const marketShare = entries.length > 0 ? (totalEntries / entries.length) * 100 : 0;
+      
+      // Simple seasonality calculation (weekend vs weekday)
+      const weekendEntries = typeEntries.filter(e => {
+        const day = dayjs(e.createdAt).day();
+        return day === 0 || day === 6; // Sunday or Saturday
+      });
+      const seasonality = totalEntries > 0 ? (weekendEntries.length / totalEntries) * 100 : 0;
+
+      return {
+        ticketType: type,
+        totalEntries,
+        revenue,
+        avgPeoplePerEntry,
+        growthRate,
+        marketShare,
+        seasonality
+      };
+    });
+    
+    console.log('✅ Real demand analytics data sent:', demandData.length, 'ticket types processed');
+    res.json(demandData);
   } catch (error) {
     console.error('Get demand analytics error:', error);
     res.status(500).json({ message: 'Failed to fetch demand analytics' });
@@ -403,6 +441,256 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
     console.error('Date-wise analytics error:', error);
     console.error('Date-wise analytics error stack:', error.stack);
     res.status(500).json({ message: 'Failed to fetch date-wise analytics' });
+  }
+});
+
+// GET /api/analytics/upgrades - Get upgrade insights
+router.get('/upgrades', authenticate, async (req, res) => {
+  try {
+    const { timeRange } = req.query;
+    console.log('Analytics upgrades request for timeRange:', timeRange);
+    
+    // Calculate date range based on timeRange
+    const now = dayjs();
+    let startDate = now;
+    
+    switch (timeRange) {
+      case '7d': startDate = now.subtract(7, 'day'); break;
+      case '30d': startDate = now.subtract(30, 'day'); break;
+      case '90d': startDate = now.subtract(90, 'day'); break;
+      case '1y': startDate = now.subtract(1, 'year'); break;
+      default: startDate = now.subtract(30, 'day');
+    }
+    
+    // Get entries within the time range
+    const entries = await Entry.find({
+      createdAt: { $gte: startDate.toDate() }
+    }).lean();
+    
+    // Calculate upgrade insights
+    const upgradeData = [];
+    const upgradeTypes = ['locker', 'food', 'special'];
+    
+    upgradeTypes.forEach(type => {
+      const entriesWithUpgrade = entries.filter(e => e.upgrades && e.upgrades.includes(type));
+      const totalRevenue = entriesWithUpgrade.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+      const upgradeCount = entriesWithUpgrade.length;
+      
+      if (upgradeCount > 0) {
+        upgradeData.push({
+          upgradeType: type,
+          count: upgradeCount,
+          revenue: totalRevenue,
+          avgRevenue: totalRevenue / upgradeCount
+        });
+      }
+    });
+    
+    console.log('✅ Real upgrade analytics data sent:', upgradeData.length, 'upgrade types processed');
+    res.json(upgradeData);
+  } catch (error) {
+    console.error('Get upgrade analytics error:', error);
+    res.status(500).json({ message: 'Failed to fetch upgrade analytics' });
+  }
+});
+
+// GET /api/analytics/timeseries - Get time series data
+router.get('/timeseries', authenticate, async (req, res) => {
+  try {
+    const { timeRange } = req.query;
+    console.log('Analytics timeseries request for timeRange:', timeRange);
+    
+    // Calculate date range based on timeRange
+    const now = dayjs();
+    let startDate = now;
+    let groupBy = 'day';
+    
+    switch (timeRange) {
+      case '7d': 
+        startDate = now.subtract(7, 'day'); 
+        groupBy = 'day';
+        break;
+      case '30d': 
+        startDate = now.subtract(30, 'day'); 
+        groupBy = 'day';
+        break;
+      case '90d': 
+        startDate = now.subtract(90, 'day'); 
+        groupBy = 'week';
+        break;
+      case '1y': 
+        startDate = now.subtract(1, 'year'); 
+        groupBy = 'month';
+        break;
+      default: 
+        startDate = now.subtract(30, 'day');
+        groupBy = 'day';
+    }
+    
+    // Get entries within the time range
+    const entries = await Entry.find({
+      createdAt: { $gte: startDate.toDate() }
+    }).lean();
+    
+    // Group entries by time period
+    const timeSeriesData = {};
+    
+    entries.forEach(entry => {
+      let key;
+      const entryDate = dayjs(entry.createdAt);
+      
+      switch (groupBy) {
+        case 'day':
+          key = entryDate.format('YYYY-MM-DD');
+          break;
+        case 'week':
+          key = entryDate.startOf('week').format('YYYY-MM-DD');
+          break;
+        case 'month':
+          key = entryDate.format('YYYY-MM');
+          break;
+        default:
+          key = entryDate.format('YYYY-MM-DD');
+      }
+      
+      if (!timeSeriesData[key]) {
+        timeSeriesData[key] = {
+          date: key,
+          entries: 0,
+          revenue: 0,
+          people: 0
+        };
+      }
+      
+      timeSeriesData[key].entries += 1;
+      timeSeriesData[key].revenue += entry.finalAmount || 0;
+      timeSeriesData[key].people += entry.totalPeople || 0;
+    });
+    
+    const result = Object.values(timeSeriesData).sort((a, b) => a.date.localeCompare(b.date));
+    
+    console.log('✅ Real timeseries analytics data sent:', result.length, 'time periods processed');
+    res.json(result);
+  } catch (error) {
+    console.error('Get timeseries analytics error:', error);
+    res.status(500).json({ message: 'Failed to fetch timeseries analytics' });
+  }
+});
+
+// GET /api/analytics/peak-hours - Get peak hours analysis
+router.get('/peak-hours', authenticate, async (req, res) => {
+  try {
+    const { timeRange } = req.query;
+    console.log('Analytics peak-hours request for timeRange:', timeRange);
+    
+    // Calculate date range based on timeRange
+    const now = dayjs();
+    let startDate = now;
+    
+    switch (timeRange) {
+      case '7d': startDate = now.subtract(7, 'day'); break;
+      case '30d': startDate = now.subtract(30, 'day'); break;
+      case '90d': startDate = now.subtract(90, 'day'); break;
+      case '1y': startDate = now.subtract(1, 'year'); break;
+      default: startDate = now.subtract(30, 'day');
+    }
+    
+    // Get entries within the time range
+    const entries = await Entry.find({
+      createdAt: { $gte: startDate.toDate() }
+    }).lean();
+    
+    // Calculate peak hours (0-23)
+    const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      entries: 0,
+      revenue: 0,
+      people: 0
+    }));
+    
+    entries.forEach(entry => {
+      const hour = dayjs(entry.createdAt).hour();
+      hourlyData[hour].entries += 1;
+      hourlyData[hour].revenue += entry.finalAmount || 0;
+      hourlyData[hour].people += entry.totalPeople || 0;
+    });
+    
+    console.log('✅ Real peak-hours analytics data sent for 24 hours');
+    res.json(hourlyData);
+  } catch (error) {
+    console.error('Get peak-hours analytics error:', error);
+    res.status(500).json({ message: 'Failed to fetch peak-hours analytics' });
+  }
+});
+
+// GET /api/analytics/customer-preferences - Get customer preferences
+router.get('/customer-preferences', authenticate, async (req, res) => {
+  try {
+    const { timeRange } = req.query;
+    console.log('Analytics customer-preferences request for timeRange:', timeRange);
+    
+    // Calculate date range based on timeRange
+    const now = dayjs();
+    let startDate = now;
+    
+    switch (timeRange) {
+      case '7d': startDate = now.subtract(7, 'day'); break;
+      case '30d': startDate = now.subtract(30, 'day'); break;
+      case '90d': startDate = now.subtract(90, 'day'); break;
+      case '1y': startDate = now.subtract(1, 'year'); break;
+      default: startDate = now.subtract(30, 'day');
+    }
+    
+    // Get entries within the time range
+    const entries = await Entry.find({
+      createdAt: { $gte: startDate.toDate() }
+    }).lean();
+    
+    // Calculate customer preferences
+    const preferences = {
+      ticketTypePreferences: {},
+      avgGroupSize: 0,
+      weekendVsWeekday: { weekend: 0, weekday: 0 },
+      timePreferences: { morning: 0, afternoon: 0, evening: 0 }
+    };
+    
+    let totalPeople = 0;
+    let totalEntries = entries.length;
+    
+    entries.forEach(entry => {
+      // Ticket type preferences
+      const ticketType = entry.ticketType || 'unknown';
+      preferences.ticketTypePreferences[ticketType] = (preferences.ticketTypePreferences[ticketType] || 0) + 1;
+      
+      // Group size
+      totalPeople += entry.totalPeople || 0;
+      
+      // Weekend vs Weekday
+      const day = dayjs(entry.createdAt).day();
+      if (day === 0 || day === 6) { // Sunday or Saturday
+        preferences.weekendVsWeekday.weekend += 1;
+      } else {
+        preferences.weekendVsWeekday.weekday += 1;
+      }
+      
+      // Time preferences
+      const hour = dayjs(entry.createdAt).hour();
+      if (hour < 12) {
+        preferences.timePreferences.morning += 1;
+      } else if (hour < 17) {
+        preferences.timePreferences.afternoon += 1;
+      } else {
+        preferences.timePreferences.evening += 1;
+      }
+    });
+    
+    preferences.avgGroupSize = totalEntries > 0 ? totalPeople / totalEntries : 0;
+    
+    console.log('✅ Real customer-preferences analytics data sent');
+    res.json([preferences]);
+  } catch (error) {
+    console.error('Get customer-preferences analytics error:', error);
+    res.status(500).json({ message: 'Failed to fetch customer-preferences analytics' });
   }
 });
 
