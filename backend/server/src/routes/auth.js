@@ -7,9 +7,24 @@ const { authenticate } = require('../middleware/auth.js');
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? 'south-water-park-secret-change-in-prod';
 
+// OPTIONS handler for CORS preflight
+router.options('/login', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Credentials', 'false');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.status(204).end();
+});
+
 /** POST /api/auth/login */
 router.post('/login', async (req, res) => {
   try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    
     console.log('🔐 Login attempt started');
     console.log('🔐 Request body:', JSON.stringify(req.body));
     console.log('🔐 Request headers:', JSON.stringify(req.headers));
