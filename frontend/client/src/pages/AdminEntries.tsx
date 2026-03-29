@@ -39,6 +39,7 @@ export function AdminEntries() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [dateFilter, setDateFilter] = useState<'today' | 'yesterday' | 'all'>('all');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
   const [editing, setEditing] = useState<EntryRecord | null>(null);
@@ -89,18 +90,34 @@ export function AdminEntries() {
     }
   }, [isClient]);
 
-  // Filter entries based on search
+  // Filter entries based on search and date
   const filteredEntries = useMemo(() => {
-    if (!search.trim()) return allEntries;
+    let filtered = allEntries;
     
-    const searchTerm = search.toLowerCase().trim();
-    return allEntries.filter(entry => 
-      entry.name?.toLowerCase().includes(searchTerm) ||
-      entry.mobile?.toLowerCase().includes(searchTerm) ||
-      entry.filledByFullName?.toLowerCase().includes(searchTerm) ||
-      entry.ticketType?.toLowerCase().includes(searchTerm)
-    );
-  }, [allEntries, search]);
+    // Apply date filter
+    if (dateFilter === 'today') {
+      filtered = filtered.filter(entry => 
+        dayjs(entry.createdAt).isSame(dayjs(), 'day')
+      );
+    } else if (dateFilter === 'yesterday') {
+      filtered = filtered.filter(entry => 
+        dayjs(entry.createdAt).isSame(dayjs().subtract(1, 'day'), 'day')
+      );
+    }
+    
+    // Apply search filter
+    if (search.trim()) {
+      const searchTerm = search.toLowerCase().trim();
+      filtered = filtered.filter(entry => 
+        entry.name?.toLowerCase().includes(searchTerm) ||
+        entry.mobile?.toLowerCase().includes(searchTerm) ||
+        entry.filledByFullName?.toLowerCase().includes(searchTerm) ||
+        entry.ticketType?.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    return filtered;
+  }, [allEntries, search, dateFilter]);
 
   // Initial load
   useEffect(() => {
@@ -114,13 +131,14 @@ export function AdminEntries() {
       return;
     }
     
-    // Apply search filter
-    if (search.trim() === '') {
-      setEntries(allEntries);
-    } else {
-      setEntries(filteredEntries);
-    }
-  }, [debouncedSearch, search, allEntries, filteredEntries]);
+    // Apply filters - filteredEntries already includes both date and search filtering
+    setEntries(filteredEntries);
+  }, [debouncedSearch, search, filteredEntries]);
+
+  // Handle date filter changes
+  useEffect(() => {
+    setEntries(filteredEntries);
+  }, [dateFilter, filteredEntries]);
 
   // Delete entry function
   const handleDelete = async (id: string) => {
@@ -234,32 +252,83 @@ export function AdminEntries() {
 
         {/* Summary Card */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">
+              {dateFilter === 'today' ? '📅 Today\'s' : dateFilter === 'yesterday' ? '📅 Yesterday\'s' : '📅 All Time'} Entries
+            </h3>
+            <div className="text-sm text-gray-600">
+              {search && `Searching: "${search}"`}
+            </div>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{allEntries.length}</div>
-              <div className="text-sm text-gray-600">Total Entries</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{filteredEntries.length}</div>
+              <div className="text-2xl font-bold text-blue-600">{entries.length}</div>
               <div className="text-sm text-gray-600">Filtered</div>
             </div>
             <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{allEntries.length}</div>
+              <div className="text-sm text-gray-600">Total Entries</div>
+            </div>
+            <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {allEntries.filter(e => dayjs(e.createdAt).isSame(dayjs(), 'day')).length}
+                {entries.reduce((sum, e) => sum + safeNumber(e.finalAmount), 0)}
               </div>
-              <div className="text-sm text-gray-600">Today</div>
+              <div className="text-sm text-gray-600">Filtered Revenue</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600">
-                ₹{allEntries.reduce((sum, e) => sum + safeNumber(e.finalAmount), 0)}
+                {entries.reduce((sum, e) => sum + (e.ticketType === '150' ? safeNumber(e.adults) : safeNumber(e.totalPeople)), 0)}
               </div>
-              <div className="text-sm text-gray-600">Total Revenue</div>
+              <div className="text-sm text-gray-600">Total People</div>
             </div>
           </div>
         </div>
 
         {/* Search and Filters */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          {/* Date Filter Tabs */}
+          <div className="flex gap-2 mb-4 border-b border-gray-200">
+            <button
+              onClick={() => setDateFilter('today')}
+              className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
+                dateFilter === 'today'
+                  ? 'text-blue-600 border-blue-600 bg-blue-50'
+                  : 'text-gray-600 border-transparent hover:text-gray-800 hover:border-gray-300'
+              }`}
+            >
+              📅 Today
+              <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                {allEntries.filter(e => dayjs(e.createdAt).isSame(dayjs(), 'day')).length}
+              </span>
+            </button>
+            <button
+              onClick={() => setDateFilter('yesterday')}
+              className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
+                dateFilter === 'yesterday'
+                  ? 'text-blue-600 border-blue-600 bg-blue-50'
+                  : 'text-gray-600 border-transparent hover:text-gray-800 hover:border-gray-300'
+              }`}
+            >
+              📅 Yesterday
+              <span className="ml-2 bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs">
+                {allEntries.filter(e => dayjs(e.createdAt).isSame(dayjs().subtract(1, 'day'), 'day')).length}
+              </span>
+            </button>
+            <button
+              onClick={() => setDateFilter('all')}
+              className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
+                dateFilter === 'all'
+                  ? 'text-blue-600 border-blue-600 bg-blue-50'
+                  : 'text-gray-600 border-transparent hover:text-gray-800 hover:border-gray-300'
+              }`}
+            >
+              📅 All Time
+              <span className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                {allEntries.length}
+              </span>
+            </button>
+          </div>
+          
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <input
@@ -346,7 +415,10 @@ export function AdminEntries() {
                   {entries.length === 0 ? (
                     <tr>
                       <td colSpan={15} className="px-4 py-8 text-center text-gray-500">
-                        {search ? 'No entries found matching your search' : 'No entries found'}
+                        {search ? 
+                          `No entries found matching "${search}" in ${dateFilter === 'today' ? 'today' : dateFilter === 'yesterday' ? 'yesterday' : 'all time'} entries` :
+                          `No entries found for ${dateFilter === 'today' ? 'today' : dateFilter === 'yesterday' ? 'yesterday' : 'all time'}`
+                        }
                       </td>
                     </tr>
                   ) : (

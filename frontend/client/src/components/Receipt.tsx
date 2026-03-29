@@ -67,6 +67,12 @@ const Receipt: React.FC<ReceiptProps> = ({ data, onClose, batchData }) => {
     (singleEntryData?.kidDiscount || 0) -
     (singleEntryData?.additionalDiscount || 0);
 
+  // Calculate total payment breakdown for validation
+  const totalPayment = (singleEntryData?.cashAmount || 0) + 
+    (singleEntryData?.upiAmount || 0) + 
+    (singleEntryData?.advanceAmount || 0) + 
+    (singleEntryData?.otherAmount || 0);
+
   const handlePrint = () => {
     const printContent = receiptRef.current;
     if (!printContent) return;
@@ -556,6 +562,12 @@ const Receipt: React.FC<ReceiptProps> = ({ data, onClose, batchData }) => {
                   <span>TOTAL:</span>
                   <span>₹{calculatedFinalAmount.toFixed(2)}</span>
                 </div>
+                {totalPayment !== calculatedFinalAmount && (
+                  <div className="receipt-row" style={{color: '#dc2626', fontSize: '10px'}}>
+                    <span>Payment Mismatch:</span>
+                    <span>₹{totalPayment.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
 
               <div className="receipt-footer">
