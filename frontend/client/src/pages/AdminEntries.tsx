@@ -8,6 +8,7 @@ import { getTicketLabel, getTicketLabelSync, computeAmounts, TICKET_OPTIONS } fr
 import { useEntryStore } from '@/store/entryStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDebounce } from '@/hooks/useDebounce';
+import { globalSyncService } from '@/services/globalSyncService';
 import type { EntryRecord, TicketType } from '@/types';
 
 // Helper function to safely convert values to strings
@@ -140,6 +141,77 @@ export function AdminEntries() {
   useEffect(() => {
     setEntries(filteredEntries);
   }, [dateFilter, filteredEntries]);
+
+  // Listen for discount-related events to refresh entries
+  useEffect(() => {
+    console.log('🔍 AdminEntries: Setting up comprehensive sync event listeners');
+    
+    const handleDiscountUpdated = (event: any) => {
+      console.log('💰 AdminEntries: Discount updated event received, refreshing entries...', event.detail);
+      fetchEntries();
+    };
+    
+    const handleAdditionalDiscountUpdated = (event: any) => {
+      console.log('🎫 AdminEntries: Additional discount updated event received, refreshing entries...', event.detail);
+      fetchEntries();
+    };
+    
+    const handlePaymentCompleted = (event: any) => {
+      console.log('💳 AdminEntries: Payment completed event received, refreshing entries...', event.detail);
+      fetchEntries();
+    };
+    
+    const handleImmediateSync = (event: any) => {
+      console.log('⚡ AdminEntries: Immediate sync event received, refreshing entries...', event.detail);
+      fetchEntries();
+    };
+    
+    const handleDiscountsSync = () => {
+      console.log('🎟️ AdminEntries: Discounts sync event received, refreshing entries...');
+      fetchEntries();
+    };
+    
+    const handleEntryCreated = (event: any) => {
+      console.log('📊 AdminEntries: Entry created event received, refreshing entries...', event.detail);
+      fetchEntries();
+    };
+    
+    // Add window event listeners
+    window.addEventListener('discount-updated', handleDiscountUpdated as EventListener);
+    window.addEventListener('additional-discount-updated', handleAdditionalDiscountUpdated as EventListener);
+    window.addEventListener('payment-completed', handlePaymentCompleted as EventListener);
+    window.addEventListener('immediate-sync', handleImmediateSync as EventListener);
+    window.addEventListener('discounts-sync', handleDiscountsSync as EventListener);
+    window.addEventListener('entry-created', handleEntryCreated as EventListener);
+    
+    // Add global sync service listeners
+    globalSyncService.addEventListener('discount-updated', handleDiscountUpdated);
+    globalSyncService.addEventListener('additional-discount-updated', handleAdditionalDiscountUpdated);
+    globalSyncService.addEventListener('payment-completed', handlePaymentCompleted);
+    globalSyncService.addEventListener('immediate-sync', handleImmediateSync);
+    globalSyncService.addEventListener('discounts-sync', handleDiscountsSync);
+    globalSyncService.addEventListener('entry-created', handleEntryCreated);
+    
+    return () => {
+      console.log('🧹 AdminEntries: Cleaning up comprehensive sync event listeners');
+      
+      // Remove window event listeners
+      window.removeEventListener('discount-updated', handleDiscountUpdated as EventListener);
+      window.removeEventListener('additional-discount-updated', handleAdditionalDiscountUpdated as EventListener);
+      window.removeEventListener('payment-completed', handlePaymentCompleted as EventListener);
+      window.removeEventListener('immediate-sync', handleImmediateSync as EventListener);
+      window.removeEventListener('discounts-sync', handleDiscountsSync as EventListener);
+      window.removeEventListener('entry-created', handleEntryCreated as EventListener);
+      
+      // Remove global sync service listeners
+      globalSyncService.removeEventListener('discount-updated', handleDiscountUpdated);
+      globalSyncService.removeEventListener('additional-discount-updated', handleAdditionalDiscountUpdated);
+      globalSyncService.removeEventListener('payment-completed', handlePaymentCompleted);
+      globalSyncService.removeEventListener('immediate-sync', handleImmediateSync);
+      globalSyncService.removeEventListener('discounts-sync', handleDiscountsSync);
+      globalSyncService.removeEventListener('entry-created', handleEntryCreated);
+    };
+  }, [fetchEntries]);
 
   // Delete entry function
   const handleDelete = async (id: string) => {
