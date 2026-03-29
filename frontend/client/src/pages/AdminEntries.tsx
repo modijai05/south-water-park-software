@@ -42,7 +42,7 @@ export function AdminEntries() {
   const [toast, setToast] = useState<{ message: string; id: string } | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [inlineEditing, setInlineEditing] = useState<{ id: string; field: string; value: string } | null>(null);
-  const limit = 20;
+  const limit = 1000; // Show all entries
 
   const fetchEntries = () => {
     setLoading(true);
@@ -213,8 +213,8 @@ export function AdminEntries() {
           </div>
         </div>
 
-        {/* Pagination */}
-        {total > limit && (
+        {/* Pagination - Always show for navigation */}
+        {total > 0 && (
           <div className="modern-card">
             <div className="flex justify-between items-center">
               <p className="text-blue-800">
