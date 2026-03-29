@@ -151,6 +151,11 @@ export function AdminEntries() {
       setEntries(prev => prev.filter(entry => entry._id !== id));
       setTotal(prev => prev - 1);
       
+      // Dispatch event for dashboard sync
+      window.dispatchEvent(new CustomEvent('entry-deleted', {
+        detail: { entryId: id, timestamp: new Date().toISOString() }
+      }));
+      
       setToast({ 
         message: '✅ Entry deleted successfully', 
         id: 'delete-success',
@@ -178,6 +183,11 @@ export function AdminEntries() {
       setEntries([]);
       setTotal(0);
       
+      // Dispatch event for dashboard sync
+      window.dispatchEvent(new CustomEvent('entries-changed', {
+        detail: { action: 'clear-all', timestamp: new Date().toISOString() }
+      }));
+      
       setToast({ 
         message: '✅ All entries cleared successfully', 
         id: 'clear-success',
@@ -196,8 +206,13 @@ export function AdminEntries() {
   };
 
   // Refresh entries
-  const handleRefresh = () => {
-    fetchEntries();
+  const handleRefresh = async () => {
+    await fetchEntries();
+    
+    // Dispatch event for dashboard sync
+    window.dispatchEvent(new CustomEvent('entries-changed', {
+      detail: { action: 'refresh', timestamp: new Date().toISOString() }
+    }));
   };
 
   // Handle new entry navigation

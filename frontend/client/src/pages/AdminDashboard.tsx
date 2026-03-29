@@ -165,6 +165,7 @@ interface Charts {
   hourlyChart: { _id: string; count: number; amount: number }[];
   ticketDistribution: { _id: string; count: number; amount: number }[];
   hourlyComparison: { hour: string; entries: number; revenue: number }[];
+  monthly: { _id: string; count: number; amount: number }[];
   summary: {
     totalEntries: number;
     totalRevenue: number;
@@ -200,6 +201,7 @@ export function AdminDashboard() {
       // Return fallback configs to prevent UI errors
       const fallbackConfigs = TICKET_OPTIONS.map(option => ({
         ticketType: option.value,
+        label: option.label,
         basePrice: option.price,
         adultPrice: option.price,
         kidPrice: Math.round(option.price * 0.5),
@@ -390,6 +392,242 @@ export function AdminDashboard() {
     }
   };
 
+  // Calculate stats directly from entries data for perfect synchronization
+  const calculateStatsFromEntries = (entriesData: any[]): Stats => {
+    const today = dayjs().format('YYYY-MM-DD');
+    const todayEntries = entriesData.filter(entry => 
+      dayjs(entry.createdAt).format('YYYY-MM-DD') === today
+    );
+    
+    // Calculate all-time totals
+    const totalEntries = entriesData.length;
+    const totalAmount = entriesData.reduce((sum, entry) => sum + (entry.finalAmount || 0), 0);
+    const totalCash = entriesData.reduce((sum, entry) => sum + (entry.cashAmount || 0), 0);
+    const totalUpi = entriesData.reduce((sum, entry) => sum + (entry.upiAmount || 0), 0);
+    const totalAdvance = entriesData.reduce((sum, entry) => sum + (entry.advanceAmount || 0), 0);
+    const totalAdults = entriesData.reduce((sum, entry) => sum + (entry.adults || 0), 0);
+    const totalKids = entriesData.reduce((sum, entry) => sum + (entry.kids || 0), 0);
+    const totalPeople = entriesData.reduce((sum, entry) => {
+      if (entry.ticketType === '150') return sum + (entry.adults || 0);
+      return sum + (entry.totalPeople || 0);
+    }, 0);
+    
+    // Calculate today's totals
+    const todayAmount = todayEntries.reduce((sum, entry) => sum + (entry.finalAmount || 0), 0);
+    const todayCash = todayEntries.reduce((sum, entry) => sum + (entry.cashAmount || 0), 0);
+    const todayUpi = todayEntries.reduce((sum, entry) => sum + (entry.upiAmount || 0), 0);
+    const todayAdvance = todayEntries.reduce((sum, entry) => sum + (entry.advanceAmount || 0), 0);
+    const todayAdults = todayEntries.reduce((sum, entry) => sum + (entry.adults || 0), 0);
+    const todayKids = todayEntries.reduce((sum, entry) => sum + (entry.kids || 0), 0);
+    const todayPeople = todayEntries.reduce((sum, entry) => {
+      if (entry.ticketType === '150') return sum + (entry.adults || 0);
+      return sum + (entry.totalPeople || 0);
+    }, 0);
+    
+    // Calculate ticket type stats
+    const ticketTypeStats = (entries: any[], ticketType: string) => {
+      const filtered = entries.filter(entry => entry.ticketType === ticketType);
+      return {
+        entries: filtered.length,
+        adults: filtered.reduce((sum, entry) => sum + (entry.adults || 0), 0),
+        kids: filtered.reduce((sum, entry) => sum + (entry.kids || 0), 0)
+      };
+    };
+    
+    // All-time ticket stats
+    const total150Stats = ticketTypeStats(entriesData, '150');
+    const total300Stats = ticketTypeStats(entriesData, '300');
+    const total450Stats = ticketTypeStats(entriesData, '450');
+    const total600Stats = ticketTypeStats(entriesData, '600');
+    const total100Stats = ticketTypeStats(entriesData, '100');
+    
+    // Today ticket stats
+    const today150Stats = ticketTypeStats(todayEntries, '150');
+    const today300Stats = ticketTypeStats(todayEntries, '300');
+    const today450Stats = ticketTypeStats(todayEntries, '450');
+    const today600Stats = ticketTypeStats(todayEntries, '600');
+    const today100Stats = ticketTypeStats(todayEntries, '100');
+    
+    // Calculate discount stats
+    const totalAdditionalDiscount = entriesData.reduce((sum, entry) => sum + (entry.additionalDiscount || 0), 0);
+    const totalKidDiscount = entriesData.reduce((sum, entry) => sum + (entry.kidDiscount || 0), 0);
+    const totalTotalDiscount = totalAdditionalDiscount + totalKidDiscount;
+    const todayAdditionalDiscount = todayEntries.reduce((sum, entry) => sum + (entry.additionalDiscount || 0), 0);
+    const todayKidDiscount = todayEntries.reduce((sum, entry) => sum + (entry.kidDiscount || 0), 0);
+    const todayTotalDiscount = todayAdditionalDiscount + todayKidDiscount;
+    
+    // Calculate food coupon stats
+    const totalAdultsFastFoodCoupons = entriesData.reduce((sum, entry) => sum + (entry.adultsFastFoodCoupon || 0), 0);
+    const totalKidsFastFoodCoupons = entriesData.reduce((sum, entry) => sum + (entry.kidsFastFoodCoupon || 0), 0);
+    const totalAdultsMainFoodCoupons = entriesData.reduce((sum, entry) => sum + (entry.adultsMainFoodCoupon || 0), 0);
+    const totalKidsMainFoodCoupons = entriesData.reduce((sum, entry) => sum + (entry.kidsMainFoodCoupon || 0), 0);
+    const totalFastFoodCoupons = totalAdultsFastFoodCoupons + totalKidsFastFoodCoupons;
+    const totalMainFoodCoupons = totalAdultsMainFoodCoupons + totalKidsMainFoodCoupons;
+    const totalFoodCoupons = totalFastFoodCoupons + totalMainFoodCoupons;
+    
+    const todayAdultsFastFoodCoupons = todayEntries.reduce((sum, entry) => sum + (entry.adultsFastFoodCoupon || 0), 0);
+    const todayKidsFastFoodCoupons = todayEntries.reduce((sum, entry) => sum + (entry.kidsFastFoodCoupon || 0), 0);
+    const todayAdultsMainFoodCoupons = todayEntries.reduce((sum, entry) => sum + (entry.adultsMainFoodCoupon || 0), 0);
+    const todayKidsMainFoodCoupons = todayEntries.reduce((sum, entry) => sum + (entry.kidsMainFoodCoupon || 0), 0);
+    const todayFastFoodCoupons = todayAdultsFastFoodCoupons + todayKidsFastFoodCoupons;
+    const todayMainFoodCoupons = todayAdultsMainFoodCoupons + todayKidsMainFoodCoupons;
+    const todayTotalFoodCoupons = todayFastFoodCoupons + todayMainFoodCoupons;
+    
+    return {
+      // Basic stats
+      todayEntries: todayEntries.length,
+      totalEntries,
+      todayPeople,
+      totalPeople,
+      todayAdults,
+      totalAdults,
+      todayKids,
+      totalKids,
+      todayCash,
+      totalCash,
+      todayUpi,
+      totalUpi,
+      todayAdvance,
+      totalAdvance,
+      todayAmount,
+      totalAmount,
+      
+      // Upgrade stats
+      totalUpgrades: entriesData.filter(entry => entry.upgrades && entry.upgrades.length > 0).length,
+      todayUpgrades: todayEntries.filter(entry => entry.upgrades && entry.upgrades.length > 0).length,
+      
+      // Discount stats
+      todayAdditionalDiscount,
+      todayTotalDiscount,
+      totalAdditionalDiscount,
+      totalTotalDiscount,
+      
+      // Performance metrics
+      averageTicketValue: totalEntries > 0 ? Math.round(totalAmount / totalEntries) : 0,
+      peakHour: '12:00', // Would need more complex calculation
+      busiestDay: 'Monday', // Would need more complex calculation
+      uniqueCustomers: totalEntries, // Simplified
+      returningCustomers: 0, // Would need tracking
+      conversionRate: 100, // Simplified
+      
+      // Ticket type counts
+      today150: today150Stats.entries,
+      today300: today300Stats.entries,
+      today450: today450Stats.entries,
+      today600: today600Stats.entries,
+      today100: today100Stats.entries,
+      total150: total150Stats.entries,
+      total300: total300Stats.entries,
+      total450: total450Stats.entries,
+      total600: total600Stats.entries,
+      total100: total100Stats.entries,
+      
+      // Per-ticket-type adult and kid counts
+      today150Adults: today150Stats.adults,
+      today150Kids: today150Stats.kids,
+      today300Adults: today300Stats.adults,
+      today300Kids: today300Stats.kids,
+      today450Adults: today450Stats.adults,
+      today450Kids: today450Stats.kids,
+      today600Adults: today600Stats.adults,
+      today600Kids: today600Stats.kids,
+      today100Adults: today100Stats.adults,
+      today100Kids: today100Stats.kids,
+      total150Adults: total150Stats.adults,
+      total150Kids: total150Stats.kids,
+      total300Adults: total300Stats.adults,
+      total300Kids: total300Stats.kids,
+      total450Adults: total450Stats.adults,
+      total450Kids: total450Stats.kids,
+      total600Adults: total600Stats.adults,
+      total600Kids: total600Stats.kids,
+      total100Adults: total100Stats.adults,
+      total100Kids: total100Stats.kids,
+      
+      // Food coupon stats
+      todayAdultsFastFoodCoupons,
+      todayKidsFastFoodCoupons,
+      todayAdultsMainFoodCoupons,
+      todayKidsMainFoodCoupons,
+      todayTotalFastFoodCoupons: todayFastFoodCoupons,
+      todayTotalMainFoodCoupons: todayMainFoodCoupons,
+      todayTotalFoodCoupons,
+      totalAdultsFastFoodCoupons,
+      totalKidsFastFoodCoupons,
+      totalAdultsMainFoodCoupons,
+      totalKidsMainFoodCoupons,
+      totalFastFoodCoupons,
+      totalMainFoodCoupons,
+      totalFoodCoupons,
+      
+      // Performance metadata
+      lastUpdated: new Date().toISOString(),
+      dataFreshness: 'real-time',
+      source: 'entries-data',
+      syncStatus: 'synchronized'
+    };
+  };
+  
+  // Sync dashboard with entries data
+  const syncDashboardWithEntries = async () => {
+    try {
+      console.log('🔄 Dashboard: Syncing with entries data...');
+      
+      // Fetch all entries data
+      const entriesRes = await entriesApi.list({ page: 1, limit: 50000 });
+      const entriesData = (entriesRes.data?.entries as any[]) ?? [];
+      
+      console.log('🔄 Dashboard: Fetched', entriesData.length, 'entries for synchronization');
+      
+      // Calculate stats from entries data
+      const calculatedStats = calculateStatsFromEntries(entriesData);
+      
+      console.log('🔄 Dashboard: Calculated stats from entries:', {
+        totalEntries: calculatedStats.totalEntries,
+        totalAmount: calculatedStats.totalAmount,
+        todayEntries: calculatedStats.todayEntries,
+        todayAmount: calculatedStats.todayAmount
+      });
+      
+      // Update dashboard stats with synchronized data
+      setStats(calculatedStats);
+      
+      // Fetch all charts data (including monthly)
+      const [todayChartsData, allChartsData] = await Promise.all([
+        entriesApi.todayCharts(),
+        entriesApi.charts()
+      ]);
+      
+      // Combine charts data
+      const combinedCharts = {
+        ...todayChartsData,
+        monthly: allChartsData.monthly || []
+      };
+      
+      setCharts(combinedCharts as unknown as Charts);
+      
+      // Update recent entries
+      const sortedEntries = entriesData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const finalEntries = sortedEntries.slice(0, 5);
+      setRecentEntries(finalEntries);
+      
+      console.log('✅ Dashboard: Successfully synchronized with entries data');
+      
+      // Trigger sync event
+      window.dispatchEvent(new CustomEvent('dashboard-synced-with-entries', {
+        detail: {
+          timestamp: new Date().toISOString(),
+          source: 'entries-sync',
+          stats: calculatedStats,
+          entriesCount: entriesData.length
+        }
+      }));
+      
+    } catch (error) {
+      console.error('❌ Dashboard: Failed to sync with entries data:', error);
+    }
+  };
+
   // Get current ticket price from dynamic configs (with day-wise pricing) - FIXED
   const getCurrentTicketPrice = (ticketType: string): number => {
     const config = ticketConfigs.find(c => c.ticketType === ticketType);
@@ -431,56 +669,17 @@ export function AdminDashboard() {
       try {
         setLoading(true);
         setError(null);
-        console.log('Dashboard: Fetching data...');
+        console.log('Dashboard: Fetching data with entries synchronization...');
         
-        // Fetch ticket configs along with other data
-        const [s, c] = await Promise.all([
-          entriesApi.stats(true), // Force refresh from MongoDB
-          entriesApi.todayCharts(), // Use today's charts endpoint
-          fetchTicketConfigs()
-        ]);
+        // Use entries-based synchronization for perfect data alignment
+        await syncDashboardWithEntries();
+        
+        // Fetch ticket configs
+        await fetchTicketConfigs();
         
         if (!cancelled) {
-          console.log('Dashboard: Raw MongoDB stats data:', s);
-          console.log('Dashboard: Charts data:', c);
-          
-          // Check if data shows previous day and needs force reset
-          if (needsForceReset(s)) {
-            console.log('🚨 DETECTED: Previous day data still showing - triggering force reset');
-            
-            // Trigger force reset automatically
-            forceDailyResetComplete().then(result => {
-              if (result.success) {
-                console.log('✅ Automatic force reset successful');
-                fetchAllData(); // Refresh data after successful reset
-              } else {
-                console.error('❌ Automatic force reset failed');
-              }
-            });
-            
-            return; // Don't set the data until reset is complete
-          }
-          
-          // Use backend stats directly - backend now handles all calculations correctly
-          setStats(s as unknown as Stats);
-          setCharts(c as unknown as Charts);
-          
-          // Fetch recent entries
-          try {
-            const recentData = await entriesApi.list({ limit: 5, page: 1 });
-            const entries = (recentData.data?.entries as any[]) ?? [];
-            
-            // Sort by createdAt descending (most recent first) and take top 5
-            const sortedEntries = entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            const finalEntries = sortedEntries.slice(0, 5);
-            setRecentEntries(finalEntries);
-          } catch (recentError) {
-            console.error('❌ Dashboard: Failed to fetch recent entries:', recentError);
-            setRecentEntries([]);
-          }
-          
           setLoading(false);
-          console.log('Dashboard: Data fetched and corrected successfully');
+          console.log('Dashboard: Data fetched and synchronized with entries successfully');
         }
       } catch (error) {
         console.error('❌ Dashboard: Failed to fetch data:', error);
@@ -561,61 +760,8 @@ export function AdminDashboard() {
     const handleEntryUpdate = () => {
       if (!cancelled) {
         console.log('🔄 Dashboard: Entry update sync triggered...');
-        const fetchData = async () => {
-          try {
-            console.log('🔄 Dashboard: Fetching updated data...');
-            const [s, c] = await Promise.all([
-              entriesApi.stats(), 
-              entriesApi.todayCharts(),
-              fetchTicketConfigs() // Also refresh ticket configs to ensure pricing sync
-            ]);
-            if (!cancelled) {
-              console.log('📊 Dashboard: Updated stats received:', s);
-              console.log('📈 Dashboard: Updated charts received:', c);
-              
-              // Log specific discount data for debugging
-              console.log('💰 Dashboard: Additional Discount Data - Today:', (s as any)?.todayAdditionalDiscount, 'Total:', (s as any)?.totalAdditionalDiscount);
-              console.log('💰 Dashboard: Total Discount Data - Today:', (s as any)?.todayTotalDiscount, 'All-Time:', (s as any)?.totalTotalDiscount);
-              
-              setStats(s as unknown as Stats);
-              setCharts(c as unknown as Charts);
-              
-              // Refresh recent entries
-              try {
-                const recentData = await entriesApi.list({ limit: 5, page: 1 });
-                const entries = (recentData.data?.entries as any[]) ?? [];
-                const sortedEntries = entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-                const finalEntries = sortedEntries.slice(0, 5);
-                setRecentEntries(finalEntries);
-              } catch (recentError) {
-                console.error('❌ Dashboard: Failed to refresh recent entries:', recentError);
-              }
-              
-              console.log('✅ Dashboard: Data updated successfully');
-              console.log('🍔 Dashboard: Food coupons data - todayTotal:', (s as any)?.todayTotalFoodCoupons, 'totalFoodCoupons:', (s as any)?.totalFoodCoupons);
-              console.log('💰 Dashboard: Additional discount data - todayAdditionalDiscount:', (s as any)?.todayAdditionalDiscount, 'totalAdditionalDiscount:', (s as any)?.totalAdditionalDiscount);
-              
-              // Dispatch sync event for other components
-              window.dispatchEvent(new CustomEvent('dashboard-synced', {
-                detail: { 
-                  timestamp: new Date().toISOString(), 
-                  stats: s, 
-                  charts: c,
-                  discounts: {
-                    todayAdditionalDiscount: (s as any)?.todayAdditionalDiscount,
-                    totalAdditionalDiscount: (s as any)?.totalAdditionalDiscount,
-                    todayTotalDiscount: (s as any)?.todayTotalDiscount,
-                    totalTotalDiscount: (s as any)?.totalTotalDiscount
-                  }
-                }
-              }));
-            }
-          } catch (error) {
-            console.error('❌ Dashboard: Failed to refresh data:', error);
-          }
-        };
-
-        fetchData();
+        // Use entries-based synchronization for perfect data alignment
+        syncDashboardWithEntries();
       }
     };
 
@@ -635,6 +781,17 @@ export function AdminDashboard() {
       handleEntryUpdate();
     };
 
+    // Listen for entries changes from AdminEntries page
+    const handleEntriesChange = (event: any) => {
+      console.log('🔄 Dashboard: Entries change detected:', event.detail);
+      handleEntryUpdate();
+    };
+    
+    window.addEventListener('entries-changed', handleEntriesChange);
+    window.addEventListener('entry-created', handleEntriesChange);
+    window.addEventListener('entry-updated', handleEntriesChange);
+    window.addEventListener('entry-deleted', handleEntriesChange);
+    
     // Listen for comprehensive sync events
     window.addEventListener('comprehensive-sync-complete', handleComprehensiveSync);
     window.addEventListener('dashboard-refresh-required', handleComprehensiveSync);
@@ -690,6 +847,10 @@ export function AdminDashboard() {
       cancelled = true;
       window.removeEventListener('comprehensive-sync-complete', handleComprehensiveSync);
       window.removeEventListener('dashboard-refresh-required', handleComprehensiveSync);
+      window.removeEventListener('entries-changed', handleEntriesChange);
+      window.removeEventListener('entry-created', handleEntriesChange);
+      window.removeEventListener('entry-updated', handleEntriesChange);
+      window.removeEventListener('entry-deleted', handleEntriesChange);
       window.removeEventListener('entry-updated', throttledHandleEntryUpdate);
       window.removeEventListener('entry-created', immediateHandleEntryUpdate);
       window.removeEventListener('entry-deleted', immediateHandleEntryUpdate);
@@ -851,7 +1012,7 @@ export function AdminDashboard() {
     };
   }, []);
 
-  const safeCharts = charts || { hourlyChart: [], ticketDistribution: [], hourlyComparison: [], summary: { totalEntries: 0, totalRevenue: 0, date: '', lastUpdated: '' } };
+  const safeCharts = charts || { hourlyChart: [], ticketDistribution: [], hourlyComparison: [], monthly: [], summary: { totalEntries: 0, totalRevenue: 0, date: '', lastUpdated: '' } };
 
   // Loading guard
   if (loading) {
@@ -951,6 +1112,52 @@ export function AdminDashboard() {
                 </div>
               </motion.div>
             )}
+
+            {/* Sync Controls */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span className="text-sm font-medium text-blue-800">
+                      Data Source: <span className="font-bold">{stats?.source || 'API'}</span> | 
+                      Sync Status: <span className="font-bold">{stats?.syncStatus || 'Connected'}</span> | 
+                      Last Updated: <span className="font-bold">{stats?.lastUpdated ? dayjs(stats.lastUpdated).format('HH:mm:ss') : 'Unknown'}</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="flex space-x-2">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={syncDashboardWithEntries}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Sync with Entries</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={forceRefreshAllData}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                    <span>Force Refresh</span>
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
 
             {/* Welcome Message */}
             <motion.div
