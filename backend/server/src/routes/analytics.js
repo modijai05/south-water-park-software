@@ -694,4 +694,165 @@ router.get('/customer-preferences', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/analytics/discounts - Get discount analytics
+router.get('/discounts', authenticate, async (req, res) => {
+  try {
+    const { timeRange } = req.query;
+    console.log('Analytics discounts request for timeRange:', timeRange);
+    
+    // Calculate date range based on timeRange
+    const now = dayjs();
+    let startDate = now;
+    
+    switch (timeRange) {
+      case '7d': startDate = now.subtract(7, 'day'); break;
+      case '30d': startDate = now.subtract(30, 'day'); break;
+      case '90d': startDate = now.subtract(90, 'day'); break;
+      case '1y': startDate = now.subtract(1, 'year'); break;
+      default: startDate = now.subtract(30, 'day');
+    }
+    
+    // Get entries within the time range
+    const entries = await Entry.find({
+      createdAt: { $gte: startDate.toDate() }
+    }).lean();
+    
+    // Calculate comprehensive discount analytics
+    const discountAnalytics = {
+      summary: {
+        totalEntries: entries.length,
+        entriesWithDiscounts: 0,
+        totalDiscountAmount: 0,
+        totalAdditionalDiscount: 0,
+        totalKidDiscount: 0,
+        averageDiscountPerEntry: 0,
+        discountRate: 0
+      },
+      trends: {
+        dailyDiscounts: [],
+        discountTypes: {
+          additional: { count: 0, amount: 0, avgAmount: 0 },
+          kid: { count: 0, amount: 0, avgAmount: 0 }
+        },
+        ticketTypeDiscounts: {}
+      },
+      insights: {
+        highestDiscountDay: null,
+        mostDiscountedTicketType: null,
+        discountFrequency: 'low',
+        totalSavings: 0
+      }
+    };
+    
+    // Process entries for discount data
+    const dailyData = {};
+    
+    entries.forEach(entry => {
+      const additionalDiscount = entry.additionalDiscount || 0;
+      const kidDiscount = entry.kidDiscount || 0;
+      const totalDiscount = additionalDiscount + kidDiscount;
+      
+      if (totalDiscount > 0) {
+        discountAnalytics.summary.entriesWithDiscounts++;
+        discountAnalytics.summary.totalDiscountAmount += totalDiscount;
+        discountAnalytics.summary.totalAdditionalDiscount += additionalDiscount;
+        discountAnalytics.summary.totalKidDiscount += kidDiscount;
+        
+        // Track by ticket type
+        const ticketType = entry.ticketType || 'unknown';
+        if (!discountAnalytics.trends.ticketTypeDiscounts[ticketType]) {
+          discountAnalytics.trends.ticketTypeDiscounts[ticketType] = {
+            count: 0,
+            totalDiscount: 0,
+            avgDiscount: 0
+          };
+        }
+        discountAnalytics.trends.ticketTypeDiscounts[ticketType].count++;
+        discountAnalytics.trends.ticketTypeDiscounts[ticketType].totalDiscount += totalDiscount;
+        
+        // Track discount types
+        if (additionalDiscount > 0) {
+          discountAnalytics.trends.discountTypes.additional.count++;
+          discountAnalytics.trends.discountTypes.additional.amount += additionalDiscount;
+        }
+        if (kidDiscount > 0) {
+          discountAnalytics.trends.discountTypes.kid.count++;
+          discountAnalytics.trends.discountTypes.kid.amount += kidDiscount;
+        }
+        
+        // Track daily discounts
+        const day = dayjs(entry.createdAt).format('YYYY-MM-DD');
+        if (!dailyData[day]) {
+          dailyData[day] = { date: day, additionalDiscount: 0, kidDiscount: 0, totalDiscount: 0, entries: 0 };
+        }
+        dailyData[day].additionalDiscount += additionalDiscount;
+        dailyData[day].kidDiscount += kidDiscount;
+        dailyData[day].totalDiscount += totalDiscount;
+        dailyData[day].entries++;
+      }
+    });
+    
+    // Calculate averages and rates
+    if (entries.length > 0) {
+      discountAnalytics.summary.discountRate = (discountAnalytics.summary.entriesWithDiscounts / entries.length) * 100;
+      discountAnalytics.summary.averageDiscountPerEntry = discountAnalytics.summary.totalDiscountAmount / entries.length;
+    }
+    
+    // Calculate average discount amounts for discount types
+    if (discountAnalytics.trends.discountTypes.additional.count > 0) {
+      discountAnalytics.trends.discountTypes.additional.avgAmount = 
+        discountAnalytics.trends.discountTypes.additional.amount / discountAnalytics.trends.discountTypes.additional.count;
+    }
+    if (discountAnalytics.trends.discountTypes.kid.count > 0) {
+      discountAnalytics.trends.discountTypes.kid.avgAmount = 
+        discountAnalytics.trends.discountTypes.kid.amount / discountAnalytics.trends.discountTypes.kid.count;
+    }
+    
+    // Calculate average discount per ticket type
+    Object.keys(discountAnalytics.trends.ticketTypeDiscounts).forEach(ticketType => {
+      const data = discountAnalytics.trends.ticketTypeDiscounts[ticketType];
+      data.avgDiscount = data.count > 0 ? data.totalDiscount / data.count : 0;
+    });
+    
+    // Convert daily data to array and sort
+    discountAnalytics.trends.dailyDiscounts = Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
+    
+    // Find insights
+    if (discountAnalytics.trends.dailyDiscounts.length > 0) {
+      const highestDay = discountAnalytics.trends.dailyDiscounts.reduce((max, day) => 
+        day.totalDiscount > max.totalDiscount ? day : max
+      );
+      discountAnalytics.insights.highestDiscountDay = highestDay;
+    }
+    
+    const ticketTypeEntries = Object.entries(discountAnalytics.trends.ticketTypeDiscounts);
+    if (ticketTypeEntries.length > 0) {
+      const mostDiscounted = ticketTypeEntries.reduce((max, [type, data]) => 
+        data.totalDiscount > max[1].totalDiscount ? [type, data] : max
+      );
+      discountAnalytics.insights.mostDiscountedTicketType = {
+        ticketType: mostDiscounted[0],
+        ...mostDiscounted[1]
+      };
+    }
+    
+    // Determine discount frequency
+    if (discountAnalytics.summary.discountRate > 50) {
+      discountAnalytics.insights.discountFrequency = 'high';
+    } else if (discountAnalytics.summary.discountRate > 20) {
+      discountAnalytics.insights.discountFrequency = 'medium';
+    } else {
+      discountAnalytics.insights.discountFrequency = 'low';
+    }
+    
+    discountAnalytics.insights.totalSavings = discountAnalytics.summary.totalDiscountAmount;
+    
+    console.log('✅ Real discount analytics data sent');
+    res.json(discountAnalytics);
+  } catch (error) {
+    console.error('Get discount analytics error:', error);
+    res.status(500).json({ message: 'Failed to fetch discount analytics' });
+  }
+});
+
 module.exports = { analyticsRouter: router };

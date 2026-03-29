@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import dayjs from 'dayjs';
 import { Layout } from '@/components/Layout';
+import { DiscountAnalytics } from '@/components/DiscountAnalytics';
 import { computeAmounts, TICKET_OPTIONS, isSunday } from '@/lib/ticketUtils';
 import { ticketConfigApi } from '@/lib/ticketApi';
 import { entriesApi } from '@/lib/api';
@@ -2681,33 +2682,8 @@ export function AdminDashboard() {
                   </div>
                 </motion.div>
 
-                {/* Discount Analytics */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border-2 border-amber-200"
-                >
-                  <h4 className="text-lg font-bold text-amber-900 mb-4">💰 Discount Analytics</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-amber-700">Today's Discounts:</span>
-                      <span className="font-bold text-amber-900">₹{!stats ? '0' : <AnimatedCounter value={stats.todayTotalDiscount || 0} />}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-amber-700">Additional Today:</span>
-                      <span className="font-bold text-amber-900">₹{!stats ? '0' : <AnimatedCounter value={stats.todayAdditionalDiscount || 0} />}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-amber-700">All-Time Discounts:</span>
-                      <span className="font-bold text-amber-900">₹{!stats ? '0' : <AnimatedCounter value={stats.totalTotalDiscount || 0} />}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-amber-700">Additional All-Time:</span>
-                      <span className="font-bold text-amber-900">₹{!stats ? '0' : <AnimatedCounter value={stats.totalAdditionalDiscount || 0} />}</span>
-                    </div>
-                  </div>
-                </motion.div>
+                {/* Professional Discount Analytics */}
+                <DiscountAnalytics timeRange="30d" />
               </div>
 
               {/* Performance Metrics */}

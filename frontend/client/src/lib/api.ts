@@ -653,6 +653,13 @@ export const analyticsApi = {
     const query = q.toString();
     return api<any[]>(`/analytics/customer-preferences${query ? `?${query}` : ''}`);
   },
+  discounts: (timeRange?: string) => {
+    const q = new URLSearchParams();
+    if (timeRange) q.set('timeRange', timeRange);
+    q.set('t', Date.now().toString()); // Cache-busting
+    const query = q.toString();
+    return api<any>(`/analytics/discounts${query ? `?${query}` : ''}`);
+  },
   today: () => {
     return api<{ todayAnalytics: any[], summary: any }>(`/analytics/today`);
   },
