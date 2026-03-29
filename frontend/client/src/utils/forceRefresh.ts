@@ -1,6 +1,11 @@
 // Force refresh utility to immediately update all data to today's date
 import { entriesApi } from '@/lib/api';
 import { performDailyReset, clearTodayCache } from './dailyReset';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+// Enable UTC plugin
+dayjs.extend(utc);
 
 export const forceRefreshToToday = async () => {
   console.log('🚀 Force refreshing all data to today\'s date...');
@@ -100,17 +105,18 @@ export const manualForceRefresh = async () => {
   }
 };
 
-// Auto-check and force refresh if needed
+// Auto-check and force refresh if needed (UTC-based)
 export const checkAndForceRefresh = () => {
   const lastForceRefresh = localStorage.getItem('last-force-refresh-today');
-  const today = new Date().toISOString().split('T')[0];
+  const today = dayjs().utc().format('YYYY-MM-DD');
   
-  console.log('🔍 Checking if force refresh is needed...');
+  console.log('🔍 Checking if force refresh is needed (UTC):');
   console.log('📅 Last force refresh:', lastForceRefresh);
-  console.log('📅 Today:', today);
+  console.log('📅 Today (UTC):', today);
+  console.log('📅 Local time:', dayjs().format('YYYY-MM-DD'));
   
   if (lastForceRefresh !== today) {
-    console.log('🚀 Auto-triggering force refresh for today...');
+    console.log('🚀 Auto-triggering force refresh for today (UTC)...');
     forceRefreshToToday();
     localStorage.setItem('last-force-refresh-today', today);
     return true;

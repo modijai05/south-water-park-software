@@ -1,5 +1,10 @@
 // System reset utility to ensure deployment changes take effect
 import { performDailyReset, clearTodayCache } from './dailyReset';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+// Enable UTC plugin
+dayjs.extend(utc);
 
 export const triggerSystemReset = () => {
   console.log('🔄 Triggering system reset for deployment changes...');
@@ -42,10 +47,17 @@ export const triggerSystemReset = () => {
   // Silent reset - no popup notifications
 };
 
-// Auto-trigger reset if needed
+// Auto-trigger reset if needed (UTC-based)
 export const checkAndTriggerReset = () => {
   const lastReset = localStorage.getItem('south-water-park-last-reset');
-  const today = new Date().toISOString().split('T')[0];
+  const today = dayjs().utc().format('YYYY-MM-DD');
+  
+  console.log('🔄 System reset check (UTC):', {
+    lastReset,
+    today,
+    localTime: dayjs().format('YYYY-MM-DD'),
+    utcTime: dayjs().utc().format('YYYY-MM-DD')
+  });
   
   if (lastReset !== today) {
     console.log('🔄 Auto-triggering system reset for new deployment...');

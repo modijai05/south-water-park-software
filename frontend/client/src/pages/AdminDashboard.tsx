@@ -16,6 +16,11 @@ import { useDailyReset, performDailyReset, needsDailyReset } from '@/utils/daily
 import { checkAndTriggerReset } from '@/utils/systemReset';
 import { checkAndForceRefresh } from '@/utils/forceRefresh';
 import { verifyTodayData, autoVerify } from '@/utils/verifyTodayData';
+import { forceDailyResetComplete, needsForceReset } from '@/utils/forceDailyReset';
+import utc from 'dayjs/plugin/utc';
+
+// Enable UTC plugin
+dayjs.extend(utc);
 
 // Helper functions for data transformation
 const generateQuarterlyData = (monthlyData: any[]) => {
@@ -261,13 +266,19 @@ export function AdminDashboard() {
   useEffect(() => {
     // Prevent multiple reset triggers on same page load
     const resetAlreadyTriggered = sessionStorage.getItem('admin-reset-triggered');
-    const today = new Date().toISOString().split('T')[0];
+    const today = dayjs().utc().format('YYYY-MM-DD');
     
-    // Clear session storage if it's a new day
+    // Clear session storage if it's a new day (UTC-based)
     const lastResetDate = sessionStorage.getItem('admin-reset-date');
     if (lastResetDate !== today) {
       sessionStorage.clear();
       sessionStorage.setItem('admin-reset-date', today);
+      console.log('🔄 New UTC day detected, cleared session storage:', {
+        lastResetDate,
+        today,
+        localTime: dayjs().format('YYYY-MM-DD'),
+        utcTime: dayjs().utc().format('YYYY-MM-DD')
+      });
     }
     
     if (needsDailyReset()) {
@@ -294,7 +305,8 @@ export function AdminDashboard() {
           
           console.log('🔄 AdminDashboard: Reset operations completed', {
             systemReset: systemResetNeeded,
-            forceRefresh: forceRefreshNeeded
+            forceRefresh: forceRefreshNeeded,
+            utcDate: today
           });
         } catch (error) {
           console.error('❌ AdminDashboard: Reset operations failed:', error);
@@ -311,6 +323,30 @@ export function AdminDashboard() {
     setTimeout(() => {
       autoVerify();
     }, 5000); // Delay to allow resets to complete
+    
+    // Listen for force reset events
+    const handleForceResetSuccess = (event: any) => {
+      console.log('🎉 Force reset successful:', event.detail);
+      // Refresh data after successful force reset
+      fetchAllData();
+    };
+    
+    const handleForceResetFailure = (event: any) => {
+      console.error('❌ Force reset failed:', event.detail);
+      // Show user notification for manual intervention
+      if (typeof window !== 'undefined' && window.alert) {
+        alert('⚠️ Daily reset failed! Previous day data is still showing.\n\nPlease refresh the page or contact support.\n\nYou can also try: window.forceDailyResetComplete()');
+      }
+    };
+    
+    window.addEventListener('force-daily-reset-success', handleForceResetSuccess);
+    window.addEventListener('force-daily-reset-failure', handleForceResetFailure);
+    
+    // Cleanup listeners
+    return () => {
+      window.removeEventListener('force-daily-reset-success', handleForceResetSuccess);
+      window.removeEventListener('force-daily-reset-failure', handleForceResetFailure);
+    };
   }, []);
 
   // Enhanced sync function to force refresh all data
@@ -407,6 +443,23 @@ export function AdminDashboard() {
         if (!cancelled) {
           console.log('Dashboard: Raw MongoDB stats data:', s);
           console.log('Dashboard: Charts data:', c);
+          
+          // Check if data shows previous day and needs force reset
+          if (needsForceReset(s)) {
+            console.log('🚨 DETECTED: Previous day data still showing - triggering force reset');
+            
+            // Trigger force reset automatically
+            forceDailyResetComplete().then(result => {
+              if (result.success) {
+                console.log('✅ Automatic force reset successful');
+                fetchAllData(); // Refresh data after successful reset
+              } else {
+                console.error('❌ Automatic force reset failed');
+              }
+            });
+            
+            return; // Don't set the data until reset is complete
+          }
           
           // Use backend stats directly - backend now handles all calculations correctly
           setStats(s as unknown as Stats);

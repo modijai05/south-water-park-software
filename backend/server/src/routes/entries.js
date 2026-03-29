@@ -352,17 +352,20 @@ const simpleAuth = (req, res, next) => {
   }
 };
 
-// Helper function to get today's date range
+// Helper function to get today's date range (UTC-based for consistency)
 const getTodayRange = () => {
-  const now = dayjs();
-  const startOfDay = now.startOf('day').toDate();
-  const endOfDay = now.endOf('day').toDate();
+  // Use UTC timezone to ensure consistent date handling across server and client
+  const now = dayjs().utc();
+  const startOfDay = now.startOf('day').utc().toDate();
+  const endOfDay = now.endOf('day').utc().toDate();
   
-  console.log('📅 Today date range:', {
+  console.log('📅 Today date range (UTC):', {
     now: now.toISOString(),
     startOfDay: startOfDay.toISOString(),
     endOfDay: endOfDay.toISOString(),
-    timezone: now.format('Z')
+    timezone: 'UTC',
+    localDate: now.format('YYYY-MM-DD'),
+    localTime: now.format('HH:mm:ss')
   });
   
   return { startOfDay, endOfDay };
