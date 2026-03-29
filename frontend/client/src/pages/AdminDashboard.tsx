@@ -1566,6 +1566,22 @@ export function AdminDashboard() {
               </div>
             </div>
 
+            {/* Section Separator */}
+            <div className="relative py-8 mb-8">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <div className="bg-white px-6 py-3 rounded-full shadow-lg border border-gray-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-bold text-gray-700">Daily Reset at Midnight</span>
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* All-Time Statistics */}
             <div className="relative mb-12">
               {/* Background decoration */}
@@ -1593,6 +1609,56 @@ export function AdminDashboard() {
                 </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Comparison Card - Today vs All-Time */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 50 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.7, ease: "backOut" }}
+                    whileHover={{
+                      scale: 1.02,
+                      y: -5,
+                      boxShadow: "0 25px 50px rgba(59, 130, 246, 0.2)"
+                    }}
+                    className="group relative bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-8 shadow-2xl text-white lg:col-span-2"
+                  >
+                    <div className="absolute inset-0 bg-white/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <p className="text-lg font-bold text-blue-100 mb-2">📊 Revenue Comparison</p>
+                          <div className="grid grid-cols-2 gap-6">
+                            <div>
+                              <p className="text-xs text-blue-200 mb-1">Today's Revenue</p>
+                              <p className="text-3xl font-extrabold text-white">
+                                ₹{!stats ? '0' : <AnimatedCounter value={stats.todayAmount ?? 0} />}
+                              </p>
+                              <p className="text-xs text-blue-200 mt-1">Resets daily at midnight</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-blue-200 mb-1">All-Time Revenue</p>
+                              <p className="text-3xl font-extrabold text-white">
+                                ₹{!stats ? '0' : <AnimatedCounter value={stats.totalAmount ?? 0} />}
+                              </p>
+                              <p className="text-xs text-blue-200 mt-1">Preserved forever</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center shadow-lg">
+                          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm2-4h.01M17 19h.01" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="flex items-center text-sm text-blue-100">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span className="font-medium">Daily reset preserves all-time data</span>
+                      </div>
+                    </div>
+                  </motion.div>
+
                   {/* All Time Entries */}
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9, y: 50 }}
