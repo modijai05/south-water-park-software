@@ -268,7 +268,7 @@ export const entriesApi = {
           lastUpdated: string;
         };
       };
-      metadata: {
+      metadata?: {
         syncType: string;
         timestamp: string;
         dataFreshness: string;
@@ -279,7 +279,9 @@ export const entriesApi = {
           cacheStatus: string;
           dataIntegrity: string;
         };
+        error?: string;
       };
+      error?: string;
     }>(`/entries/sync-all?t=${timestamp}`)
       .then(response => {
         if (!response || !response.success) {
@@ -299,9 +301,15 @@ export const entriesApi = {
               timestamp: new Date().toISOString(),
               dataFreshness: 'error',
               source: 'fallback',
-              syncStatus: 'error'
-            }
-          };
+              syncStatus: 'error',
+              error: response?.error || 'Unknown error',
+              performance: {
+                queryTime: Date.now(),
+                cacheStatus: 'error',
+                dataIntegrity: 'compromised'
+              }
+            };
+          }
         }
         
         // Enhanced validation of response data
@@ -325,21 +333,29 @@ export const entriesApi = {
               queryTime: Date.now(),
               cacheStatus: 'unknown',
               dataIntegrity: 'unknown'
-            }
+            },
+            error: response.metadata?.error
           }
         };
         
-        console.log('🔄 API: Sync-all completed successfully:', {
-          totalRecords: safeData.summary.totalRecords,
-          todayRecords: safeData.summary.todayRecords,
-          dataFreshness: safeData.metadata.dataFreshness,
-          syncStatus: safeData.metadata.syncStatus
-        });
+        // Log sync integrity and any errors
+        if (response.metadata?.error) {
+          console.warn('⚠️ API: Sync completed with errors:', response.metadata.error);
+        } else {
+          console.log('🔄 API: Sync-all completed successfully:', {
+            totalRecords: safeData.summary.totalRecords,
+            todayRecords: safeData.summary.todayRecords,
+            dataFreshness: safeData.metadata.dataFreshness,
+            syncStatus: safeData.metadata.syncStatus
+          });
+        }
         
         return safeData;
       })
       .catch(error => {
         console.error('🚨 API: Sync-all error:', error);
+        
+        // Return comprehensive fallback data
         return {
           stats: {},
           recentEntries: [],
@@ -355,7 +371,13 @@ export const entriesApi = {
             timestamp: new Date().toISOString(),
             dataFreshness: 'error',
             source: 'fallback',
-            syncStatus: 'error'
+            syncStatus: 'error',
+            error: error.message || 'Network error',
+            performance: {
+              queryTime: Date.now(),
+              cacheStatus: 'error',
+              dataIntegrity: 'compromised'
+            }
           }
         };
       });
