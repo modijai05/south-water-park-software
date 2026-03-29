@@ -180,9 +180,18 @@ export function AdminDashboard() {
   const [charts, setCharts] = useState<Charts | null>(null);
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [lastResetInfo, setLastResetInfo] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
+  const [dataSyncStatus, setDataSyncStatus] = useState<'loading' | 'syncing' | 'ready' | 'error'>('loading');
+  const [performanceMetrics, setPerformanceMetrics] = useState({
+    allTimeEntries: 0,
+    allTimeRevenue: 0,
+    todayEntries: 0,
+    todayRevenue: 0,
+    lastSyncTime: null as string | null
+  });
 
   // Fetch ticket configurations
   const fetchTicketConfigs = async () => {
@@ -568,10 +577,11 @@ export function AdminDashboard() {
     };
   };
   
-  // Sync dashboard with entries data
+  // Enhanced sync function with performance metrics tracking
   const syncDashboardWithEntries = async () => {
     try {
       console.log('🔄 Dashboard: Syncing with entries data...');
+      setDataSyncStatus('syncing');
       
       // Fetch all entries data
       const entriesRes = await entriesApi.list({ page: 1, limit: 50000 });
@@ -588,6 +598,17 @@ export function AdminDashboard() {
         todayEntries: calculatedStats.todayEntries,
         todayAmount: calculatedStats.todayAmount
       });
+      
+      // Update performance metrics immediately to prevent lag
+      const newPerformanceMetrics = {
+        allTimeEntries: calculatedStats.totalEntries,
+        allTimeRevenue: calculatedStats.totalAmount,
+        todayEntries: calculatedStats.todayEntries,
+        todayRevenue: calculatedStats.todayAmount,
+        lastSyncTime: new Date().toISOString()
+      };
+      
+      setPerformanceMetrics(newPerformanceMetrics);
       
       // Update dashboard stats with synchronized data
       setStats(calculatedStats);
@@ -611,6 +632,9 @@ export function AdminDashboard() {
       const finalEntries = sortedEntries.slice(0, 5);
       setRecentEntries(finalEntries);
       
+      setDataSyncStatus('ready');
+      setInitialLoadComplete(true);
+      
       console.log('✅ Dashboard: Successfully synchronized with entries data');
       
       // Trigger sync event
@@ -619,16 +643,74 @@ export function AdminDashboard() {
           timestamp: new Date().toISOString(),
           source: 'entries-sync',
           stats: calculatedStats,
+          performanceMetrics: newPerformanceMetrics,
           entriesCount: entriesData.length
         }
       }));
       
     } catch (error) {
       console.error('❌ Dashboard: Failed to sync with entries data:', error);
+      setDataSyncStatus('error');
     }
   };
 
-  // Get current ticket price from dynamic configs (with day-wise pricing) - FIXED
+  // Professional loading component for performance metrics
+  const PerformanceMetricCard = ({ title, value, subtitle, isLoading, icon, color }: {
+    title: string;
+    value: number | string;
+    subtitle?: string;
+    isLoading: boolean;
+    icon: React.ReactNode;
+    color: string;
+  }) => (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, y: 50 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      whileHover={{
+        scale: 1.02,
+        y: -5,
+        boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1)"
+      }}
+      className="group relative bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:border-gray-200 transition-all duration-300"
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {isLoading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="text-gray-400">Loading...</span>
+                </div>
+              ) : (
+                <span className={color}>
+                  {typeof value === 'number' ? (
+                    <AnimatedCounter value={value} />
+                  ) : (
+                    value
+                  )}
+                </span>
+              )}
+            </p>
+          </div>
+          <div className={`w-14 h-14 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center shadow-lg`}>
+            {icon}
+          </div>
+        </div>
+        {subtitle && (
+          <div className="flex items-center text-sm text-gray-500">
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium">{subtitle}</span>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
   const getCurrentTicketPrice = (ticketType: string): number => {
     const config = ticketConfigs.find(c => c.ticketType === ticketType);
     if (config) {
@@ -1113,23 +1195,61 @@ export function AdminDashboard() {
               </motion.div>
             )}
 
-            {/* Sync Controls */}
+            {/* Enhanced Sync Controls */}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200"
+              className={`p-4 rounded-xl border transition-all duration-300 ${
+                dataSyncStatus === 'ready' 
+                  ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
+                  : dataSyncStatus === 'syncing'
+                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'
+                  : dataSyncStatus === 'error'
+                  ? 'bg-gradient-to-r from-red-50 to-pink-50 border-red-200'
+                  : 'bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200'
+              }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span className="text-sm font-medium text-blue-800">
-                      Data Source: <span className="font-bold">{stats?.source || 'API'}</span> | 
-                      Sync Status: <span className="font-bold">{stats?.syncStatus || 'Connected'}</span> | 
-                      Last Updated: <span className="font-bold">{stats?.lastUpdated ? dayjs(stats.lastUpdated).format('HH:mm:ss') : 'Unknown'}</span>
-                    </span>
+                    {dataSyncStatus === 'syncing' && (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
+                    )}
+                    {dataSyncStatus === 'ready' && (
+                      <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
+                    {dataSyncStatus === 'error' && (
+                      <svg className="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
+                    {dataSyncStatus === 'loading' && (
+                      <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    )}
+                    <div className="text-sm">
+                      <span className={`font-medium ${
+                        dataSyncStatus === 'ready' ? 'text-green-800' :
+                        dataSyncStatus === 'syncing' ? 'text-blue-800' :
+                        dataSyncStatus === 'error' ? 'text-red-800' :
+                        'text-gray-800'
+                      }`}>
+                        Status: <span className="font-bold">{
+                          dataSyncStatus === 'ready' ? '✅ Synchronized' :
+                          dataSyncStatus === 'syncing' ? '🔄 Syncing...' :
+                          dataSyncStatus === 'error' ? '❌ Error' :
+                          '⏳ Loading...'
+                        }</span>
+                      </span>
+                      {performanceMetrics.lastSyncTime && (
+                        <span className="ml-4 text-gray-600">
+                          Last Sync: <span className="font-bold">{dayjs(performanceMetrics.lastSyncTime).format('HH:mm:ss')}</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex space-x-2">
@@ -1137,7 +1257,8 @@ export function AdminDashboard() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={syncDashboardWithEntries}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-2"
+                    disabled={dataSyncStatus === 'syncing'}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors flex items-center space-x-2"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1866,42 +1987,33 @@ export function AdminDashboard() {
                     </div>
                   </motion.div>
 
-                  {/* All Time Entries */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: 50 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.8, ease: "backOut" }}
-                    whileHover={{
-                      scale: 1.02,
-                      y: -5,
-                      boxShadow: "0 20px 40px rgba(16, 185, 129, 0.15)"
-                    }}
-                    className="group relative bg-white rounded-2xl p-6 shadow-lg border border-emerald-100 hover:border-emerald-200 transition-all duration-300"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                {/* All Time Entries */}
+                <PerformanceMetricCard
+                  title="Total Entries"
+                  value={performanceMetrics.allTimeEntries}
+                  subtitle="All records"
+                  isLoading={dataSyncStatus === 'loading' || dataSyncStatus === 'syncing'}
+                  icon={
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  }
+                  color="text-emerald-600"
+                />
 
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600 mb-1">Total Entries</p>
-                          <p className="text-3xl font-bold text-gray-900">
-                            {!stats ? '0' : <AnimatedCounter value={stats.totalEntries ?? 0} />}
-                          </p>
-                        </div>
-                        <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
-                          <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="flex items-center text-sm text-emerald-600">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="font-medium">All records</span>
-                      </div>
-                    </div>
-                  </motion.div>
+                {/* All Time Revenue */}
+                <PerformanceMetricCard
+                  title="All-Time Revenue"
+                  value={`₹${performanceMetrics.allTimeRevenue}`}
+                  subtitle="Preserved forever"
+                  isLoading={dataSyncStatus === 'loading' || dataSyncStatus === 'syncing'}
+                  icon={
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  }
+                  color="text-blue-600"
+                />
 
                   {/* All Time People */}
                   <motion.div
