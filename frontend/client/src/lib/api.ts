@@ -372,12 +372,7 @@ export const entriesApi = {
             monthly: []
           };
         }
-        // Ensure all arrays are safe
-        return {
-          last7Days: Array.isArray(response.data.last7Days) ? response.data.last7Days : [],
-          ticketDistribution: Array.isArray(response.data.ticketDistribution) ? response.data.ticketDistribution : [],
-          monthly: Array.isArray(response.data.monthly) ? response.data.monthly : []
-        };
+        return response.data;
       })
       .catch(error => {
         console.error('🚨 API: Charts error:', error);

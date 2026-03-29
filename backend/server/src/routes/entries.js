@@ -1101,32 +1101,88 @@ router.get('/charts', async (req, res) => {
         
         console.log(`📊 Chart data: ${last7DaysEntries.length} last 7 days, ${ticketDistributionData.length} ticket types, ${monthlyData.length} monthly`);
         
+        // Process last 7 days data by date
+        const last7DaysData = [];
+        const dailyMap = new Map();
+        
+        // Initialize all days with zero values
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(now);
+          date.setDate(date.getDate() - i);
+          date.setHours(0, 0, 0, 0);
+          const dateStr = date.toISOString().split('T')[0];
+          dailyMap.set(dateStr, { _id: dateStr, count: 0, amount: 0 });
+        }
+        
+        // Fill with actual data
+        last7DaysEntries.forEach(entry => {
+          const dateStr = entry.createdAt.toISOString().split('T')[0];
+          if (dailyMap.has(dateStr)) {
+            const existing = dailyMap.get(dateStr);
+            existing.count += 1;
+            existing.amount += entry.finalAmount || 0;
+          }
+        });
+        
+        const last7Days = Array.from(dailyMap.values());
+        
+        // Process ticket distribution
+        const ticketDistribution = ticketDistributionData.map(item => ({
+          _id: item._id,
+          count: item.count,
+          amount: item.amount
+        }));
+        
+        // Process monthly data
+        const monthly = monthlyData.map(item => ({
+          _id: item._id,
+          count: item.count,
+          amount: item.amount
+        }));
+        
+        // Create comparison data (today vs yesterday)
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+        const yesterdayStart = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+        const yesterdayEnd = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+        
+        const [todayEntries, yesterdayEntries] = await Promise.all([
+          Entry.find({ createdAt: { $gte: todayStart, $lte: todayEnd } }),
+          Entry.find({ createdAt: { $gte: yesterdayStart, $lte: yesterdayEnd } })
+        ]);
+        
+        const comparisonData = [
+          { name: 'Today', value: todayEntries.length },
+          { name: 'Yesterday', value: yesterdayEntries.length }
+        ];
+        
+        const upgradeDistribution = []; // Placeholder for upgrade data
+        
+        console.log('📊 Chart data processed:', {
+          last7DaysCount: last7Days.length,
+          ticketDistributionCount: ticketDistribution.length,
+          monthlyCount: monthly.length,
+          todayEntries: todayEntries.length,
+          yesterdayEntries: yesterdayEntries.length
+        });
+        
         return res.json({
           success: true,
           data: {
-            last7Days: last7DaysEntries.map(entry => ({
-              _id: entry._id?.toString() || '',
-              date: entry.createdAt ? new Date(entry.createdAt).toISOString().split('T')[0] : '',
-              count: 1,
-              amount: entry.finalAmount || 0
-            })),
-            ticketDistribution: ticketDistributionData.map(item => ({
-              _id: item._id || '',
-              count: item.count || 0,
-              amount: item.amount || 0
-            })),
-            monthly: monthlyData.map(item => ({
-              _id: item._id || '',
-              count: item.count || 0,
-              amount: item.amount || 0
-            })),
-            upgradeDistribution: [], // TODO: Implement upgrade distribution logic
-            comparisonData: [] // TODO: Implement comparison data logic
+            last7Days,
+            ticketDistribution,
+            upgradeDistribution,
+            comparisonData,
+            monthly
           }
         });
         
       } catch (dbError) {
-        console.error('❌ Database charts fetch failed:', dbError.message);
+        console.error('❌ Database chart fetch failed:', dbError.message);
       }
     } else {
       console.log('⚠️ MongoDB not connected, returning fallback chart data');
@@ -1134,11 +1190,28 @@ router.get('/charts', async (req, res) => {
     
     // Fallback chart data
     const fallbackChartData = {
-      last7Days: [],
-      ticketDistribution: [],
-      monthly: [],
+      last7Days: [
+        { _id: dayjs().subtract(6, 'day').format('YYYY-MM-DD'), count: 0, amount: 0 },
+        { _id: dayjs().subtract(5, 'day').format('YYYY-MM-DD'), count: 0, amount: 0 },
+        { _id: dayjs().subtract(4, 'day').format('YYYY-MM-DD'), count: 0, amount: 0 },
+        { _id: dayjs().subtract(3, 'day').format('YYYY-MM-DD'), count: 0, amount: 0 },
+        { _id: dayjs().subtract(2, 'day').format('YYYY-MM-DD'), count: 0, amount: 0 },
+        { _id: dayjs().subtract(1, 'day').format('YYYY-MM-DD'), count: 0, amount: 0 },
+        { _id: dayjs().format('YYYY-MM-DD'), count: 0, amount: 0 }
+      ],
+      ticketDistribution: [
+        { _id: '100', count: 0, amount: 0 },
+        { _id: '150', count: 0, amount: 0 },
+        { _id: '300', count: 0, amount: 0 },
+        { _id: '450', count: 0, amount: 0 },
+        { _id: '600', count: 0, amount: 0 }
+      ],
       upgradeDistribution: [],
-      comparisonData: []
+      comparisonData: [
+        { name: 'Today', value: 0 },
+        { name: 'Yesterday', value: 0 }
+      ],
+      monthly: []
     };
     
     return res.json({
@@ -1156,69 +1229,201 @@ router.get('/charts', async (req, res) => {
   }
 });
 
-// GET /api/entries/export - Export entries with filtering (MUST BE BEFORE /:id)
+// GET /api/entries/charts/today - Get today's chart data only
+router.get('/charts/today', async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    console.log('📊 Today charts endpoint called');
+    
+    // Try database fetch
+    if (mongoose.connection.readyState === 1) {
+      try {
+        console.log('🔗 MongoDB connected, fetching today chart data...');
+        
+        // Get today's date range
+        const { startOfDay, endOfDay } = getTodayRange();
+        const now = dayjs();
+        
+        console.log('📅 Today charts date range:', {
+          startOfDay: startOfDay.toISOString(),
+          endOfDay: endOfDay.toISOString(),
+          currentTime: now.toISOString()
+        });
+        
+        // Fetch today's entries only
+        const todayEntries = await Entry.find({
+          createdAt: { $gte: startOfDay, $lte: endOfDay }
+        }).sort({ createdAt: 1 }).lean();
+        
+        console.log(`📊 Today entries for charts: ${todayEntries.length}`);
+        
+        // Process today's data by hour for hourly chart
+        const hourlyData = [];
+        const hourlyMap = new Map();
+        
+        // Initialize all hours with zero values
+        for (let hour = 0; hour < 24; hour++) {
+          hourlyMap.set(hour, { _id: `${hour}:00`, count: 0, amount: 0 });
+        }
+        
+        // Fill with actual data
+        todayEntries.forEach(entry => {
+          const hour = dayjs(entry.createdAt).hour();
+          if (hourlyMap.has(hour)) {
+            const existing = hourlyMap.get(hour);
+            existing.count += 1;
+            existing.amount += entry.finalAmount || 0;
+          }
+        });
+        
+        const hourlyChart = Array.from(hourlyMap.values());
+        
+        // Process ticket type distribution for today
+        const ticketTypeMap = new Map();
+        const ticketTypes = ['100', '150', '300', '450', '600'];
+        
+        ticketTypes.forEach(type => {
+          ticketTypeMap.set(type, { _id: type, count: 0, amount: 0 });
+        });
+        
+        todayEntries.forEach(entry => {
+          const type = entry.ticketType;
+          if (ticketTypeMap.has(type)) {
+            const existing = ticketTypeMap.get(type);
+            existing.count += 1;
+            existing.amount += entry.finalAmount || 0;
+          }
+        });
+        
+        const todayTicketDistribution = Array.from(ticketTypeMap.values());
+        
+        // Create hourly comparison data
+        const hourlyComparison = hourlyChart.map(hour => ({
+          hour: hour._id,
+          entries: hour.count,
+          revenue: hour.amount
+        }));
+        
+        console.log('📊 Today chart data processed:', {
+          hourlyChartCount: hourlyChart.length,
+          ticketDistributionCount: todayTicketDistribution.length,
+          totalEntries: todayEntries.length,
+          totalRevenue: todayEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0)
+        });
+        
+        return res.json({
+          success: true,
+          data: {
+            hourlyChart,
+            ticketDistribution: todayTicketDistribution,
+            hourlyComparison,
+            summary: {
+              totalEntries: todayEntries.length,
+              totalRevenue: todayEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0),
+              date: now.format('YYYY-MM-DD'),
+              lastUpdated: new Date().toISOString()
+            }
+          }
+        });
+        
+      } catch (dbError) {
+        console.error('❌ Database today chart fetch failed:', dbError.message);
+      }
+    } else {
+      console.log('⚠️ MongoDB not connected, returning fallback today chart data');
+    }
+    
+    // Fallback today chart data
+    const fallbackTodayChartData = {
+      hourlyChart: Array.from({ length: 24 }, (_, i) => ({
+        _id: `${i}:00`,
+        count: 0,
+        amount: 0
+      })),
+      ticketDistribution: [
+        { _id: '100', count: 0, amount: 0 },
+        { _id: '150', count: 0, amount: 0 },
+        { _id: '300', count: 0, amount: 0 },
+        { _id: '450', count: 0, amount: 0 },
+        { _id: '600', count: 0, amount: 0 }
+      ],
+      hourlyComparison: [],
+      summary: {
+        totalEntries: 0,
+        totalRevenue: 0,
+        date: dayjs().format('YYYY-MM-DD'),
+        lastUpdated: new Date().toISOString()
+      }
+    };
+    
+    return res.json({
+      success: true,
+      data: fallbackTodayChartData
+    });
+    
+  } catch (error) {
+    console.error('❌ Today charts endpoint error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch today chart data',
+      message: error.message
+    });
+  }
+});
+
+// GET /api/entries/export - Export entries to CSV
 router.get('/export', async (req, res) => {
   try {
     // Set CORS headers for all origins
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Credentials', 'false');
     
-    const {
-      search = '',
-      ticketType = '',
-      from = '',
-      to = '',
-      limit = 50
-    } = req.query;
-    
-    console.log('📊 Export endpoint called with filters:', { search, ticketType, from, to, limit });
-    
-    // Build query
-    let query = {};
-    
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { mobile: { $regex: search, $options: 'i' } },
-        { receiptNumber: { $regex: search, $options: 'i' } }
-      ];
-    }
-    
-    if (ticketType) {
-      query.ticketType = ticketType;
-    }
-    
-    if (from || to) {
-      query.createdAt = {};
-      if (from) query.createdAt.$gte = new Date(from);
-      if (to) query.createdAt.$lte = new Date(to);
-    }
+    console.log('📊 Export endpoint called');
     
     // Try database fetch
-    try {
-      if (mongoose.connection.readyState === 1) {
-        const limitNum = parseInt(limit) || 50;
-        const skip = 0; // For export, get all matching records
+    if (mongoose.connection.readyState === 1) {
+      try {
+        console.log('🔗 MongoDB connected, fetching export data...');
         
-        const [entries, total] = await Promise.all([
-          Entry.find(query)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limitNum)
-            .lean(),
-          Entry.countDocuments(query)
-        ]);
+        const { search, ticketType, from, to, limit } = req.query;
+        const limitNum = limit ? parseInt(limit) : 1000;
         
-        console.log(`✅ Export found ${entries.length} entries (total ${total})`);
+        // Build query filter
+        let filter = {};
+        if (search) {
+          filter.$or = [
+            { name: { $regex: search, $options: 'i' } },
+            { mobile: { $regex: search, $options: 'i' } },
+            { receiptNumber: { $regex: search, $options: 'i' } }
+          ];
+        }
+        if (ticketType) {
+          filter.ticketType = ticketType;
+        }
+        if (from || to) {
+          filter.createdAt = {};
+          if (from) filter.createdAt.$gte = new Date(from);
+          if (to) filter.createdAt.$lte = new Date(to);
+        }
         
-        // Calculate export statistics
+        const entries = await Entry.find(filter)
+          .sort({ createdAt: -1 })
+          .limit(limitNum)
+          .lean();
+        
+        const total = await Entry.countDocuments(filter);
+        
         const exportStats = {
-          averageTicketValue: entries.length > 0 ? Math.round(entries.reduce((sum, e) => sum + (e.finalAmount || 0), 0) / entries.length) : 0,
+          averageTicketValue: entries.length > 0 ? 
+            entries.reduce((sum, e) => sum + (e.finalAmount || 0), 0) / entries.length : 0,
           totalPeople: entries.reduce((sum, e) => sum + (e.totalPeople || 0), 0),
           totalRevenue: entries.reduce((sum, e) => sum + (e.finalAmount || 0), 0),
-          ticketTypeDistribution: entries.reduce((dist, e) => {
-            dist[e.ticketType || '150'] = (dist[e.ticketType || '150'] || 0) + 1;
-            return dist;
+          ticketTypeDistribution: entries.reduce((acc, e) => {
+            acc[e.ticketType] = (acc[e.ticketType] || 0) + 1;
+            return acc;
           }, {})
         };
         
@@ -1281,6 +1486,16 @@ router.get('/export', async (req, res) => {
         message: dbError.message
       });
     }
+    
+  } catch (error) {
+    console.error('❌ Export endpoint error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to export entries',
+      message: error.message
+    });
+  }
+});
     
   } catch (error) {
     console.error('❌ Export endpoint error:', error);

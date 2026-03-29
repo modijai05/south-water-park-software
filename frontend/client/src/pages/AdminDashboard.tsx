@@ -12,6 +12,7 @@ import { invalidateTicketConfigCache } from '@/lib/ticketUtils';
 import { useAuthStore } from '@/store/authStore';
 import type { TicketConfig } from '@/types';
 import { globalSyncService } from '@/services/globalSyncService';
+import { useDailyReset, performDailyReset, needsDailyReset } from '@/utils/dailyReset';
 
 // Helper functions for data transformation
 const generateQuarterlyData = (monthlyData: any[]) => {
@@ -153,11 +154,15 @@ interface Stats {
 }
 
 interface Charts {
-  last7Days: { _id: string; count: number; amount: number }[];
-  ticketDistribution: { _id: string; count: number }[];
-  upgradeDistribution: { _id: string; count: number }[];
-  comparisonData: { name: string; value: number }[];
-  monthly: { _id: string; count: number; amount: number }[];
+  hourlyChart: { _id: string; count: number; amount: number }[];
+  ticketDistribution: { _id: string; count: number; amount: number }[];
+  hourlyComparison: { hour: string; entries: number; revenue: number }[];
+  summary: {
+    totalEntries: number;
+    totalRevenue: number;
+    date: string;
+    lastUpdated: string;
+  };
 }
 
 export function AdminDashboard() {
@@ -166,6 +171,7 @@ export function AdminDashboard() {
   const [charts, setCharts] = useState<Charts | null>(null);
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastResetInfo, setLastResetInfo] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
 
@@ -182,10 +188,80 @@ export function AdminDashboard() {
       setTicketConfigs(configs);
       return configs;
     } catch (error) {
-      console.error('❌ Dashboard: Failed to fetch ticket configs:', error);
-      return [];
+      console.error('Dashboard: Failed to fetch ticket configs:', error);
+      // Return fallback configs to prevent UI errors
+      const fallbackConfigs = TICKET_OPTIONS.map(option => ({
+        ticketType: option.value,
+        basePrice: option.price,
+        adultPrice: option.price,
+        kidPrice: Math.round(option.price * 0.5),
+        adultFastFoodPrice: 150,
+        kidFastFoodPrice: 100,
+        adultMainFoodPrice: 250,
+        kidMainFoodPrice: 200,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+      setTicketConfigs(fallbackConfigs);
+      return fallbackConfigs;
     }
   };
+
+  // Main data fetching function
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [statsRes, chartsRes, configs] = await Promise.all([
+        entriesApi.stats(),
+        entriesApi.todayCharts(),
+        fetchTicketConfigs()
+      ]);
+      
+      setStats(statsRes as unknown as Stats);
+      setCharts(chartsRes as unknown as Charts);
+      console.log('AdminDashboard: Data refreshed after reset');
+      
+    } catch (error) {
+      console.error('AdminDashboard: Error fetching data:', error);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initialize daily reset
+  useEffect(() => {
+    const cleanup = useDailyReset(() => {
+      console.log('🔄 Daily reset triggered, refreshing dashboard data...');
+      // Force refresh all data after reset
+      fetchAllData();
+    });
+
+    // Listen for manual reset events
+    const handleDailyReset = (event: CustomEvent) => {
+      console.log('🔄 Daily reset event received:', event.detail);
+      setLastResetInfo(`Reset performed at ${dayjs(event.detail.timestamp).format('HH:mm:ss')}`);
+    };
+
+    window.addEventListener('daily-reset', handleDailyReset as EventListener);
+
+    return () => {
+      cleanup();
+      window.removeEventListener('daily-reset', handleDailyReset as EventListener);
+    };
+  }, []);
+
+  // Check if reset is needed on component mount
+  useEffect(() => {
+    if (needsDailyReset()) {
+      console.log('🔄 Daily reset needed on dashboard mount');
+      performDailyReset();
+      fetchAllData();
+    }
+  }, []);
 
   // Enhanced sync function to force refresh all data
   const forceRefreshAllData = async () => {
@@ -201,7 +277,7 @@ export function AdminDashboard() {
       // Fetch everything fresh
       const [statsRes, chartsRes, configs] = await Promise.all([
         entriesApi.stats(),
-        entriesApi.charts(),
+        entriesApi.todayCharts(),
         fetchTicketConfigs()
       ]);
       
@@ -672,7 +748,7 @@ export function AdminDashboard() {
     };
   }, []);
 
-  const safeCharts = charts || { last7Days: [], ticketDistribution: [], upgradeDistribution: [], comparisonData: [], monthly: [] };
+  const safeCharts = charts || { hourlyChart: [], ticketDistribution: [], hourlyComparison: [], summary: { totalEntries: 0, totalRevenue: 0, date: '', lastUpdated: '' } };
 
   // Loading guard
   if (loading) {
@@ -2435,14 +2511,15 @@ export function AdminDashboard() {
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={safeCharts.comparisonData}>
+                <LineChart data={safeCharts.hourlyChart}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
+                  <XAxis dataKey="_id" />
                   <YAxis />
-                  <Tooltip formatter={(value) => [`${value} tickets`, 'Count']} />
+                  <Tooltip formatter={(value) => [`${value} entries`, 'Count']} />
                   <Legend />
-                  <Bar dataKey="value" fill="#6366f1" name="Tickets Sold" />
-                </BarChart>
+                  <Line type="monotone" dataKey="count" stroke="#10b981" name="Entries" strokeWidth={2} />
+                  <Line type="monotone" dataKey="amount" stroke="#f59e0b" name="Revenue" strokeWidth={2} />
+                </LineChart>
               </ResponsiveContainer>
             </motion.div>
 
@@ -2455,7 +2532,7 @@ export function AdminDashboard() {
             >
               <h4 className="heading-md text-emerald-800 mb-4">📊 Weekly Performance</h4>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={safeCharts.last7Days}>
+                <LineChart data={safeCharts.hourlyChart}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="_id" />
                   <YAxis />
@@ -2481,7 +2558,7 @@ export function AdminDashboard() {
             >
               <h4 className="heading-md text-purple-800 mb-4">📅 Monthly Trends</h4>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={safeCharts.monthly}>
+                <BarChart data={safeCharts.hourlyChart}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="_id" />
                   <YAxis />
