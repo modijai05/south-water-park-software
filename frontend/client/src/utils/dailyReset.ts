@@ -1,4 +1,8 @@
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+// Extend dayjs with UTC plugin
+dayjs.extend(utc);
 
 // Storage key for last reset date
 const LAST_RESET_KEY = 'south-water-park-last-reset';
