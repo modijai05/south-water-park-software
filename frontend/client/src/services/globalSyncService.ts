@@ -1,297 +1,75 @@
-// Global Real-Time Sync Service
-// Ensures all dashboard components stay synchronized with real-time data
+// Simple Date-wise Sync Service
+// Ensures dashboard components stay synchronized by date
 
 import { entriesApi } from '@/lib/api';
 
 class GlobalSyncService {
   private static instance: GlobalSyncService;
   private listeners: Map<string, Function[]> = new Map();
-  private lastSyncTime: number = 0;
+  private lastSyncDate: string = '';
   private syncInterval: NodeJS.Timeout | null = null;
-  private dailyResetInterval: NodeJS.Timeout | null = null;
-  private syncData: any = null;
-  private isSyncing: boolean = false;
 
   private constructor() {
-    this.initializeDailyReset();
-    this.setupPeriodicSync();
-    this.initializeComprehensiveSync();
+    this.setupDailySync();
   }
 
-  // Initialize comprehensive data sync
-  private async initializeComprehensiveSync() {
-    console.log('🔄 GlobalSync: Initializing comprehensive data sync...');
-    await this.performComprehensiveSync();
+  // Simple daily sync based on date
+  private setupDailySync() {
+    const syncByDate = () => {
+      const today = new Date().toLocaleDateString();
+      
+      // Only sync once per day
+      if (this.lastSyncDate === today) {
+        return;
+      }
+      
+      console.log('📅 GlobalSync: Daily sync for', today);
+      this.performDateSync();
+      this.lastSyncDate = today;
+    };
+
+    // Check every minute for date change
+    this.syncInterval = setInterval(syncByDate, 60000);
+    
+    // Run immediately
+    syncByDate();
   }
 
-  // Perform comprehensive data sync from MongoDB
-  private async performComprehensiveSync() {
-    if (this.isSyncing) {
-      console.log('🔄 GlobalSync: Sync already in progress, skipping...');
-      return;
-    }
-
-    this.isSyncing = true;
+  // Simple date-based sync
+  private async performDateSync() {
     try {
-      console.log('🔄 GlobalSync: Performing comprehensive data sync...');
+      console.log('🔄 GlobalSync: Performing date-wise sync...');
       const syncData = await entriesApi.syncAll();
       
-      // Enhanced validation of sync data
-      if (syncData && syncData.stats && typeof syncData.stats === 'object') {
-        this.syncData = {
-          ...syncData,
-          lastSyncTime: Date.now(),
-          syncStatus: 'active',
-          dataIntegrity: this.validateSyncData(syncData)
-        };
-        
-        console.log('✅ GlobalSync: Comprehensive sync completed:', {
-          totalRecords: syncData.summary?.totalRecords || 0,
-          todayRecords: syncData.summary?.todayRecords || 0,
-          recentRecords: syncData.summary?.recentRecords || 0,
-          timestamp: syncData.summary?.lastUpdated || new Date().toISOString(),
-          dataIntegrity: this.syncData.dataIntegrity
-        });
-        
-        // Broadcast comprehensive sync event to all dashboards
-        this.broadcastEvent('comprehensive-sync-complete', {
-          data: this.syncData,
-          timestamp: new Date().toISOString(),
-          source: 'global-sync-service',
-          integrity: this.syncData.dataIntegrity
-        });
-        
-        // Also broadcast individual data updates for compatibility
-        this.broadcastEvent('stats-updated', syncData.stats);
-        this.broadcastEvent('entries-updated', {
-          recentEntries: syncData.recentEntries || [],
-          todayEntries: syncData.todayEntries || []
-        });
-        
-        // Trigger dashboard refresh events
-        this.broadcastEvent('dashboard-refresh-required', {
-          reason: 'comprehensive-sync',
-          timestamp: new Date().toISOString(),
-          force: true
-        });
-        
-      } else {
-        console.error('❌ GlobalSync: Invalid sync data structure:', syncData);
-        this.broadcastEvent('comprehensive-sync-error', {
-          error: 'Invalid sync data structure',
-          timestamp: new Date().toISOString(),
-          dataReceived: syncData
+      if (syncData && syncData.stats) {
+        console.log('✅ GlobalSync: Date sync completed');
+        this.broadcastEvent('date-sync-complete', {
+          date: new Date().toLocaleDateString(),
+          stats: syncData.stats
         });
       }
     } catch (error) {
-      console.error('❌ GlobalSync: Comprehensive sync failed:', error);
-      this.broadcastEvent('comprehensive-sync-error', {
-        error: error.message || 'Unknown sync error',
-        timestamp: new Date().toISOString(),
-        retryAvailable: true
-      });
-      
-      // Set error state
-      this.syncData = {
-        lastSyncTime: Date.now(),
-        syncStatus: 'error',
-        error: error.message || 'Unknown sync error'
-      };
-    } finally {
-      this.isSyncing = false;
+      console.error('❌ GlobalSync: Date sync failed:', error);
     }
   }
-  
-  // Validate sync data integrity
-  private validateSyncData(syncData: any): 'valid' | 'corrupted' | 'partial' {
-    try {
-      if (!syncData || typeof syncData !== 'object') return 'corrupted';
-      
-      const stats = syncData.stats;
-      const summary = syncData.summary;
-      
-      // Check required fields
-      if (!stats || typeof stats !== 'object') return 'corrupted';
-      if (!summary || typeof summary !== 'object') return 'corrupted';
-      
-      // Check data consistency
-      const hasValidStats = typeof stats.totalEntries === 'number' && 
-                           typeof stats.todayEntries === 'number';
-      const hasValidSummary = typeof summary.totalRecords === 'number' && 
-                             typeof summary.todayRecords === 'number';
-      
-      if (hasValidStats && hasValidSummary) {
-        // Check for data consistency
-        if (stats.totalEntries === summary.totalRecords && 
-            stats.todayEntries === summary.todayRecords) {
-          return 'valid';
-        } else {
-          return 'partial';
+
+  // Simple broadcast event
+  private broadcastEvent(event: string, data?: any) {
+    const eventListeners = this.listeners.get(event);
+    if (eventListeners) {
+      eventListeners.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error(`❌ GlobalSync: Error in event listener for ${event}:`, error);
         }
-      }
-      
-      return 'corrupted';
-    } catch (error) {
-      console.error('❌ GlobalSync: Data validation error:', error);
-      return 'corrupted';
+      });
     }
-  }
 
-  // Get current sync data
-  public getSyncData() {
-    return this.syncData;
-  }
-
-  // Force comprehensive sync
-  public async forceComprehensiveSync() {
-    console.log('🚀 GlobalSync: Force comprehensive sync triggered');
-    await this.performComprehensiveSync();
-  }
-
-  // Emergency complete reset (immediate fix)
-  public emergencyResetAllData() {
-    console.log('🚨🚨 EMERGENCY RESET: Clearing ALL data immediately');
-    
-    // Clear ALL localStorage
-    localStorage.clear();
-    
-    // Clear all stats-related cache specifically
-    localStorage.removeItem('lastResetDate');
-    localStorage.removeItem('adminDashboardStats');
-    localStorage.removeItem('staffDashboardStats');
-    localStorage.removeItem('dashboardCache');
-    localStorage.removeItem('ticketConfigs');
-    localStorage.removeItem('recentEntries');
-    localStorage.removeItem('searchResults');
-    
-    // Trigger multiple reset events
-    this.triggerDailyReset();
-    this.forceDailyResetNow();
-    
-    // Broadcast emergency reset
-    this.broadcastEvent('emergency-reset-all', {
-      timestamp: new Date().toISOString(),
-      message: 'EMERGENCY: Complete data reset triggered',
-      clearAll: true,
-      immediate: true
-    });
-    
-    // Dispatch DOM emergency reset
-    window.dispatchEvent(new CustomEvent('emergency-reset-all', {
-      detail: {
-        timestamp: new Date().toISOString(),
-        message: 'EMERGENCY RESET - Clear everything immediately',
-        clearAll: true,
-        immediate: true
-      }
+    // Also dispatch as DOM event for cross-component communication
+    window.dispatchEvent(new CustomEvent(event, {
+      detail: data || { timestamp: new Date().toISOString() }
     }));
-    
-    console.log('🧹🧹 EMERGENCY RESET: All data cleared, events dispatched');
-  }
-
-  public static getInstance(): GlobalSyncService {
-    if (!GlobalSyncService.instance) {
-      GlobalSyncService.instance = new GlobalSyncService();
-    }
-    return GlobalSyncService.instance;
-  }
-
-  // Initialize daily reset at midnight
-  private initializeDailyReset() {
-    const checkAndTriggerReset = () => {
-      const now = new Date();
-      const today = now.toDateString();
-      const storedDate = localStorage.getItem('lastResetDate');
-      
-      // Check if we need to reset (new day or no stored date)
-      if (storedDate !== today) {
-        console.log('🌅 GlobalSync: New day detected, triggering daily reset');
-        this.triggerDailyReset();
-        localStorage.setItem('lastResetDate', today);
-      }
-      
-      // Schedule next check at next midnight
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      
-      const msUntilMidnight = tomorrow.getTime() - now.getTime();
-      
-      if (this.dailyResetInterval) {
-        clearTimeout(this.dailyResetInterval as any);
-      }
-      
-      this.dailyResetInterval = setTimeout(checkAndTriggerReset, msUntilMidnight);
-      console.log('🌅 GlobalSync: Next daily reset scheduled for:', new Date(tomorrow));
-    };
-    
-    // Trigger immediately on load
-    checkAndTriggerReset();
-  }
-
-  // Trigger daily reset event
-  private triggerDailyReset() {
-    console.log('🌅 GlobalSync: Triggering daily reset for all dashboards');
-    
-    // Dispatch daily reset event
-    window.dispatchEvent(new CustomEvent('daily-reset', {
-      detail: {
-        timestamp: new Date().toISOString(),
-        source: 'global-sync-service'
-      }
-    }));
-
-    // Trigger immediate refresh for all listeners
-    this.broadcastEvent('daily-reset-complete', {
-      timestamp: new Date().toISOString(),
-      message: 'Daily performance data has been reset'
-    });
-  }
-
-  // Force immediate daily reset (professional fix)
-  public forceDailyResetNow() {
-    console.log('🚨 GlobalSync: FORCE DAILY RESET TRIGGERED IMMEDIATELY');
-    
-    // Clear any existing localStorage date to force reset
-    localStorage.removeItem('lastResetDate');
-    
-    // Clear all stats-related localStorage
-    localStorage.removeItem('adminDashboardStats');
-    localStorage.removeItem('staffDashboardStats');
-    localStorage.removeItem('dashboardCache');
-    
-    // Trigger immediate reset
-    this.triggerDailyReset();
-    
-    // Store today's date
-    localStorage.setItem('lastResetDate', new Date().toDateString());
-    
-    // Broadcast force reset event with clear instruction
-    this.broadcastEvent('force-daily-reset', {
-      timestamp: new Date().toISOString(),
-      message: 'Immediate daily reset triggered by professional developer',
-      clearCache: true,
-      forceRefresh: true
-    });
-    
-    // Also dispatch DOM event for maximum compatibility
-    window.dispatchEvent(new CustomEvent('force-daily-reset', {
-      detail: {
-        timestamp: new Date().toISOString(),
-        message: 'FORCE RESET - Clear all data immediately',
-        clearCache: true,
-        forceRefresh: true
-      }
-    }));
-    
-    console.log('🧹 GlobalSync: All cache cleared, force reset events dispatched');
-  }
-
-  // Setup periodic sync every 60 seconds (reduced from 30 for performance)
-  private setupPeriodicSync() {
-    this.syncInterval = setInterval(() => {
-      this.triggerGlobalSync();
-    }, 60000); // 60 seconds instead of 30 for better performance
   }
 
   // Add event listener
@@ -313,80 +91,26 @@ class GlobalSyncService {
     }
   }
 
-  // Broadcast event to all listeners
-  public broadcastEvent(event: string, data?: any) {
-    const eventListeners = this.listeners.get(event);
-    if (eventListeners) {
-      eventListeners.forEach(callback => {
-        try {
-          callback(data);
-        } catch (error) {
-          console.error(`❌ GlobalSync: Error in event listener for ${event}:`, error);
-        }
-      });
+  // Simple manual sync trigger
+  public triggerSync() {
+    console.log('🔄 GlobalSync: Manual sync triggered');
+    this.performDateSync();
+  }
+
+  // Get singleton instance
+  public static getInstance(): GlobalSyncService {
+    if (!GlobalSyncService.instance) {
+      GlobalSyncService.instance = new GlobalSyncService();
     }
-
-    // Also dispatch as DOM event for cross-component communication
-    window.dispatchEvent(new CustomEvent(event, {
-      detail: data || { timestamp: new Date().toISOString() }
-    }));
+    return GlobalSyncService.instance;
   }
 
-  // Trigger global sync for all dashboards
-  public triggerGlobalSync() {
-    const now = Date.now();
-    
-    // Throttle to prevent excessive syncs (minimum 5 seconds between syncs)
-    if (now - this.lastSyncTime < 5000) {
-      return;
-    }
-    
-    this.lastSyncTime = now;
-    
-    console.log('🔄 GlobalSync: Triggering global sync for all dashboards');
-    
-    this.broadcastEvent('global-sync-triggered', {
-      timestamp: new Date().toISOString(),
-      source: 'global-sync-service'
-    });
-  }
-
-  // Trigger immediate sync (for critical updates)
-  public triggerImmediateSync(reason: string) {
-    console.log(`🚀 GlobalSync: Immediate sync triggered - ${reason}`);
-    
-    this.broadcastEvent('immediate-sync-required', {
-      timestamp: new Date().toISOString(),
-      reason,
-      source: 'global-sync-service'
-    });
-  }
-
-  // Sync specific data type
-  public syncDataTypes(dataTypes: string[]) {
-    console.log('📊 GlobalSync: Syncing specific data types:', dataTypes);
-    
-    const safeDataTypes = Array.isArray(dataTypes) ? dataTypes : [];
-    safeDataTypes.forEach(dataType => {
-      this.broadcastEvent(`${dataType}-sync-required`, {
-        timestamp: new Date().toISOString(),
-        dataType
-      });
-    });
-  }
-
-  // Cleanup intervals and listeners
+  // Cleanup
   public cleanup() {
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
     }
-    
-    if (this.dailyResetInterval) {
-      clearTimeout(this.dailyResetInterval);
-      this.dailyResetInterval = null;
-    }
-    
     this.listeners.clear();
     console.log('🧹 GlobalSync: Service cleaned up');
   }
@@ -396,4 +120,4 @@ class GlobalSyncService {
 export const globalSyncService = GlobalSyncService.getInstance();
 
 // Auto-initialize when module loads
-console.log('🌐 GlobalSync: Real-time sync service initialized');
+console.log('🌐 GlobalSync: Simple date-wise sync service initialized');

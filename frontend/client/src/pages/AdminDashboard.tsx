@@ -835,23 +835,17 @@ export function AdminDashboard() {
     return () => clearInterval(interval);
   }, [syncState.syncInterval, syncState.backgroundSyncEnabled]);
   
-  // Listen for global sync events and trigger intelligent sync
+  // Simple date-wise sync listener
   useEffect(() => {
-    const handleGlobalSync = async (event: Event) => {
-      console.log('🌐 Dashboard: Received global sync event:', event.type);
-      await intelligentBackgroundSync(true); // Force sync on global events
+    const handleDateSync = async (event: any) => {
+      console.log('📅 Dashboard: Received date sync event:', event.detail);
+      await intelligentBackgroundSync(true); // Force sync on date events
     };
     
-    window.addEventListener('global-sync', handleGlobalSync);
-    window.addEventListener('dashboard-refresh-required', handleGlobalSync);
-    window.addEventListener('staff-synced', handleGlobalSync);
-    window.addEventListener('dashboard-refresh', handleGlobalSync);
+    window.addEventListener('date-sync-complete', handleDateSync);
     
     return () => {
-      window.removeEventListener('global-sync', handleGlobalSync);
-      window.removeEventListener('dashboard-refresh-required', handleGlobalSync);
-      window.removeEventListener('staff-synced', handleGlobalSync);
-      window.removeEventListener('dashboard-refresh', handleGlobalSync);
+      window.removeEventListener('date-sync-complete', handleDateSync);
     };
   }, []);
 
