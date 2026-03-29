@@ -6,89 +6,305 @@ const { Entry } = require('../models/Entry.js');
 
 const router = Router();
 
+// CORS middleware for SSE endpoints
+const corsMiddleware = (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Cache-Control, Content-Type, Authorization');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+};
+
+// Apply CORS middleware to all routes in this file
+router.use(corsMiddleware);
+
+// Connection monitoring middleware
+const connectionMonitor = (req, res, next) => {
+  console.log('🔍 Connection Monitor:', {
+    method: req.method,
+    url: req.url,
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+    referer: req.headers.referer,
+    timestamp: new Date().toISOString()
+  });
+  next();
+};
+
+// Apply connection monitoring to all routes in this file
+router.use(connectionMonitor);
+
 // Real-time sync clients storage
 const syncClients = new Map();
 
-// Broadcast function for real-time updates
+// Broadcast function for real-time updates (PROFESSIONAL IMPLEMENTATION)
 const broadcastToClients = (event, data) => {
-  const message = JSON.stringify({ event, data, timestamp: new Date().toISOString() });
+  const message = JSON.stringify({ 
+    event, 
+    data, 
+    timestamp: new Date().toISOString(),
+    serverTime: new Date().toISOString(),
+    clientId: 'broadcast'
+  });
+  
+  let successCount = 0;
+  let errorCount = 0;
   
   syncClients.forEach((client, clientId) => {
     try {
       if (client.readyState === 1) { // WebSocket OPEN state
         client.send(message);
+        successCount++;
       } else {
         // Remove disconnected clients
+        console.warn('📡 Removing disconnected client from broadcast:', clientId);
         syncClients.delete(clientId);
+        errorCount++;
       }
     } catch (error) {
-      console.error('Error broadcasting to client:', clientId, error);
+      console.error('📡 Error broadcasting to client:', clientId, {
+        error: error.message,
+        code: error.code,
+        stack: error.stack
+      });
       syncClients.delete(clientId);
+      errorCount++;
     }
   });
   
-  console.log(`📡 Broadcasted ${event} to ${syncClients.size} clients`);
+  console.log(`📡 Broadcast ${event} - Success: ${successCount}, Errors: ${errorCount}, Total: ${syncClients.size} clients`);
+  
+  // Return broadcast statistics
+  return {
+    event,
+    totalClients: syncClients.size,
+    successCount,
+    errorCount,
+    timestamp: new Date().toISOString()
+  };
 };
 
-// Real-time sync endpoint - Server-Sent Events
+// Real-time sync endpoint - Server-Sent Events (PROFESSIONAL IMPLEMENTATION)
 router.get('/sync', (req, res) => {
-  console.log('📡 New sync client connected');
+  console.log('📡 New sync client connected from:', req.ip, req.headers['user-agent']);
   
-  // Set SSE headers with improved settings
+  // Enhanced SSE headers for maximum compatibility
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
     'Connection': 'keep-alive',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Cache-Control',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Cache-Control, Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'false',
-    'X-Accel-Buffering': 'no' // Disable nginx buffering
+    'X-Accel-Buffering': 'no', // Disable nginx buffering
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block'
   });
   
-  const clientId = Date.now() + '-' + Math.random();
+  // Generate unique client ID with timestamp and random
+  const clientId = `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   let isAlive = true;
+  let heartbeatInterval = null;
+  let connectionTimeout = null;
+  
+  // Enhanced connection state tracking
+  const connectionState = {
+    connected: true,
+    clientId,
+    connectedAt: new Date().toISOString(),
+    lastActivity: new Date().toISOString(),
+    eventsSent: 0,
+    errors: []
+  };
+  
+  console.log('📡 SSE Connection established:', connectionState.clientId);
+  
+  // Helper function to safely send SSE data
+  const sendSSEData = (data) => {
+    try {
+      if (!isAlive || res.destroyed) {
+        console.warn('📡 Attempting to send data on closed connection:', connectionState.clientId);
+        return false;
+      }
+      
+      const sseData = `data: ${JSON.stringify(data)}\n\n`;
+      const success = res.write(sseData);
+      
+      if (success) {
+        connectionState.eventsSent++;
+        connectionState.lastActivity = new Date().toISOString();
+        console.log('📡 SSE Data sent:', { clientId: connectionState.clientId, event: data.event, size: sseData.length });
+      } else {
+        console.error('📡 Failed to write SSE data:', { clientId: connectionState.clientId, error: 'Connection closed' });
+        isAlive = false;
+        cleanup();
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('📡 SSE Write Error:', { clientId: connectionState.clientId, error: error.message });
+      connectionState.errors.push({ timestamp: new Date().toISOString(), error: error.message });
+      isAlive = false;
+      cleanup();
+      return false;
+    }
+  };
+  
+  // Cleanup function
+  const cleanup = () => {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    }
+    
+    if (connectionTimeout) {
+      clearTimeout(connectionTimeout);
+      connectionTimeout = null;
+    }
+    
+    isAlive = false;
+    connectionState.connected = false;
+    console.log('📡 Connection cleanup completed:', connectionState.clientId);
+  };
   
   // Send initial connection event
-  res.write(`data: ${JSON.stringify({ 
+  sendSSEData({ 
     event: 'connected', 
     clientId, 
-    timestamp: new Date().toISOString() 
-  })}\n\n`);
+    timestamp: new Date().toISOString(),
+    message: 'SSE connection established successfully'
+  });
   
-  // Keep connection alive with more frequent heartbeat
-  const heartbeat = setInterval(() => {
+  // Enhanced heartbeat with connection monitoring
+  heartbeatInterval = setInterval(() => {
     if (isAlive) {
-      res.write(`data: ${JSON.stringify({ 
+      const heartbeatData = {
         event: 'heartbeat', 
-        timestamp: new Date().toISOString() 
-      })}\n\n`);
+        timestamp: new Date().toISOString(),
+        clientId: connectionState.clientId,
+        uptime: Date.now() - new Date(connectionState.connectedAt).getTime()
+      };
+      
+      const success = sendSSEData(heartbeatData);
+      
+      if (!success) {
+        console.error('📡 Heartbeat failed, cleaning up connection:', connectionState.clientId);
+        cleanup();
+      }
     } else {
-      clearInterval(heartbeat);
+      console.log('📡 Heartbeat stopped for disconnected client:', connectionState.clientId);
+      cleanup();
     }
-  }, 15000); // 15 second heartbeat (reduced from 30)
+  }, 10000); // 10 second heartbeat for better responsiveness
   
-  // Handle client disconnect
-  req.on('close', () => {
-    isAlive = false;
-    clearInterval(heartbeat);
-    console.log('📡 Sync client disconnected:', clientId);
-  });
-  
-  req.on('error', (error) => {
-    isAlive = false;
-    clearInterval(heartbeat);
-    console.error('📡 Sync client error:', error);
-  });
-  
-  // Trigger immediate sync
-  setTimeout(() => {
+  // Connection timeout protection
+  connectionTimeout = setTimeout(() => {
     if (isAlive) {
+      console.log('📡 Connection timeout, cleaning up:', connectionState.clientId);
+      sendSSEData({
+        event: 'timeout',
+        clientId: connectionState.clientId,
+        timestamp: new Date().toISOString(),
+        message: 'Connection timed out due to inactivity'
+      });
+      cleanup();
+    }
+  }, 300000); // 5 minute timeout
+  
+  // Enhanced client disconnect handling
+  req.on('close', () => {
+    console.log('📡 Client disconnected:', connectionState.clientId);
+    sendSSEData({
+      event: 'disconnected',
+      clientId: connectionState.clientId,
+      timestamp: new Date().toISOString(),
+      reason: 'client_closed',
+      uptime: Date.now() - new Date(connectionState.connectedAt).getTime(),
+      eventsSent: connectionState.eventsSent,
+      errors: connectionState.errors
+    });
+    cleanup();
+  });
+  
+  // Enhanced error handling
+  req.on('error', (error) => {
+    console.error('📡 SSE Connection Error:', { 
+      clientId: connectionState.clientId, 
+      error: error.message, 
+      code: error.code,
+      stack: error.stack 
+    });
+    
+    connectionState.errors.push({ 
+      timestamp: new Date().toISOString(), 
+      error: error.message, 
+      code: error.code 
+    });
+    
+    // Send error event before cleanup
+    sendSSEData({
+      event: 'error',
+      clientId: connectionState.clientId,
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      code: error.code || 'UNKNOWN_ERROR'
+    });
+    
+    cleanup();
+  });
+  
+  // Handle request abortion
+  req.on('aborted', () => {
+    console.warn('📡 Request aborted by client:', connectionState.clientId);
+    sendSSEData({
+      event: 'aborted',
+      clientId: connectionState.clientId,
+      timestamp: new Date().toISOString(),
+      reason: 'request_aborted',
+      uptime: Date.now() - new Date(connectionState.connectedAt).getTime()
+    });
+    cleanup();
+  });
+  
+  // Enhanced response handling for connection close
+  res.on('close', () => {
+    console.log('📡 Response closed:', connectionState.clientId);
+    cleanup();
+  });
+  
+  // Enhanced response error handling
+  res.on('error', (error) => {
+    console.error('📡 Response Error:', { 
+      clientId: connectionState.clientId, 
+      error: error.message, 
+      code: error.code 
+    });
+    cleanup();
+  });
+  
+  // Trigger initial sync after connection is stable
+  setTimeout(() => {
+    if (isAlive && !res.destroyed) {
+      console.log('📡 Triggering initial sync for client:', connectionState.clientId);
+      
+      // Broadcast sync-required event to all clients
       broadcastToClients('sync-required', { 
-        source: 'connection',
-        message: 'Initial sync required' 
+        source: 'sse-connection',
+        clientId: connectionState.clientId,
+        message: 'Initial sync required for new SSE connection',
+        timestamp: new Date().toISOString()
       });
     }
-  }, 1000);
+  }, 2000); // Wait 2 seconds for connection to stabilize
+  
+  console.log('📡 SSE Endpoint Setup Complete:', { clientId: connectionState.clientId, headers: res.getHeaders() });
 });
 
 // Trigger sync endpoint - for other services to trigger updates
