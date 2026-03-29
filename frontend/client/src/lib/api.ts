@@ -383,6 +383,54 @@ export const entriesApi = {
           monthly: []
         };
       }),
+  
+  todayCharts: () =>
+    api<{ success: boolean; data: { hourlyChart: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number; amount: number }[]; hourlyComparison: { hour: string; entries: number; revenue: number }[]; summary: { totalEntries: number; totalRevenue: number; date: string; lastUpdated: string } } }>(`/entries/charts/today?t=${Date.now()}`)
+      .then(response => {
+        if (!response || !response.success || !response.data) {
+          console.error('🚨 API: Today charts failed:', response);
+          // Return safe default chart data
+          return {
+            hourlyChart: Array.from({ length: 24 }, (_, i) => ({ _id: `${i}:00`, count: 0, amount: 0 })),
+            ticketDistribution: [
+              { _id: '100', count: 0, amount: 0 },
+              { _id: '150', count: 0, amount: 0 },
+              { _id: '300', count: 0, amount: 0 },
+              { _id: '450', count: 0, amount: 0 },
+              { _id: '600', count: 0, amount: 0 }
+            ],
+            hourlyComparison: [],
+            summary: {
+              totalEntries: 0,
+              totalRevenue: 0,
+              date: new Date().toISOString().split('T')[0],
+              lastUpdated: new Date().toISOString()
+            }
+          };
+        }
+        return response.data;
+      })
+      .catch(error => {
+        console.error('🚨 API: Today charts error:', error);
+        // Return safe default chart data
+        return {
+          hourlyChart: Array.from({ length: 24 }, (_, i) => ({ _id: `${i}:00`, count: 0, amount: 0 })),
+          ticketDistribution: [
+            { _id: '100', count: 0, amount: 0 },
+            { _id: '150', count: 0, amount: 0 },
+            { _id: '300', count: 0, amount: 0 },
+            { _id: '450', count: 0, amount: 0 },
+            { _id: '600', count: 0, amount: 0 }
+          ],
+          hourlyComparison: [],
+          summary: {
+            totalEntries: 0,
+            totalRevenue: 0,
+            date: new Date().toISOString().split('T')[0],
+            lastUpdated: new Date().toISOString()
+          }
+        };
+      }),
   export: (params?: { search?: string; ticketType?: string; from?: string; to?: string; limit?: number }) => {
     const q = new URLSearchParams();
     if (params?.search) q.set('search', params.search);

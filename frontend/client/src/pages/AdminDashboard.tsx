@@ -354,7 +354,7 @@ export function AdminDashboard() {
         // Fetch ticket configs along with other data
         const [s, c] = await Promise.all([
           entriesApi.stats(true), // Force refresh from MongoDB
-          entriesApi.charts(),
+          entriesApi.todayCharts(), // Use today's charts endpoint
           fetchTicketConfigs()
         ]);
         
@@ -428,7 +428,7 @@ export function AdminDashboard() {
               }
               
               // Fetch charts separately
-              const chartsData = await entriesApi.charts();
+              const chartsData = await entriesApi.todayCharts();
               if (chartsData) {
                 setCharts(chartsData as unknown as Charts);
               }
@@ -467,7 +467,7 @@ export function AdminDashboard() {
             console.log('🔄 Dashboard: Fetching updated data...');
             const [s, c] = await Promise.all([
               entriesApi.stats(), 
-              entriesApi.charts(),
+              entriesApi.todayCharts(),
               fetchTicketConfigs() // Also refresh ticket configs to ensure pricing sync
             ]);
             if (!cancelled) {
@@ -619,7 +619,7 @@ export function AdminDashboard() {
           console.log('🔄 Dashboard: Fetching updated data...');
           const [s, c] = await Promise.all([
             entriesApi.stats(), 
-            entriesApi.charts(),
+            entriesApi.todayCharts(),
             fetchTicketConfigs() // Ensure ticket configs are also refreshed
           ]);
           if (!cancelled) {
@@ -662,7 +662,7 @@ export function AdminDashboard() {
           try {
             const [s, c] = await Promise.all([
               entriesApi.stats(), 
-              entriesApi.charts(),
+              entriesApi.todayCharts(),
               fetchTicketConfigs()
             ]);
             if (!cancelled) {
