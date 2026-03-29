@@ -493,81 +493,7 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-// GET /api/entries/:id - Get single entry (PUBLIC ACCESS) - MUST BE AFTER SPECIFIC ROUTES
-router.get('/:id', async (req, res) => {
-  try {
-    // Set CORS headers for all origins
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Credentials', 'false');
-    
-    const { id } = req.params;
-    console.log('🔍 Fetching single entry:', id);
-    
-    // Validate ObjectId format
-    if (id === 'stats' || id === 'health' || id === 'sync-all') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid entry ID format'
-      });
-    }
-    
-    // Try database find, fallback to success response
-    try {
-      if (mongoose.connection.readyState === 1) {
-        const entry = await Entry.findOne({ _id: id });
-        
-        if (!entry) {
-          return res.status(404).json({
-            success: false,
-            message: 'Entry not found'
-          });
-        }
-        
-        console.log('✅ Entry found in database');
-        return res.json({
-          success: true,
-          data: entry
-        });
-      } else {
-        console.log('⚠️ MongoDB not connected, returning fallback entry');
-        return res.json({
-          success: true,
-          data: {
-            _id: id,
-            name: 'Unknown',
-            mobile: 'Unknown',
-            ticketType: '150',
-            adults: 1,
-            kids: 0,
-            totalPeople: 1,
-            finalAmount: 150,
-            cashAmount: 150,
-            upiAmount: 0,
-            advanceAmount: 0,
-            receiptNumber: 'REC' + Date.now(),
-            createdAt: new Date().toISOString(),
-            fallbackMode: true
-          }
-        });
-      }
-    } catch (dbError) {
-      console.error('❌ Database error:', dbError.message);
-      return res.status(500).json({
-        success: false,
-        error: 'Database error',
-        message: dbError.message
-      });
-    }
-    
-  } catch (error) {
-    console.error('❌ Get entry error:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to fetch entry',
-      message: error.message
-    });
-  }
-});
+// GET /api/entries/:id - Get single entry (PUBLIC ACCESS) - MOVED TO THE END
 
 // POST /api/entries - Create new entry (PUBLIC ACCESS)
 router.post('/', async (req, res) => {
@@ -710,7 +636,7 @@ router.get('/charts', async (req, res) => {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         
         // Fetch chart data in parallel
-        const [last7Days, ticketDistribution, monthlyData] = await Promise.all([
+        const [last7DaysEntries, ticketDistributionData, monthlyData] = await Promise.all([
           Entry.find({
             createdAt: { $gte: sevenDaysAgo, $lte: now }
           }).sort({ createdAt: 1 }).lean(),
@@ -726,7 +652,7 @@ router.get('/charts', async (req, res) => {
             {
               $sort: { _id: 1 }
             }
-          ]).lean(),
+          ]),
           
           Entry.aggregate([
             {
@@ -749,21 +675,21 @@ router.get('/charts', async (req, res) => {
             {
               $sort: { _id: 1 }
             }
-          ]).lean()
+          ])
         ]);
         
-        console.log(`📊 Chart data: ${last7Days.length} last 7 days, ${ticketDistribution.length} ticket types, ${monthlyData.length} monthly`);
+        console.log(`📊 Chart data: ${last7DaysEntries.length} last 7 days, ${ticketDistributionData.length} ticket types, ${monthlyData.length} monthly`);
         
         return res.json({
           success: true,
           data: {
-            last7Days: last7Days.map(entry => ({
+            last7Days: last7DaysEntries.map(entry => ({
               _id: entry._id?.toString() || '',
               date: entry.createdAt ? new Date(entry.createdAt).toISOString().split('T')[0] : '',
               count: 1,
               amount: entry.finalAmount || 0
             })),
-            ticketDistribution: ticketDistribution.map(item => ({
+            ticketDistribution: ticketDistributionData.map(item => ({
               _id: item._id || '',
               count: item.count || 0,
               amount: item.amount || 0
@@ -772,7 +698,9 @@ router.get('/charts', async (req, res) => {
               _id: item._id || '',
               count: item.count || 0,
               amount: item.amount || 0
-            }))
+            })),
+            upgradeDistribution: [], // TODO: Implement upgrade distribution logic
+            comparisonData: [] // TODO: Implement comparison data logic
           }
         });
         
@@ -787,7 +715,9 @@ router.get('/charts', async (req, res) => {
     const fallbackChartData = {
       last7Days: [],
       ticketDistribution: [],
-      monthly: []
+      monthly: [],
+      upgradeDistribution: [],
+      comparisonData: []
     };
     
     return res.json({
@@ -1021,6 +951,82 @@ router.get('/', simpleAuth, async (req, res) => {
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch entries',
+      message: error.message
+    });
+  }
+});
+
+// GET /api/entries/:id - Get single entry (PUBLIC ACCESS) - MUST BE LAST TO AVOID CONFLICTS
+router.get('/:id', async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    const { id } = req.params;
+    console.log('🔍 Fetching single entry:', id);
+    
+    // Validate ObjectId format - exclude known specific routes
+    if (id === 'stats' || id === 'health' || id === 'sync-all' || id === 'charts' || id === 'export') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid entry ID format'
+      });
+    }
+    
+    // Try database find, fallback to success response
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const entry = await Entry.findOne({ _id: id });
+        
+        if (!entry) {
+          return res.status(404).json({
+            success: false,
+            message: 'Entry not found'
+          });
+        }
+        
+        console.log('✅ Entry found in database');
+        return res.json({
+          success: true,
+          data: entry
+        });
+      } else {
+        console.log('⚠️ MongoDB not connected, returning fallback entry');
+        return res.json({
+          success: true,
+          data: {
+            _id: id,
+            name: 'Unknown',
+            mobile: 'Unknown',
+            ticketType: '150',
+            adults: 1,
+            kids: 0,
+            totalPeople: 1,
+            finalAmount: 150,
+            cashAmount: 150,
+            upiAmount: 0,
+            advanceAmount: 0,
+            receiptNumber: 'REC' + Date.now(),
+            createdAt: new Date().toISOString(),
+            fallbackMode: true
+          }
+        });
+      }
+    } catch (dbError) {
+      console.error('❌ Database error:', dbError.message);
+      return res.status(500).json({
+        success: false,
+        error: 'Database error',
+        message: dbError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Get entry error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch entry',
       message: error.message
     });
   }
