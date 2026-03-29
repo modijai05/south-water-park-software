@@ -74,37 +74,9 @@ router.post('/login', async (req, res) => {
       console.error('🔐 Database authentication error:', dbError.message);
     }
     
-    // Fallback authentication for admin user (temporary - should be removed in production)
-    if (username === 'admin' && password === 'admin123') {
-      console.log('🔐 Using fallback admin authentication');
-      const token = jwt.sign(
-        { userId: 'fallback-admin', username: 'admin', role: 'admin' },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-      
-      const response = {
-        message: 'Login successful (admin)',
-        token,
-        user: {
-          id: 'fallback-admin',
-          username: 'admin',
-          fullName: 'Admin User',
-          role: 'admin',
-          active: true
-        }
-      };
-      
-      console.log('🔐 Fallback admin login successful');
-      // Set CORS headers
-      res.header('Access-Control-Allow-Origin', '*');
-      res.header('Access-Control-Allow-Credentials', 'true');
-      return res.json(response);
-    }
-    
     if (mongoose.connection.readyState !== 1) {
-      console.log('⚠️ Login: Database not connected and no valid fallback credentials');
-      return res.status(401).json({ message: 'Invalid username or password' });
+      console.log('⚠️ Login: Database not connected');
+      return res.status(401).json({ message: 'Database not connected - please try again' });
     }
     
     console.log('🔐 Searching for user:', username);
