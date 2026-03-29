@@ -261,6 +261,14 @@ export function AdminDashboard() {
   useEffect(() => {
     // Prevent multiple reset triggers on same page load
     const resetAlreadyTriggered = sessionStorage.getItem('admin-reset-triggered');
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Clear session storage if it's a new day
+    const lastResetDate = sessionStorage.getItem('admin-reset-date');
+    if (lastResetDate !== today) {
+      sessionStorage.clear();
+      sessionStorage.setItem('admin-reset-date', today);
+    }
     
     if (needsDailyReset()) {
       console.log('🔄 AdminDashboard: Daily reset needed on mount');
@@ -271,20 +279,38 @@ export function AdminDashboard() {
     // Only trigger system reset if not already done this session
     if (!resetAlreadyTriggered) {
       console.log('🔄 AdminDashboard: First time setup - triggering system refresh');
-      // Check and trigger system reset for deployment changes
-      checkAndTriggerReset();
       
-      // Check and force refresh to today's data
-      checkAndForceRefresh();
+      // Batch all reset operations together to prevent multiple triggers
+      const performAllResets = async () => {
+        try {
+          // Check and trigger system reset for deployment changes
+          const systemResetNeeded = checkAndTriggerReset();
+          
+          // Check and force refresh to today's data
+          const forceRefreshNeeded = checkAndForceRefresh();
+          
+          // Mark as triggered for this session
+          sessionStorage.setItem('admin-reset-triggered', 'true');
+          
+          console.log('🔄 AdminDashboard: Reset operations completed', {
+            systemReset: systemResetNeeded,
+            forceRefresh: forceRefreshNeeded
+          });
+        } catch (error) {
+          console.error('❌ AdminDashboard: Reset operations failed:', error);
+        }
+      };
       
-      // Mark as triggered for this session
-      sessionStorage.setItem('admin-reset-triggered', 'true');
+      // Execute all resets together
+      performAllResets();
     } else {
       console.log('🔄 AdminDashboard: Reset already triggered this session - skipping');
     }
     
-    // Auto-verify today's data is correct (always run)
-    autoVerify();
+    // Auto-verify today's data is correct (always run but with delay)
+    setTimeout(() => {
+      autoVerify();
+    }, 5000); // Delay to allow resets to complete
   }, []);
 
   // Enhanced sync function to force refresh all data

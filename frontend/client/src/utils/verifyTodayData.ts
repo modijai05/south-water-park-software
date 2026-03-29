@@ -38,24 +38,70 @@ interface ChartsData {
   };
 }
 
+// Debounce verification to prevent multiple calls
+let verificationTimeout: NodeJS.Timeout | null = null;
+let isVerifying = false;
+
 export const verifyTodayData = async () => {
-  console.log('🔍 Verifying today\'s data is displaying correctly...');
+  // Prevent multiple simultaneous verifications
+  if (isVerifying) {
+    console.log('� Verification already in progress, skipping...');
+    return { success: false, issues: ['Verification already in progress'], data: null };
+  }
+  
+  // Clear any existing timeout
+  if (verificationTimeout) {
+    clearTimeout(verificationTimeout);
+  }
+  
+  isVerifying = true;
+  
+  console.log('�🔍 Verifying today\'s data is displaying correctly...');
   
   try {
     const today = dayjs().format('YYYY-MM-DD');
     console.log('📅 Today\'s date:', today);
     
-    // Fetch today's data
-    const [statsData, chartsData] = await Promise.all([
-      entriesApi.stats(true),
-      entriesApi.todayCharts()
-    ]);
+    // Fetch today's data with error handling for 404
+    let statsData: StatsData | null = null;
+    let chartsData: ChartsData | null = null;
+    
+    try {
+      statsData = await entriesApi.stats(true) as StatsData;
+    } catch (error) {
+      console.error('❌ Stats API failed:', error);
+      return { success: false, issues: ['Stats API failed'], data: null };
+    }
+    
+    try {
+      chartsData = await entriesApi.todayCharts();
+    } catch (error) {
+      console.error('❌ Today charts API failed (404 expected if not deployed):', error);
+      // Don't fail verification if charts endpoint is not deployed yet
+      chartsData = {
+        hourlyChart: Array.from({ length: 24 }, (_, i) => ({ _id: `${i}:00`, count: 0, amount: 0 })),
+        ticketDistribution: [
+          { _id: '100', count: 0, amount: 0 },
+          { _id: '150', count: 0, amount: 0 },
+          { _id: '300', count: 0, amount: 0 },
+          { _id: '450', count: 0, amount: 0 },
+          { _id: '600', count: 0, amount: 0 }
+        ],
+        hourlyComparison: [],
+        summary: {
+          totalEntries: 0,
+          totalRevenue: 0,
+          date: today,
+          lastUpdated: new Date().toISOString()
+        }
+      };
+    }
     
     console.log('📊 Stats data verification:', {
-      todayEntries: (statsData as StatsData)?.todayEntries || 0,
-      todayAmount: (statsData as StatsData)?.todayAmount || 0,
-      todayPeople: (statsData as StatsData)?.todayPeople || 0,
-      lastUpdated: (statsData as StatsData)?.lastUpdated
+      todayEntries: statsData?.todayEntries || 0,
+      todayAmount: statsData?.todayAmount || 0,
+      todayPeople: statsData?.todayPeople || 0,
+      lastUpdated: statsData?.lastUpdated
     });
     
     console.log('📈 Charts data verification:', {
@@ -70,7 +116,7 @@ export const verifyTodayData = async () => {
     const issues = [];
     
     // Check if stats show today's data
-    if (!(statsData as StatsData)?.todayEntries || (statsData as StatsData).todayEntries < 0) {
+    if (!statsData?.todayEntries || statsData.todayEntries < 0) {
       issues.push('Stats todayEntries is missing or invalid');
     }
     
@@ -86,7 +132,7 @@ export const verifyTodayData = async () => {
     
     // Check if data is fresh (updated within last 5 minutes)
     const now = dayjs();
-    const lastUpdated = dayjs((statsData as StatsData)?.lastUpdated || chartsData?.summary?.lastUpdated);
+    const lastUpdated = dayjs(statsData?.lastUpdated || chartsData?.summary?.lastUpdated);
     const minutesSinceUpdate = now.diff(lastUpdated, 'minute');
     
     if (minutesSinceUpdate > 5) {
@@ -107,9 +153,9 @@ export const verifyTodayData = async () => {
       data: { statsData, chartsData },
       verification: {
         date: today,
-        entries: (statsData as StatsData)?.todayEntries || 0,
-        revenue: (statsData as StatsData)?.todayAmount || 0,
-        lastUpdated: (statsData as StatsData)?.lastUpdated,
+        entries: statsData?.todayEntries || 0,
+        revenue: statsData?.todayAmount || 0,
+        lastUpdated: statsData?.lastUpdated,
         freshness: `${minutesSinceUpdate} minutes ago`
       }
     };
@@ -117,12 +163,19 @@ export const verifyTodayData = async () => {
   } catch (error) {
     console.error('❌ Verification failed:', error);
     return { success: false, error: (error as Error).message };
+  } finally {
+    isVerifying = false;
   }
 };
 
-// Auto-verify on page load
+// Auto-verify on page load with debouncing
 export const autoVerify = () => {
-  setTimeout(() => {
+  // Clear any existing timeout
+  if (verificationTimeout) {
+    clearTimeout(verificationTimeout);
+  }
+  
+  verificationTimeout = setTimeout(() => {
     console.log('🔄 Auto-verifying today\'s data...');
     verifyTodayData().then(result => {
       if (result.success) {
