@@ -199,6 +199,12 @@ export function AdminEntries() {
     fetchEntries();
   };
 
+  // Handle new entry navigation
+  const handleNewEntry = () => {
+    console.log('🎫 Navigating to ticket form...');
+    navigate('/ticket');
+  };
+
   if (!isClient) {
     return (
       <Layout>
@@ -228,15 +234,15 @@ export function AdminEntries() {
             >
               🔄 Refresh
             </motion.button>
-            <Link to="/ticket-form">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition"
-              >
-                ➕ New Entry
-              </motion.button>
-            </Link>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleNewEntry}
+              className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition"
+              disabled={loading}
+            >
+              ➕ New Entry
+            </motion.button>
             {user?.role === 'admin' && (
               <motion.button
                 whileHover={{ scale: 1.02 }}
