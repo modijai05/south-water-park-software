@@ -97,6 +97,39 @@ class GlobalSyncService {
     this.performDateSync();
   }
 
+  // Immediate sync trigger for real-time updates
+  public triggerImmediateSync(source: string = 'manual') {
+    console.log(`⚡ GlobalSync: Immediate sync triggered from ${source}`);
+    
+    // Broadcast immediate sync event for real-time listeners
+    this.broadcastEvent('immediate-sync', {
+      source,
+      timestamp: new Date().toISOString()
+    });
+
+    // Perform async sync in background
+    this.performDateSync();
+  }
+
+  // Sync specific data types
+  public syncDataTypes(dataTypes: string[]) {
+    console.log(`📊 GlobalSync: Syncing specific data types: ${dataTypes.join(', ')}`);
+    
+    // Broadcast data type specific sync events
+    dataTypes.forEach(dataType => {
+      this.broadcastEvent(`${dataType}-sync`, {
+        dataType,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    // Also broadcast a general sync event
+    this.broadcastEvent('data-types-synced', {
+      dataTypes,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   // Get singleton instance
   public static getInstance(): GlobalSyncService {
     if (!GlobalSyncService.instance) {

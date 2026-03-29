@@ -7,6 +7,7 @@ import {
   ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import Logger from '@/lib/logger';
+import { globalSyncService } from '@/services/globalSyncService';
 
 interface DiscountAnalytics {
   summary: {
@@ -52,6 +53,71 @@ export function DiscountAnalytics({ timeRange = '30d' }: { timeRange?: string })
 
   useEffect(() => {
     fetchDiscountAnalytics();
+    
+    // Set up real-time sync event listeners for discount updates
+    const handleDiscountUpdated = (event: any) => {
+      console.log('💰 DiscountAnalytics: Discount updated event received:', event.detail);
+      fetchDiscountAnalytics();
+    };
+    
+    const handleAdditionalDiscountUpdated = (event: any) => {
+      console.log('🎫 DiscountAnalytics: Additional discount updated event received:', event.detail);
+      fetchDiscountAnalytics();
+    };
+    
+    const handleEntryCreated = () => {
+      console.log('📊 DiscountAnalytics: Entry created event received, refreshing discount data...');
+      fetchDiscountAnalytics();
+    };
+    
+    const handlePaymentCompleted = () => {
+      console.log('💳 DiscountAnalytics: Payment completed event received, refreshing discount data...');
+      fetchDiscountAnalytics();
+    };
+    
+    const handleImmediateSync = (event: any) => {
+      console.log('⚡ DiscountAnalytics: Immediate sync event received:', event.detail);
+      fetchDiscountAnalytics();
+    };
+    
+    const handleDiscountsSync = () => {
+      console.log('🎟️ DiscountAnalytics: Discounts sync event received, refreshing data...');
+      fetchDiscountAnalytics();
+    };
+    
+    // Add global sync service listeners
+    globalSyncService.addEventListener('discount-updated', handleDiscountUpdated);
+    globalSyncService.addEventListener('additional-discount-updated', handleAdditionalDiscountUpdated);
+    globalSyncService.addEventListener('entry-created', handleEntryCreated);
+    globalSyncService.addEventListener('payment-completed', handlePaymentCompleted);
+    globalSyncService.addEventListener('immediate-sync', handleImmediateSync);
+    globalSyncService.addEventListener('discounts-sync', handleDiscountsSync);
+    
+    // Also listen to window events for cross-component communication
+    window.addEventListener('discount-updated', handleDiscountUpdated as EventListener);
+    window.addEventListener('additional-discount-updated', handleAdditionalDiscountUpdated as EventListener);
+    window.addEventListener('entry-created', handleEntryCreated as EventListener);
+    window.addEventListener('payment-completed', handlePaymentCompleted as EventListener);
+    window.addEventListener('immediate-sync', handleImmediateSync as EventListener);
+    window.addEventListener('discounts-sync', handleDiscountsSync as EventListener);
+    
+    return () => {
+      // Clean up global sync service listeners
+      globalSyncService.removeEventListener('discount-updated', handleDiscountUpdated);
+      globalSyncService.removeEventListener('additional-discount-updated', handleAdditionalDiscountUpdated);
+      globalSyncService.removeEventListener('entry-created', handleEntryCreated);
+      globalSyncService.removeEventListener('payment-completed', handlePaymentCompleted);
+      globalSyncService.removeEventListener('immediate-sync', handleImmediateSync);
+      globalSyncService.removeEventListener('discounts-sync', handleDiscountsSync);
+      
+      // Clean up window event listeners
+      window.removeEventListener('discount-updated', handleDiscountUpdated as EventListener);
+      window.removeEventListener('additional-discount-updated', handleAdditionalDiscountUpdated as EventListener);
+      window.removeEventListener('entry-created', handleEntryCreated as EventListener);
+      window.removeEventListener('payment-completed', handlePaymentCompleted as EventListener);
+      window.removeEventListener('immediate-sync', handleImmediateSync as EventListener);
+      window.removeEventListener('discounts-sync', handleDiscountsSync as EventListener);
+    };
   }, [timeRange]);
 
   const fetchDiscountAnalytics = async () => {
@@ -62,6 +128,36 @@ export function DiscountAnalytics({ timeRange = '30d' }: { timeRange?: string })
       Logger.info('Discount analytics data loaded', response, 'DiscountAnalytics');
     } catch (error) {
       Logger.error('Failed to fetch discount analytics', error, 'DiscountAnalytics');
+      
+      // Provide fallback data to prevent UI crashes
+      const fallbackData = {
+        summary: {
+          totalEntries: 0,
+          entriesWithDiscounts: 0,
+          totalDiscountAmount: 0,
+          totalAdditionalDiscount: 0,
+          totalKidDiscount: 0,
+          averageDiscountPerEntry: 0,
+          discountRate: 0
+        },
+        trends: {
+          dailyDiscounts: [],
+          discountTypes: {
+            additional: { count: 0, amount: 0, avgAmount: 0 },
+            kid: { count: 0, amount: 0, avgAmount: 0 }
+          },
+          ticketTypeDiscounts: {}
+        },
+        insights: {
+          highestDiscountDay: null,
+          mostDiscountedTicketType: null,
+          discountFrequency: 'low',
+          totalSavings: 0
+        }
+      };
+      
+      console.log('🔄 DiscountAnalytics: Using fallback data due to API error');
+      setData(fallbackData);
     } finally {
       setLoading(false);
     }
@@ -85,7 +181,27 @@ export function DiscountAnalytics({ timeRange = '30d' }: { timeRange?: string })
   if (!data) {
     return (
       <div className="bg-white rounded-xl p-6 border border-gray-200">
-        <p className="text-gray-500">No discount data available</p>
+        <div className="text-center py-8">
+          <div className="text-4xl mb-4">🎫</div>
+          <p className="text-gray-500 text-lg font-medium">No discount data available</p>
+          <p className="text-gray-400 text-sm mt-2">Start offering discounts to see analytics here</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state when no discounts exist
+  if (data.summary.entriesWithDiscounts === 0) {
+    return (
+      <div className="bg-white rounded-xl p-6 border border-gray-200">
+        <div className="text-center py-8">
+          <div className="text-4xl mb-4">💰</div>
+          <p className="text-gray-500 text-lg font-medium">No discounts given yet</p>
+          <p className="text-gray-400 text-sm mt-2">
+            Total entries: {data.summary.totalEntries} | 
+            Discount rate: {data.summary.discountRate.toFixed(1)}%
+          </p>
+        </div>
       </div>
     );
   }

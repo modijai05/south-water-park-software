@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { analyticsApi } from '@/lib/api';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
+import { globalSyncService } from '@/services/globalSyncService';
 
 interface TodayAnalytics {
   ticketType: string;
@@ -42,7 +43,54 @@ export function TodayAnalytics() {
     // Set up auto-refresh every 30 seconds
     const interval = setInterval(fetchTodayData, 30000);
     
-    return () => clearInterval(interval);
+    // Set up real-time sync event listeners
+    const handleEntryCreated = () => {
+      console.log('📊 TodayAnalytics: Entry created event received, refreshing data...');
+      fetchTodayData();
+    };
+    
+    const handlePaymentCompleted = () => {
+      console.log('💰 TodayAnalytics: Payment completed event received, refreshing data...');
+      fetchTodayData();
+    };
+    
+    const handleImmediateSync = (event: any) => {
+      console.log('⚡ TodayAnalytics: Immediate sync event received:', event.detail);
+      fetchTodayData();
+    };
+    
+    const handleStatsSync = () => {
+      console.log('📈 TodayAnalytics: Stats sync event received, refreshing data...');
+      fetchTodayData();
+    };
+    
+    // Add global sync service listeners
+    globalSyncService.addEventListener('entry-created', handleEntryCreated);
+    globalSyncService.addEventListener('payment-completed', handlePaymentCompleted);
+    globalSyncService.addEventListener('immediate-sync', handleImmediateSync);
+    globalSyncService.addEventListener('stats-sync', handleStatsSync);
+    
+    // Also listen to window events for cross-component communication
+    window.addEventListener('entry-created', handleEntryCreated as EventListener);
+    window.addEventListener('payment-completed', handlePaymentCompleted as EventListener);
+    window.addEventListener('immediate-sync', handleImmediateSync as EventListener);
+    window.addEventListener('stats-sync', handleStatsSync as EventListener);
+    
+    return () => {
+      clearInterval(interval);
+      
+      // Clean up global sync service listeners
+      globalSyncService.removeEventListener('entry-created', handleEntryCreated);
+      globalSyncService.removeEventListener('payment-completed', handlePaymentCompleted);
+      globalSyncService.removeEventListener('immediate-sync', handleImmediateSync);
+      globalSyncService.removeEventListener('stats-sync', handleStatsSync);
+      
+      // Clean up window event listeners
+      window.removeEventListener('entry-created', handleEntryCreated as EventListener);
+      window.removeEventListener('payment-completed', handlePaymentCompleted as EventListener);
+      window.removeEventListener('immediate-sync', handleImmediateSync as EventListener);
+      window.removeEventListener('stats-sync', handleStatsSync as EventListener);
+    };
   }, []);
 
   const fetchTodayData = async () => {

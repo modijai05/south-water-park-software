@@ -697,6 +697,7 @@ router.get('/customer-preferences', authenticate, async (req, res) => {
 // GET /api/analytics/discounts - Get discount analytics
 router.get('/discounts', authenticate, async (req, res) => {
   try {
+    console.log('🎯 Analytics discounts endpoint called - DEBUG');
     const { timeRange } = req.query;
     console.log('Analytics discounts request for timeRange:', timeRange);
     
@@ -712,10 +713,12 @@ router.get('/discounts', authenticate, async (req, res) => {
       default: startDate = now.subtract(30, 'day');
     }
     
-    // Get entries within the time range
+    // Get entries within time range
     const entries = await Entry.find({
       createdAt: { $gte: startDate.toDate() }
     }).lean();
+    
+    console.log(`Found ${entries.length} entries for discount analysis`);
     
     // Calculate comprehensive discount analytics
     const discountAnalytics = {
@@ -847,11 +850,33 @@ router.get('/discounts', authenticate, async (req, res) => {
     
     discountAnalytics.insights.totalSavings = discountAnalytics.summary.totalDiscountAmount;
     
-    console.log('✅ Real discount analytics data sent');
+    console.log('✅ Real discount analytics data sent successfully');
     res.json(discountAnalytics);
   } catch (error) {
     console.error('Get discount analytics error:', error);
+    console.error('Get discount analytics error stack:', error.stack);
     res.status(500).json({ message: 'Failed to fetch discount analytics' });
+  }
+});
+
+// GET /api/analytics/discounts-test - Test endpoint for debugging
+router.get('/discounts-test', async (req, res) => {
+  try {
+    console.log('🧪 Analytics discounts-test endpoint called');
+    res.json({
+      success: true,
+      message: 'Discount analytics test endpoint working',
+      timestamp: new Date().toISOString(),
+      debug: {
+        endpoint: '/api/analytics/discounts-test',
+        method: 'GET',
+        query: req.query,
+        headers: req.headers
+      }
+    });
+  } catch (error) {
+    console.error('Discount analytics test error:', error);
+    res.status(500).json({ message: 'Test endpoint failed' });
   }
 });
 

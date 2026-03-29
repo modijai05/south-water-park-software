@@ -404,6 +404,103 @@ app.use('/api/ticket-demand-analysis', ticketDemandAnalysisRoutes);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api', sendSMSRouter);
 
+// Fallback discounts analytics endpoint - ENSURES IT WORKS
+app.get('/api/analytics/discounts', async (req, res) => {
+  try {
+    console.log('🚨 Fallback discounts analytics endpoint called');
+    
+    // Set CORS headers
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    
+    const { Entry } = require('./models/Entry.js');
+    const dayjs = require('dayjs');
+    
+    const { timeRange = '30d' } = req.query;
+    console.log('Fallback analytics request for timeRange:', timeRange);
+    
+    // Calculate date range
+    const now = dayjs();
+    let startDate = now;
+    
+    switch (timeRange) {
+      case '7d': startDate = now.subtract(7, 'day'); break;
+      case '30d': startDate = now.subtract(30, 'day'); break;
+      case '90d': startDate = now.subtract(90, 'day'); break;
+      case '1y': startDate = now.subtract(1, 'year'); break;
+      default: startDate = now.subtract(30, 'day');
+    }
+    
+    // Get entries
+    const entries = await Entry.find({
+      createdAt: { $gte: startDate.toDate() }
+    }).lean();
+    
+    console.log(`Fallback: Found ${entries.length} entries for discount analysis`);
+    
+    // Simple discount analytics
+    const entriesWithDiscounts = entries.filter(e => (e.additionalDiscount || 0) > 0 || (e.kidDiscount || 0) > 0);
+    const totalDiscountAmount = entries.reduce((sum, e) => sum + (e.additionalDiscount || 0) + (e.kidDiscount || 0), 0);
+    const totalAdditionalDiscount = entries.reduce((sum, e) => sum + (e.additionalDiscount || 0), 0);
+    const totalKidDiscount = entries.reduce((sum, e) => sum + (e.kidDiscount || 0), 0);
+    
+    const discountAnalytics = {
+      summary: {
+        totalEntries: entries.length,
+        entriesWithDiscounts: entriesWithDiscounts.length,
+        totalDiscountAmount,
+        totalAdditionalDiscount,
+        totalKidDiscount,
+        averageDiscountPerEntry: entries.length > 0 ? totalDiscountAmount / entries.length : 0,
+        discountRate: entries.length > 0 ? (entriesWithDiscounts.length / entries.length) * 100 : 0
+      },
+      trends: {
+        dailyDiscounts: [],
+        discountTypes: {
+          additional: { 
+            count: entries.filter(e => (e.additionalDiscount || 0) > 0).length, 
+            amount: totalAdditionalDiscount, 
+            avgAmount: 0 
+          },
+          kid: { 
+            count: entries.filter(e => (e.kidDiscount || 0) > 0).length, 
+            amount: totalKidDiscount, 
+            avgAmount: 0 
+          }
+        },
+        ticketTypeDiscounts: {}
+      },
+      insights: {
+        highestDiscountDay: null,
+        mostDiscountedTicketType: null,
+        discountFrequency: entries.length > 0 && (entriesWithDiscounts.length / entries.length) > 0.2 ? 'medium' : 'low',
+        totalSavings: totalDiscountAmount
+      }
+    };
+    
+    // Calculate averages
+    if (discountAnalytics.trends.discountTypes.additional.count > 0) {
+      discountAnalytics.trends.discountTypes.additional.avgAmount = 
+        totalAdditionalDiscount / discountAnalytics.trends.discountTypes.additional.count;
+    }
+    if (discountAnalytics.trends.discountTypes.kid.count > 0) {
+      discountAnalytics.trends.discountTypes.kid.avgAmount = 
+        totalKidDiscount / discountAnalytics.trends.discountTypes.kid.count;
+    }
+    
+    console.log('✅ Fallback discount analytics sent successfully');
+    res.json(discountAnalytics);
+    
+  } catch (error) {
+    console.error('Fallback discount analytics error:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch discount analytics',
+      error: error.message 
+    });
+  }
+});
+
 app.use(errorHandler);
 
 // Ultra-simple endpoint for immediate fix - Added before all other routes

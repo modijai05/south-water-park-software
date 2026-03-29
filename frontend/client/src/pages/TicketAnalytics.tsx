@@ -12,6 +12,7 @@ import {
   PolarAngleAxis, PolarRadiusAxis, Radar, Treemap 
 } from 'recharts';
 import Logger from '@/lib/logger';
+import { globalSyncService } from '@/services/globalSyncService';
 import type { 
   EntryRecord as Entry, 
   AnalyticsData,
@@ -122,6 +123,73 @@ export function TicketAnalytics() {
 
   useEffect(() => {
     fetchAnalyticsData();
+    
+    // Set up real-time sync event listeners for comprehensive analytics updates
+    const handleEntryCreated = () => {
+      console.log('📊 TicketAnalytics: Entry created event received, refreshing analytics...');
+      fetchAnalyticsData();
+    };
+    
+    const handlePaymentCompleted = () => {
+      console.log('💰 TicketAnalytics: Payment completed event received, refreshing analytics...');
+      fetchAnalyticsData();
+    };
+    
+    const handleImmediateSync = (event: any) => {
+      console.log('⚡ TicketAnalytics: Immediate sync event received:', event.detail);
+      fetchAnalyticsData();
+    };
+    
+    const handleStatsSync = () => {
+      console.log('📈 TicketAnalytics: Stats sync event received, refreshing analytics...');
+      fetchAnalyticsData();
+    };
+    
+    const handleEntriesSync = () => {
+      console.log('🎟️ TicketAnalytics: Entries sync event received, refreshing analytics...');
+      fetchAnalyticsData();
+    };
+    
+    const handleDataTypesSynced = (event: any) => {
+      console.log('🔄 TicketAnalytics: Data types synced event received:', event.detail);
+      if (event.detail?.dataTypes?.includes('stats') || event.detail?.dataTypes?.includes('entries')) {
+        fetchAnalyticsData();
+      }
+    };
+    
+    // Add global sync service listeners
+    globalSyncService.addEventListener('entry-created', handleEntryCreated);
+    globalSyncService.addEventListener('payment-completed', handlePaymentCompleted);
+    globalSyncService.addEventListener('immediate-sync', handleImmediateSync);
+    globalSyncService.addEventListener('stats-sync', handleStatsSync);
+    globalSyncService.addEventListener('entries-sync', handleEntriesSync);
+    globalSyncService.addEventListener('data-types-synced', handleDataTypesSynced);
+    
+    // Also listen to window events for cross-component communication
+    window.addEventListener('entry-created', handleEntryCreated as EventListener);
+    window.addEventListener('payment-completed', handlePaymentCompleted as EventListener);
+    window.addEventListener('immediate-sync', handleImmediateSync as EventListener);
+    window.addEventListener('stats-sync', handleStatsSync as EventListener);
+    window.addEventListener('entries-sync', handleEntriesSync as EventListener);
+    window.addEventListener('data-types-synced', handleDataTypesSynced as EventListener);
+    
+    return () => {
+      // Clean up global sync service listeners
+      globalSyncService.removeEventListener('entry-created', handleEntryCreated);
+      globalSyncService.removeEventListener('payment-completed', handlePaymentCompleted);
+      globalSyncService.removeEventListener('immediate-sync', handleImmediateSync);
+      globalSyncService.removeEventListener('stats-sync', handleStatsSync);
+      globalSyncService.removeEventListener('entries-sync', handleEntriesSync);
+      globalSyncService.removeEventListener('data-types-synced', handleDataTypesSynced);
+      
+      // Clean up window event listeners
+      window.removeEventListener('entry-created', handleEntryCreated as EventListener);
+      window.removeEventListener('payment-completed', handlePaymentCompleted as EventListener);
+      window.removeEventListener('immediate-sync', handleImmediateSync as EventListener);
+      window.removeEventListener('stats-sync', handleStatsSync as EventListener);
+      window.removeEventListener('entries-sync', handleEntriesSync as EventListener);
+      window.removeEventListener('data-types-synced', handleDataTypesSynced as EventListener);
+    };
   }, [timeRange]);
 
   const fetchAnalyticsData = async () => {
