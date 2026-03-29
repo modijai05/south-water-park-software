@@ -123,10 +123,13 @@ export function DiscountAnalytics({ timeRange = '30d' }: { timeRange?: string })
   const fetchDiscountAnalytics = async () => {
     setLoading(true);
     try {
+      console.log('🔄 DiscountAnalytics: Fetching discount data for timeRange:', timeRange);
       const response = await analyticsApi.discounts(timeRange);
+      console.log('✅ DiscountAnalytics: Raw API response:', response);
       setData(response);
       Logger.info('Discount analytics data loaded', response, 'DiscountAnalytics');
     } catch (error) {
+      console.error('❌ DiscountAnalytics: API Error:', error);
       Logger.error('Failed to fetch discount analytics', error, 'DiscountAnalytics');
       
       // Provide fallback data to prevent UI crashes
@@ -205,6 +208,11 @@ export function DiscountAnalytics({ timeRange = '30d' }: { timeRange?: string })
       </div>
     );
   }
+
+  // Add debug logging to see what data we're working with
+  console.log('🔍 DiscountAnalytics: Current data state:', data);
+  console.log('🔍 DiscountAnalytics: entriesWithDiscounts:', data?.summary?.entriesWithDiscounts);
+  console.log('🔍 DiscountAnalytics: totalDiscountAmount:', data?.summary?.totalDiscountAmount);
 
   const pieData = [
     { name: 'Additional Discounts', value: data.trends.discountTypes.additional.amount, color: '#3B82F6' },
