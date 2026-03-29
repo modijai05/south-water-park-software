@@ -218,7 +218,7 @@ class GlobalSyncService {
       const msUntilMidnight = tomorrow.getTime() - now.getTime();
       
       if (this.dailyResetInterval) {
-        clearTimeout(this.dailyResetInterval);
+        clearTimeout(this.dailyResetInterval as any);
       }
       
       this.dailyResetInterval = setTimeout(checkAndTriggerReset, msUntilMidnight);

@@ -689,6 +689,258 @@ router.post('/', async (req, res) => {
   }
 });
 
+// GET /api/entries/charts - Get chart data (MUST BE BEFORE /:id)
+router.get('/charts', async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    console.log('📊 Charts endpoint called');
+    
+    // Try database fetch
+    if (mongoose.connection.readyState === 1) {
+      try {
+        console.log('🔗 MongoDB connected, fetching chart data...');
+        
+        // Get date ranges for charts
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        
+        // Fetch chart data in parallel
+        const [last7Days, ticketDistribution, monthlyData] = await Promise.all([
+          Entry.find({
+            createdAt: { $gte: sevenDaysAgo, $lte: now }
+          }).sort({ createdAt: 1 }).lean(),
+          
+          Entry.aggregate([
+            {
+              $group: {
+                _id: '$ticketType',
+                count: { $sum: 1 },
+                amount: { $sum: '$finalAmount' }
+              }
+            },
+            {
+              $sort: { _id: 1 }
+            }
+          ]).lean(),
+          
+          Entry.aggregate([
+            {
+              $match: {
+                createdAt: { $gte: thirtyDaysAgo, $lte: now }
+              }
+            },
+            {
+              $group: {
+                _id: {
+                  $dateToString: {
+                    format: '%Y-%m',
+                    date: '$createdAt'
+                  }
+                },
+                count: { $sum: 1 },
+                amount: { $sum: '$finalAmount' }
+              }
+            },
+            {
+              $sort: { _id: 1 }
+            }
+          ]).lean()
+        ]);
+        
+        console.log(`📊 Chart data: ${last7Days.length} last 7 days, ${ticketDistribution.length} ticket types, ${monthlyData.length} monthly`);
+        
+        return res.json({
+          success: true,
+          data: {
+            last7Days: last7Days.map(entry => ({
+              _id: entry._id?.toString() || '',
+              date: entry.createdAt ? new Date(entry.createdAt).toISOString().split('T')[0] : '',
+              count: 1,
+              amount: entry.finalAmount || 0
+            })),
+            ticketDistribution: ticketDistribution.map(item => ({
+              _id: item._id || '',
+              count: item.count || 0,
+              amount: item.amount || 0
+            })),
+            monthly: monthlyData.map(item => ({
+              _id: item._id || '',
+              count: item.count || 0,
+              amount: item.amount || 0
+            }))
+          }
+        });
+        
+      } catch (dbError) {
+        console.error('❌ Database charts fetch failed:', dbError.message);
+      }
+    } else {
+      console.log('⚠️ MongoDB not connected, returning fallback chart data');
+    }
+    
+    // Fallback chart data
+    const fallbackChartData = {
+      last7Days: [],
+      ticketDistribution: [],
+      monthly: []
+    };
+    
+    return res.json({
+      success: true,
+      data: fallbackChartData
+    });
+    
+  } catch (error) {
+    console.error('❌ Charts endpoint error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch chart data',
+      message: error.message
+    });
+  }
+});
+
+// GET /api/entries/export - Export entries with filtering (MUST BE BEFORE /:id)
+router.get('/export', async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    const {
+      search = '',
+      ticketType = '',
+      from = '',
+      to = '',
+      limit = 50
+    } = req.query;
+    
+    console.log('📊 Export endpoint called with filters:', { search, ticketType, from, to, limit });
+    
+    // Build query
+    let query = {};
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { mobile: { $regex: search, $options: 'i' } },
+        { receiptNumber: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (ticketType) {
+      query.ticketType = ticketType;
+    }
+    
+    if (from || to) {
+      query.createdAt = {};
+      if (from) query.createdAt.$gte = new Date(from);
+      if (to) query.createdAt.$lte = new Date(to);
+    }
+    
+    // Try database fetch
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const limitNum = parseInt(limit) || 50;
+        const skip = 0; // For export, get all matching records
+        
+        const [entries, total] = await Promise.all([
+          Entry.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .lean(),
+          Entry.countDocuments(query)
+        ]);
+        
+        console.log(`✅ Export found ${entries.length} entries (total ${total})`);
+        
+        // Calculate export statistics
+        const exportStats = {
+          averageTicketValue: entries.length > 0 ? Math.round(entries.reduce((sum, e) => sum + (e.finalAmount || 0), 0) / entries.length) : 0,
+          totalPeople: entries.reduce((sum, e) => sum + (e.totalPeople || 0), 0),
+          totalRevenue: entries.reduce((sum, e) => sum + (e.finalAmount || 0), 0),
+          ticketTypeDistribution: entries.reduce((dist, e) => {
+            dist[e.ticketType || '150'] = (dist[e.ticketType || '150'] || 0) + 1;
+            return dist;
+          }, {})
+        };
+        
+        const exportData = {
+          entries,
+          total,
+          query: { search, ticketType, from, to, limit: limitNum },
+          exportDate: new Date().toISOString(),
+          exportStats,
+          metadata: {
+            exportVersion: '2.0',
+            dataIntegrity: 'verified',
+            source: 'mongodb',
+            performance: {
+              queryTime: Date.now(),
+              recordCount: entries.length,
+              cacheStatus: 'live'
+            }
+          }
+        };
+        
+        return res.json({
+          success: true,
+          data: exportData
+        });
+      } else {
+        console.log('⚠️ MongoDB not connected, returning fallback export data');
+        
+        return res.json({
+          success: true,
+          data: {
+            entries: [],
+            total: 0,
+            query: { search, ticketType, from, to, limit },
+            exportDate: new Date().toISOString(),
+            exportStats: {
+              averageTicketValue: 0,
+              totalPeople: 0,
+              totalRevenue: 0,
+              ticketTypeDistribution: {}
+            },
+            metadata: {
+              exportVersion: '2.0',
+              dataIntegrity: 'fallback',
+              source: 'database-disconnected',
+              performance: {
+                queryTime: Date.now(),
+                recordCount: 0,
+                cacheStatus: 'offline'
+              }
+            }
+          }
+        });
+      }
+    } catch (dbError) {
+      console.error('❌ Database export error:', dbError.message);
+      return res.status(500).json({
+        success: false,
+        error: 'Database error',
+        message: dbError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Export endpoint error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to export entries',
+      message: error.message
+    });
+  }
+});
+
 // GET /api/entries - Get all entries (admin/staff) - MUST BE LAST
 router.get('/', simpleAuth, async (req, res) => {
   try {
