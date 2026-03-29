@@ -12,12 +12,56 @@ import { useAuthStore } from '@/store/authStore';
 import { TICKET_OPTIONS } from '@/types';
 import { invalidateTicketConfigCache } from '@/lib/ticketUtils';
 import { globalSyncService } from '@/services/globalSyncService';
+import { useDailyReset, performDailyReset, needsDailyReset } from '@/utils/dailyReset';
 
 export function Staff() {
   const { user } = useAuthStore();
   const [stats, setStats] = useState<StaffStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
+  
+  // Initialize daily reset
+  useEffect(() => {
+    const cleanup = useDailyReset(() => {
+      console.log('🔄 Staff dashboard: Daily reset triggered, refreshing data...');
+      // Force refresh all data after reset
+      (async () => {
+        try {
+          const [statsRes, configs] = await Promise.all([
+            entriesApi.stats(),
+            fetchTicketConfigs()
+          ]);
+          setStats(statsRes as unknown as StaffStats);
+          setTicketConfigs(configs);
+        } catch (error) {
+          console.error('Staff dashboard: Error refreshing after reset:', error);
+        }
+      })();
+    });
+
+    // Check if reset is needed on component mount
+    if (needsDailyReset()) {
+      console.log('🔄 Staff dashboard: Daily reset needed on mount');
+      performDailyReset();
+      // Trigger the same refresh logic
+      (async () => {
+        try {
+          const [statsRes, configs] = await Promise.all([
+            entriesApi.stats(),
+            fetchTicketConfigs()
+          ]);
+          setStats(statsRes as unknown as StaffStats);
+          setTicketConfigs(configs);
+        } catch (error) {
+          console.error('Staff dashboard: Error refreshing on mount reset:', error);
+        }
+      })();
+    }
+
+    return () => {
+      cleanup();
+    };
+  }, []);
   
   // Receipt generation states
   const [showReceipt, setShowReceipt] = useState(false);
