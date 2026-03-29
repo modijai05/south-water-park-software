@@ -136,27 +136,44 @@ export function AdminEntries() {
   
   // Get current entries based on active date group and pagination
   const currentEntries = useMemo(() => {
-    let sourceEntries = filteredEntries;
+    console.log('🔍 Current entries calculation:', {
+      totalEntries: allEntries.length,
+      activeDateGroup,
+      searchTerm: search,
+      todayCount: dateGroups.today.length,
+      yesterdayCount: dateGroups.yesterday.length,
+      olderCount: dateGroups.older.length
+    });
     
-    // Apply date-wise filtering
+    // If search exists, use filtered entries
+    if (search.trim()) {
+      console.log('🔍 Using filtered entries for search:', filteredEntries.length);
+      return filteredEntries;
+    }
+    
+    // If no search, show entries by date group
+    let entriesToShow: EntryRecord[] = [];
+    
     if (activeDateGroup === 'today') {
-      sourceEntries = dateGroups.today;
+      entriesToShow = dateGroups.today;
     } else if (activeDateGroup === 'yesterday') {
-      sourceEntries = dateGroups.yesterday;
+      entriesToShow = dateGroups.yesterday;
     } else {
       // Older entries with pagination
       const startIndex = (olderPage - 1) * limit;
       const endIndex = startIndex + limit;
-      sourceEntries = dateGroups.older.slice(startIndex, endIndex);
+      entriesToShow = dateGroups.older.slice(startIndex, endIndex);
     }
     
-    // Apply search filtering if search exists
-    if (search.trim()) {
-      return filterEntries(sourceEntries, search);
+    // Fallback: if no entries in selected date group, show all entries
+    if (entriesToShow.length === 0 && allEntries.length > 0) {
+      console.log('🔍 No entries in date group, showing all entries');
+      return allEntries;
     }
     
-    return sourceEntries;
-  }, [filteredEntries, activeDateGroup, dateGroups, olderPage, limit, search, filterEntries]);
+    console.log('🔍 Final entries to show:', entriesToShow.length);
+    return entriesToShow;
+  }, [allEntries, activeDateGroup, dateGroups, olderPage, limit, search, filteredEntries]);
   
   // Update date groups when all entries change
   useEffect(() => {
@@ -173,40 +190,51 @@ export function AdminEntries() {
     
     // Use cached data if available and not force refresh
     if (!forceRefresh && allEntries.length > 0 && (now - lastFetchTime.current) < cacheDuration) {
-      console.log('🔍 Using cached entries');
+      console.log('🔍 Using cached entries:', allEntries.length);
       return;
     }
     
     setInitialLoading(allEntries.length === 0); // Only show loading on first fetch
     setLoading(true);
-    console.log('🔍 AdminEntries: Fetching entries with params:', { search: debouncedSearch || undefined, page, limit });
+    console.log('🔍 AdminEntries: Fetching entries...');
     
     try {
-      const res = await entriesApi.list({ search: undefined, page: 1, limit: 1000 }); // Fetch more for caching
+      // Fetch with no search to get all entries for caching
+      const res = await entriesApi.list({ page: 1, limit: 1000 });
       
-      console.log('🔍 AdminEntries: API response:', { success: res.success, entriesCount: res.data?.entries?.length || 0, total: res.data?.total || 0 });
+      console.log('🔍 AdminEntries: API response:', { 
+        success: res.success, 
+        entriesCount: res.data?.entries?.length || 0, 
+        total: res.data?.total || 0,
+        actualData: res.data
+      });
       
       const fetchedEntries = (res.data?.entries as EntryRecord[]) ?? [];
-      setAllEntries(fetchedEntries);
-      setTotal(res.data?.total ?? 0);
-      lastFetchTime.current = now;
+      console.log('🔍 AdminEntries: Fetched entries:', fetchedEntries.length);
       
-        // Debug first entry filled by fields
-        if (fetchedEntries.length > 0) {
-          const firstEntry = fetchedEntries[0];
-          console.log('🔍 AdminEntries: First entry filledBy debug:', {
-            filledByFullName: firstEntry.filledByFullName,
-            createdBy: firstEntry.createdBy,
-            user: user?.username
-          });
-        }
+      if (fetchedEntries.length > 0) {
+        setAllEntries(fetchedEntries);
+        setTotal(res.data?.total ?? 0);
+        lastFetchTime.current = now;
+        
+        // Debug first entry
+        const firstEntry = fetchedEntries[0];
+        console.log('🔍 AdminEntries: First entry:', {
+          id: firstEntry._id,
+          name: firstEntry.name,
+          createdAt: firstEntry.createdAt,
+          filledByFullName: firstEntry.filledByFullName
+        });
+      } else {
+        console.log('🔍 AdminEntries: No entries found');
+      }
     } catch (error) {
-      console.error('Failed to fetch entries:', error);
+      console.error('🔍 AdminEntries: Failed to fetch entries:', error);
     } finally {
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [isClient, debouncedSearch, page, limit, allEntries.length, user?.username]);
+  }, [isClient, allEntries.length]);
   
   // Initial load
   useEffect(() => {
@@ -511,11 +539,25 @@ export function AdminEntries() {
               </div>
             </div>
           ) : (
-            <div 
-              ref={parentRef}
-              className="overflow-x-auto"
-              style={{ height: '600px', overflow: 'auto' }}
-            >
+            <>
+              {/* Debug Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h3 className="font-bold text-blue-900 mb-2">🔍 Debug Info</h3>
+                <div className="text-sm text-blue-800 space-y-1">
+                  <p>Total Entries: {allEntries.length}</p>
+                  <p>Current Entries: {currentEntries.length}</p>
+                  <p>Active Date Group: {activeDateGroup}</p>
+                  <p>Search Term: "{search}"</p>
+                  <p>Today: {dateGroups.today.length} | Yesterday: {dateGroups.yesterday.length} | Older: {dateGroups.older.length}</p>
+                  <p>Virtualizer Count: {rowVirtualizer.getTotalSize()}</p>
+                </div>
+              </div>
+              
+              <div 
+                ref={parentRef}
+                className="overflow-x-auto"
+                style={{ height: '600px', overflow: 'auto' }}
+              >
               {/* Table Header */}
               <div className="sticky top-0 bg-white z-10">
                 <table className="w-full text-left text-sm">
@@ -682,6 +724,7 @@ export function AdminEntries() {
                 })}
               </div>
             </div>
+            </>
           )}
         </div>
 
