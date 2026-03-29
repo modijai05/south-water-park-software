@@ -39,10 +39,7 @@ export const triggerSystemReset = () => {
   console.log('✅ System reset completed successfully');
   console.log('🔄 Please refresh the page to see the changes');
   
-  // Show user notification
-  if (typeof window !== 'undefined' && window.alert) {
-    alert('System reset completed! Please refresh the page to see the updated today\'s performance graphs.');
-  }
+  // Silent reset - no popup notifications
 };
 
 // Auto-trigger reset if needed

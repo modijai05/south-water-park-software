@@ -54,15 +54,11 @@ export const forceRefreshToToday = async () => {
         stats: statsData,
         charts: chartsData,
         cachesCleared: allCacheKeys.length,
-        reason: 'manual-force-refresh'
+        reason: 'auto-force-refresh'
       }
     }));
     
-    // Show success notification
-    if (typeof window !== 'undefined' && window.alert) {
-      alert('✅ Force refresh completed! All data is now showing today\'s date only.\n\nPlease refresh the page to see the updated data.');
-    }
-    
+    // Silent force refresh - no popup notifications
     console.log('✅ Force refresh completed successfully');
     
     return { success: true, stats: statsData, charts: chartsData };
@@ -70,11 +66,36 @@ export const forceRefreshToToday = async () => {
   } catch (error) {
     console.error('❌ Force refresh failed:', error);
     
-    // Show error notification
-    if (typeof window !== 'undefined' && window.alert) {
-      alert('❌ Force refresh failed. Please refresh the page manually.\n\nError: ' + error.message);
+    // Silent error handling - no popup notifications
+    return { success: false, error: error.message };
+  }
+};
+
+// Manual force refresh with user notification (only called manually)
+export const manualForceRefresh = async () => {
+  console.log('🚀 Manual force refresh triggered by user...');
+  
+  try {
+    const result = await forceRefreshToToday();
+    
+    if (result.success) {
+      // Show success notification only for manual refresh
+      if (typeof window !== 'undefined' && window.alert) {
+        alert('✅ Manual refresh completed! All data is now showing today\'s date only.\n\nPlease refresh the page to see the updated data.');
+      }
+    } else {
+      // Show error notification only for manual refresh
+      if (typeof window !== 'undefined' && window.alert) {
+        alert('❌ Manual refresh failed. Please refresh the page manually.\n\nError: ' + result.error);
+      }
     }
     
+    return result;
+  } catch (error) {
+    console.error('❌ Manual refresh failed:', error);
+    if (typeof window !== 'undefined' && window.alert) {
+      alert('❌ Manual refresh failed. Please refresh the page manually.\n\nError: ' + error.message);
+    }
     return { success: false, error: error.message };
   }
 };
@@ -102,12 +123,14 @@ export const checkAndForceRefresh = () => {
 declare global {
   interface Window {
     forceRefreshToToday: () => Promise<any>;
+    manualForceRefresh: () => Promise<any>;
     checkAndForceRefresh: () => boolean;
   }
 }
 
 if (typeof window !== 'undefined') {
   window.forceRefreshToToday = forceRefreshToToday;
+  window.manualForceRefresh = manualForceRefresh;
   window.checkAndForceRefresh = checkAndForceRefresh;
   
   // Auto-check on load

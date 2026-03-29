@@ -259,19 +259,31 @@ export function AdminDashboard() {
 
   // Check if reset is needed on component mount
   useEffect(() => {
+    // Prevent multiple reset triggers on same page load
+    const resetAlreadyTriggered = sessionStorage.getItem('admin-reset-triggered');
+    
     if (needsDailyReset()) {
       console.log('🔄 AdminDashboard: Daily reset needed on mount');
       performDailyReset();
       fetchAllData();
     }
     
-    // Check and trigger system reset for deployment changes
-    checkAndTriggerReset();
+    // Only trigger system reset if not already done this session
+    if (!resetAlreadyTriggered) {
+      console.log('🔄 AdminDashboard: First time setup - triggering system refresh');
+      // Check and trigger system reset for deployment changes
+      checkAndTriggerReset();
+      
+      // Check and force refresh to today's data
+      checkAndForceRefresh();
+      
+      // Mark as triggered for this session
+      sessionStorage.setItem('admin-reset-triggered', 'true');
+    } else {
+      console.log('🔄 AdminDashboard: Reset already triggered this session - skipping');
+    }
     
-    // Check and force refresh to today's data
-    checkAndForceRefresh();
-    
-    // Auto-verify today's data is correct
+    // Auto-verify today's data is correct (always run)
     autoVerify();
   }, []);
 
