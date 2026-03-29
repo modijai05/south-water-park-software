@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import dayjs from 'dayjs';
 import { Layout } from '@/components/Layout';
 import { entriesApi } from '@/lib/api';
-import { getTicketLabel, computeAmounts, TICKET_OPTIONS } from '@/lib/ticketUtils';
+import { getTicketLabel, getTicketLabelSync, computeAmounts, TICKET_OPTIONS } from '@/lib/ticketUtils';
 import { useEntryStore } from '@/store/entryStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDebounce } from '@/hooks/useDebounce';
