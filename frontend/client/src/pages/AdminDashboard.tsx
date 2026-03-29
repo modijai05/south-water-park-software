@@ -385,10 +385,6 @@ export function AdminDashboard() {
       
       // Extract the actual data from the stats response
       const statsData = statsRes; // API returns data directly
-      console.log('🔍 ADMIN DASHBOARD DEBUG - Force refresh stats response:', statsRes);
-      console.log('🔍 ADMIN DASHBOARD DEBUG - Extracted stats data:', statsData);
-      console.log('🔍 ADMIN DASHBOARD DEBUG - Today additional discount:', statsData?.todayAdditionalDiscount);
-      console.log('🔍 ADMIN DASHBOARD DEBUG - Total additional discount:', statsData?.totalAdditionalDiscount);
       setStats(statsData as unknown as Stats);
       setCharts(chartsRes as unknown as Charts);
       console.log('Admin: Force refreshed - New prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
@@ -1947,13 +1943,6 @@ export function AdminDashboard() {
                           <p className="text-3xl font-extrabold text-white">
                             ₹{!stats ? '0' : <AnimatedCounter value={stats.todayAdditionalDiscount ?? 0} />}
                           </p>
-                          {/* Enhanced Debug Info */}
-                          <div className="text-xs text-amber-200 mt-2 bg-black/20 p-2 rounded">
-                            <div>Stats: {stats ? 'EXISTS' : 'NULL'}</div>
-                            <div>Today Additional: {stats?.todayAdditionalDiscount ?? 'UNDEFINED'}</div>
-                            <div>Today Total: {stats?.todayTotalDiscount ?? 'UNDEFINED'}</div>
-                            <div>Raw: {JSON.stringify(stats?.todayAdditionalDiscount)}</div>
-                          </div>
                         </div>
                         <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center shadow-lg">
                           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2613,12 +2602,6 @@ export function AdminDashboard() {
                           <p className="text-3xl font-extrabold text-white">
                             ₹{!stats ? '0' : <AnimatedCounter value={stats.totalAdditionalDiscount ?? 0} />}
                           </p>
-                          {/* Enhanced Debug Info */}
-                          <div className="text-xs text-purple-200 mt-2 bg-black/20 p-2 rounded">
-                            <div>Total Additional: {stats?.totalAdditionalDiscount ?? 'UNDEFINED'}</div>
-                            <div>Total Discount: {stats?.totalTotalDiscount ?? 'UNDEFINED'}</div>
-                            <div>Raw Total: {JSON.stringify(stats?.totalAdditionalDiscount)}</div>
-                          </div>
                         </div>
                         <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center shadow-lg">
                           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

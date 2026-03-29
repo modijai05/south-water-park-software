@@ -7,7 +7,7 @@ import { ticketConfigApi } from '@/lib/ticketApi';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import Receipt from '@/components/Receipt';
 import Logger from '@/lib/logger';
-import type { TicketConfig, EntryRecord as Entry, Stats as StaffStats, CustomEventData } from '@/types';
+import type { TicketConfig, EntryRecord as Entry, Stats, CustomEventData } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { TICKET_OPTIONS } from '@/types';
 import { invalidateTicketConfigCache } from '@/lib/ticketUtils';
@@ -16,7 +16,7 @@ import { useDailyReset, performDailyReset, needsDailyReset } from '@/utils/daily
 
 export function Staff() {
   const { user } = useAuthStore();
-  const [stats, setStats] = useState<StaffStats | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
   
@@ -31,7 +31,7 @@ export function Staff() {
             entriesApi.stats(),
             fetchTicketConfigs()
           ]);
-          setStats(statsRes as unknown as StaffStats);
+          setStats(statsRes as unknown as Stats);
           setTicketConfigs(configs);
         } catch (error) {
           console.error('Staff dashboard: Error refreshing after reset:', error);
@@ -50,7 +50,7 @@ export function Staff() {
             entriesApi.stats(),
             fetchTicketConfigs()
           ]);
-          setStats(statsRes as unknown as StaffStats);
+          setStats(statsRes as unknown as Stats);
           setTicketConfigs(configs);
         } catch (error) {
           console.error('Staff dashboard: Error refreshing on mount reset:', error);
@@ -145,7 +145,7 @@ export function Staff() {
       const syncData = await entriesApi.syncAll();
       
       if (syncData && syncData.stats) {
-        setStats(syncData.stats as unknown as StaffStats);
+        setStats(syncData.stats as unknown as Stats);
         Logger.debug('Comprehensive sync completed', {
           totalRecords: syncData.summary.totalRecords,
           todayRecords: syncData.summary.todayRecords,
@@ -168,7 +168,7 @@ export function Staff() {
           fetchTicketConfigs()
         ]);
         
-        setStats(statsRes as unknown as StaffStats);
+        setStats(statsRes as unknown as Stats);
         Logger.debug('Fallback sync completed', { stats: statsRes, configCount: configs.length }, 'Staff');
       }
     } catch (error) {
@@ -192,7 +192,7 @@ export function Staff() {
         ]);
         
         if (!cancelled) {
-          setStats(statsRes as unknown as StaffStats);
+          setStats(statsRes as unknown as Stats);
           // Note: setTicketConfigs is already called in fetchTicketConfigs
           Logger.debug('Initial data loaded', { stats: statsRes, configCount: configs.length }, 'Staff');
         }
@@ -208,6 +208,16 @@ export function Staff() {
           totalAdults: 0,
           todayKids: 0,
           totalKids: 0,
+          todayAmount: 0,
+          totalAmount: 0,
+          todayCash: 0,
+          totalUpi: 0,
+          todayAdvance: 0,
+          totalAdvance: 0,
+          todayAdditionalDiscount: 0,
+          todayTotalDiscount: 0,
+          totalAdditionalDiscount: 0,
+          totalTotalDiscount: 0,
           today150: 0,
           total150: 0,
           today150Adults: 0,
@@ -255,7 +265,7 @@ export function Staff() {
           averageTicketValue: 0,
           peakHour: 'N/A',
           conversionRate: 0,
-        } as StaffStats);
+        } as Stats);
       } finally {
         setLoading(false);
       }
@@ -307,7 +317,7 @@ export function Staff() {
         ]);
         
         if (!cancelled) {
-          setStats(statsRes as unknown as StaffStats);
+          setStats(statsRes as unknown as Stats);
           console.log('🔄 Staff: Refreshed stats and ticket configs');
           console.log('🎫 Staff: Updated prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
           console.log('✅ Staff: Complete data refresh successful');

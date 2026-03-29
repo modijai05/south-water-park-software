@@ -129,22 +129,34 @@ export interface Stats {
   totalEntries: number;
   todayPeople: number;
   totalPeople: number;
-  todayAdults: number;
-  totalAdults: number;
-  todayKids: number;
-  totalKids: number;
-  todayCash: number;
-  totalUpi: number;
-  todayAdvance: number;
-  todayAmount: number;
-  totalAmount: number;
-  totalCash: number;
-  totalAdvance: number;
-  // Ticket type stats
+  adults: {
+    today: number;
+    total: number;
+  };
+  kids: {
+    today: number;
+    total: number;
+  };
+  cash: {
+    today: number;
+    total: number;
+  };
+  upi: {
+    today: number;
+    total: number;
+  };
+  advance: {
+    today: number;
+    total: number;
+  };
+  amount: {
+    today: number;
+    total: number;
+  };
   today150: number;
   total150: number;
   today150Adults: number;
-  total150Kids: number;
+  total150Adults: number;
   today300: number;
   total300: number;
   today300Adults: number;
@@ -180,6 +192,11 @@ export interface Stats {
   averageTicketValue: number;
   peakHour: string;
   conversionRate: number;
+  // Discount statistics
+  todayAdditionalDiscount: number;
+  todayTotalDiscount: number;
+  totalAdditionalDiscount: number;
+  totalTotalDiscount: number;
 }
 
 export interface ChartData {
