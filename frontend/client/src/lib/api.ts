@@ -308,8 +308,8 @@ export const entriesApi = {
                 cacheStatus: 'error',
                 dataIntegrity: 'compromised'
               }
-            };
-          }
+            }
+          };
         }
         
         // Enhanced validation of response data

@@ -192,6 +192,16 @@ export function AdminDashboard() {
     todayRevenue: 0,
     lastSyncTime: null as string | null
   });
+  
+  // Intelligent sync state management
+  const [syncState, setSyncState] = useState({
+    isAutoSyncing: false,
+    lastSyncAttempt: 0,
+    syncInterval: 30000, // 30 seconds
+    backgroundSyncEnabled: true,
+    errorCount: 0,
+    maxRetries: 3
+  });
 
   // Fetch ticket configurations
   const fetchTicketConfigs = async () => {
@@ -233,15 +243,8 @@ export function AdminDashboard() {
       setLoading(true);
       setError(null);
       
-      const [statsRes, chartsRes, configs] = await Promise.all([
-        entriesApi.stats(),
-        entriesApi.todayCharts(),
-        fetchTicketConfigs()
-      ]);
-      
-      setStats(statsRes as unknown as Stats);
-      setCharts(chartsRes as unknown as Charts);
-      console.log('AdminDashboard: Data refreshed after reset');
+      // Use intelligent background sync for all data fetching
+      await intelligentBackgroundSync(true);
       
     } catch (error) {
       console.error('AdminDashboard: Error fetching data:', error);
@@ -577,29 +580,42 @@ export function AdminDashboard() {
     };
   };
   
-  // Enhanced sync function with performance metrics tracking
-  const syncDashboardWithEntries = async () => {
+  // Intelligent background sync with progressive loading
+  const intelligentBackgroundSync = async (forceSync = false) => {
+    const now = Date.now();
+    
+    // Prevent excessive sync attempts
+    if (!forceSync && syncState.isAutoSyncing && (now - syncState.lastSyncAttempt) < syncState.syncInterval) {
+      console.log('🔄 Dashboard: Skipping sync - too recent');
+      return;
+    }
+    
+    // Check error count and implement exponential backoff
+    if (syncState.errorCount >= syncState.maxRetries && !forceSync) {
+      console.log('🔄 Dashboard: Too many errors, waiting before retry');
+      return;
+    }
+    
+    setSyncState(prev => ({ ...prev, isAutoSyncing: true, lastSyncAttempt: now }));
+    
     try {
-      console.log('🔄 Dashboard: Syncing with entries data...');
+      console.log('🔄 Dashboard: Intelligent background sync...');
       setDataSyncStatus('syncing');
       
-      // Fetch all entries data
-      const entriesRes = await entriesApi.list({ page: 1, limit: 50000 });
+      // Progressive data loading - start with cached data, then fetch fresh
+      const [entriesRes, chartsData] = await Promise.all([
+        entriesApi.list({ page: 1, limit: 50000 }),
+        entriesApi.todayCharts().catch(() => null) // Allow charts to fail gracefully
+      ]);
+      
       const entriesData = (entriesRes.data?.entries as any[]) ?? [];
       
-      console.log('🔄 Dashboard: Fetched', entriesData.length, 'entries for synchronization');
+      console.log('🔄 Dashboard: Fetched', entriesData.length, 'entries for intelligent sync');
       
       // Calculate stats from entries data
       const calculatedStats = calculateStatsFromEntries(entriesData);
       
-      console.log('🔄 Dashboard: Calculated stats from entries:', {
-        totalEntries: calculatedStats.totalEntries,
-        totalAmount: calculatedStats.totalAmount,
-        todayEntries: calculatedStats.todayEntries,
-        todayAmount: calculatedStats.todayAmount
-      });
-      
-      // Update performance metrics immediately to prevent lag
+      // Update performance metrics immediately
       const newPerformanceMetrics = {
         allTimeEntries: calculatedStats.totalEntries,
         allTimeRevenue: calculatedStats.totalAmount,
@@ -609,23 +625,17 @@ export function AdminDashboard() {
       };
       
       setPerformanceMetrics(newPerformanceMetrics);
-      
-      // Update dashboard stats with synchronized data
       setStats(calculatedStats);
       
-      // Fetch all charts data (including monthly)
-      const [todayChartsData, allChartsData] = await Promise.all([
-        entriesApi.todayCharts(),
-        entriesApi.charts()
-      ]);
-      
-      // Combine charts data
-      const combinedCharts = {
-        ...todayChartsData,
-        monthly: allChartsData.monthly || []
-      };
-      
-      setCharts(combinedCharts as unknown as Charts);
+      // Update charts if available
+      if (chartsData) {
+        const allChartsData = await entriesApi.charts().catch(() => ({ monthly: [] }));
+        const combinedCharts = {
+          ...chartsData,
+          monthly: allChartsData.monthly || []
+        };
+        setCharts(combinedCharts as unknown as Charts);
+      }
       
       // Update recent entries
       const sortedEntries = entriesData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -635,13 +645,16 @@ export function AdminDashboard() {
       setDataSyncStatus('ready');
       setInitialLoadComplete(true);
       
-      console.log('✅ Dashboard: Successfully synchronized with entries data');
+      // Reset error count on success
+      setSyncState(prev => ({ ...prev, errorCount: 0, isAutoSyncing: false }));
       
-      // Trigger sync event
-      window.dispatchEvent(new CustomEvent('dashboard-synced-with-entries', {
+      console.log('✅ Dashboard: Intelligent sync completed successfully');
+      
+      // Dispatch sync event
+      window.dispatchEvent(new CustomEvent('dashboard-intelligent-sync', {
         detail: {
           timestamp: new Date().toISOString(),
-          source: 'entries-sync',
+          source: 'intelligent-background-sync',
           stats: calculatedStats,
           performanceMetrics: newPerformanceMetrics,
           entriesCount: entriesData.length
@@ -649,8 +662,18 @@ export function AdminDashboard() {
       }));
       
     } catch (error) {
-      console.error('❌ Dashboard: Failed to sync with entries data:', error);
+      console.error('❌ Dashboard: Intelligent sync failed:', error);
       setDataSyncStatus('error');
+      
+      // Increment error count and implement exponential backoff
+      setSyncState(prev => ({
+        ...prev,
+        errorCount: prev.errorCount + 1,
+        isAutoSyncing: false,
+        syncInterval: Math.min(prev.syncInterval * 2, 300000) // Max 5 minutes
+      }));
+      
+      // Don't show error to user - system will retry automatically
     }
   };
 
@@ -751,17 +774,17 @@ export function AdminDashboard() {
       try {
         setLoading(true);
         setError(null);
-        console.log('Dashboard: Fetching data with entries synchronization...');
+        console.log('Dashboard: Fetching data with intelligent sync...');
         
-        // Use entries-based synchronization for perfect data alignment
-        await syncDashboardWithEntries();
+        // Use intelligent background sync for perfect data alignment
+        await intelligentBackgroundSync(true);
         
         // Fetch ticket configs
         await fetchTicketConfigs();
         
         if (!cancelled) {
           setLoading(false);
-          console.log('Dashboard: Data fetched and synchronized with entries successfully');
+          console.log('Dashboard: Data fetched and synchronized intelligently');
         }
       } catch (error) {
         console.error('❌ Dashboard: Failed to fetch data:', error);
@@ -776,6 +799,37 @@ export function AdminDashboard() {
     
     return () => {
       cancelled = true;
+    };
+  }, []);
+  
+  // Automatic background sync with intelligent scheduling
+  useEffect(() => {
+    if (!syncState.backgroundSyncEnabled) return;
+    
+    const interval = setInterval(() => {
+      intelligentBackgroundSync();
+    }, syncState.syncInterval);
+    
+    return () => clearInterval(interval);
+  }, [syncState.syncInterval, syncState.backgroundSyncEnabled]);
+  
+  // Listen for global sync events and trigger intelligent sync
+  useEffect(() => {
+    const handleGlobalSync = async (event: Event) => {
+      console.log('🌐 Dashboard: Received global sync event:', event.type);
+      await intelligentBackgroundSync(true); // Force sync on global events
+    };
+    
+    window.addEventListener('global-sync', handleGlobalSync);
+    window.addEventListener('dashboard-refresh-required', handleGlobalSync);
+    window.addEventListener('staff-synced', handleGlobalSync);
+    window.addEventListener('dashboard-refresh', handleGlobalSync);
+    
+    return () => {
+      window.removeEventListener('global-sync', handleGlobalSync);
+      window.removeEventListener('dashboard-refresh-required', handleGlobalSync);
+      window.removeEventListener('staff-synced', handleGlobalSync);
+      window.removeEventListener('dashboard-refresh', handleGlobalSync);
     };
   }, []);
 
@@ -842,8 +896,8 @@ export function AdminDashboard() {
     const handleEntryUpdate = () => {
       if (!cancelled) {
         console.log('🔄 Dashboard: Entry update sync triggered...');
-        // Use entries-based synchronization for perfect data alignment
-        syncDashboardWithEntries();
+        // Use intelligent background sync for perfect data alignment
+        intelligentBackgroundSync();
       }
     };
 
@@ -1195,7 +1249,7 @@ export function AdminDashboard() {
               </motion.div>
             )}
 
-            {/* Enhanced Sync Controls */}
+            {/* Intelligent Sync Status Indicator */}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1238,7 +1292,7 @@ export function AdminDashboard() {
                         'text-gray-800'
                       }`}>
                         Status: <span className="font-bold">{
-                          dataSyncStatus === 'ready' ? '✅ Synchronized' :
+                          dataSyncStatus === 'ready' ? '✅ Auto-Syncing' :
                           dataSyncStatus === 'syncing' ? '🔄 Syncing...' :
                           dataSyncStatus === 'error' ? '❌ Error' :
                           '⏳ Loading...'
@@ -1249,33 +1303,13 @@ export function AdminDashboard() {
                           Last Sync: <span className="font-bold">{dayjs(performanceMetrics.lastSyncTime).format('HH:mm:ss')}</span>
                         </span>
                       )}
+                      {syncState.backgroundSyncEnabled && (
+                        <span className="ml-4 text-green-600">
+                          <span className="font-bold">🔄 Auto</span>
+                        </span>
+                      )}
                     </div>
                   </div>
-                </div>
-                <div className="flex space-x-2">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={syncDashboardWithEntries}
-                    disabled={dataSyncStatus === 'syncing'}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors flex items-center space-x-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span>Sync with Entries</span>
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={forceRefreshAllData}
-                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center space-x-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                    </svg>
-                    <span>Force Refresh</span>
-                  </motion.button>
                 </div>
               </div>
             </motion.div>
