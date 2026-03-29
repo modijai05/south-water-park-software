@@ -733,6 +733,30 @@ export function AdminEntries() {
           </div>
         </div>
 
+        {/* Summary Card */}
+        <div className="modern-card bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-900">{allEntries.length}</div>
+              <div className="text-sm text-gray-600">Total Entries</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-900">{currentEntries.length}</div>
+              <div className="text-sm text-gray-600">Visible</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-900">{dateGroups.today.length}</div>
+              <div className="text-sm text-gray-600">Today</div>
+            </div>
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+                {isConnected ? '🟢' : '🔴'}
+              </div>
+              <div className="text-sm text-gray-600">Real-time</div>
+            </div>
+          </div>
+        </div>
+
         {/* Entries Table with Virtualization */}
         <div className="modern-card">
           {initialLoading ? (
@@ -749,60 +773,31 @@ export function AdminEntries() {
             </div>
           ) : (
             <>
-              {/* Debug Info */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <h3 className="font-bold text-blue-900 mb-2">🔍 Debug Info</h3>
-                <div className="text-sm text-blue-800 space-y-1">
-                  <p><strong>Total Entries:</strong> {allEntries.length}</p>
-                  <p><strong>Current Entries:</strong> {currentEntries.length}</p>
-                  <p><strong>Active Date Group:</strong> {activeDateGroup}</p>
-                  <p><strong>Search Term:</strong> "{search}"</p>
-                  <p><strong>Date Groups:</strong> Today: {dateGroups.today.length} | Yesterday: {dateGroups.yesterday.length} | Older: {dateGroups.older.length}</p>
-                  <p><strong>Virtualizer Count:</strong> {rowVirtualizer.getTotalSize()}</p>
-                  <p><strong>Real-time Sync:</strong> 
-                    <span className={`font-bold ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
-                      {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
-                    </span>
-                    {!isConnected && (
-                      <button 
-                        onClick={reconnect}
-                        className="ml-2 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition"
-                      >
-                        Reconnect
-                      </button>
-                    )}
-                  </p>
-                  {allEntries.length > 0 && (
-                    <p><strong>Date Range:</strong> {dayjs(allEntries[allEntries.length - 1]?.createdAt).format('DD MMM YYYY')} - {dayjs(allEntries[0]?.createdAt).format('DD MMM YYYY')}</p>
-                  )}
-                </div>
-              </div>
-              
               <div 
                 ref={parentRef}
-                className="overflow-x-auto border border-gray-200 rounded-lg"
+                className="overflow-x-auto border border-gray-300 rounded-lg shadow-lg bg-white"
                 style={{ height: '700px', overflow: 'auto' }}
               >
               {/* Table Header */}
               <div className="sticky top-0 bg-white z-10 border-b-2 border-gray-300">
-                <table className="w-full text-left text-sm" style={{ tableLayout: 'fixed' }}>
+                <table className="w-full text-left text-sm" style={{ tableLayout: 'fixed', minWidth: '1400px' }}>
                   <thead>
-                    <tr className="bg-gray-50">
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '120px' }}>Date & Time</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '140px' }}>Filled By</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '140px' }}>Name</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '120px' }}>Mobile</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '80px' }}>Ticket</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '70px' }}>Adults</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '70px' }}>Kids</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '70px' }}>Total</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '90px' }}>Amount</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '80px' }}>💵 Cash</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '80px' }}>💳 UPI</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '90px' }}>🤝 Advance</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '80px' }}>💳 Other</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '140px' }}>🍔 Food Coupons</th>
-                      <th className="py-4 px-4 text-gray-900 font-bold" style={{ width: '120px' }}>Actions</th>
+                    <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '110px' }}>Date</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '130px' }}>Filled By</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '150px' }}>Name</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '110px' }}>Mobile</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '120px' }}>Ticket Type</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '60px' }}>Adults</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '60px' }}>Kids</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '60px' }}>Total</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '80px' }}>Amount</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '80px' }}>Cash</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '80px' }}>UPI</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '80px' }}>Advance</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '80px' }}>Other</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '120px' }}>Food Coupons</th>
+                      <th className="py-3 px-3 text-gray-900 font-bold" style={{ width: '100px' }}>Actions</th>
                     </tr>
                   </thead>
                 </table>
@@ -842,14 +837,14 @@ export function AdminEntries() {
                                   : 'bg-green-100 border-green-300 shadow-lg transform scale-105')
                               : ''
                           }`}>
-                            <td className="py-4 px-4 text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                            <td className="py-3 px-3 text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
                               <div className="space-y-1">
                                 <p className="font-medium text-sm">{dayjs(entry.createdAt).format('DD/MM/YY')}</p>
-                                <p className="text-xs text-gray-600">{dayjs(entry.createdAt).format('hh:mm A')}</p>
+                                <p className="text-xs text-gray-500 font-medium">{dayjs(entry.createdAt).format('hh:mm A')}</p>
                               </div>
                             </td>
-                            <td className="py-4 px-4 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
-                              <div className="space-y-2">
+                            <td className="py-3 px-3 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                              <div className="space-y-1">
                                 <div className="flex flex-col gap-1">
                                   <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-blue-100 to-blue-200 text-blue-900 font-bold text-xs border border-blue-300 inline-block">
                                     👤 {isClient ? (entry.filledByFullName || user?.fullName || user?.username || 'Unknown') : 'Loading...'}
@@ -862,54 +857,71 @@ export function AdminEntries() {
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-4 font-bold text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                            <td className="py-3 px-3 font-bold text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
                               <div className="truncate" title={safeString(entry.name)}>
-                                {safeString(entry.name)}
+                                <span className="text-sm">{safeString(entry.name)}</span>
                               </div>
                             </td>
-                            <td className="py-4 px-4 text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
-                              <div className="font-mono text-sm">{safeString(entry.mobile)}</div>
+                            <td className="py-3 px-3 text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                              <div className="font-mono text-sm font-medium">{safeString(entry.mobile)}</div>
                             </td>
-                            <td className="py-4 px-4 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
-                              <span className="px-2 py-1 rounded-lg bg-blue-100 text-blue-900 font-bold text-xs inline-block">
-                                {getTicketLabelSync(entry.ticketType as TicketType)}
-                              </span>
+                            <td className="py-3 px-3 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1">
+                                  <span className="px-2 py-1 rounded-lg bg-blue-100 text-blue-900 font-bold text-xs inline-block">
+                                    ₹{getTicketLabelSync(entry.ticketType as TicketType)}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 truncate" title={getTicketLabelSync(entry.ticketType as TicketType)}>
+                                  {(() => {
+                                    const ticketType = entry.ticketType as TicketType;
+                                    switch(ticketType) {
+                                      case '150': return '1 Hour';
+                                      case '300': return '3-4 Hours';
+                                      case '450': return 'Fast Food';
+                                      case '600': return 'Main Food';
+                                      case '100': return 'Sitting';
+                                      default: return ticketType;
+                                    }
+                                  })()}
+                                </p>
+                              </div>
                             </td>
-                            <td className="py-4 px-4 text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="font-bold">{safeString(entry.adults)}</div>
+                            <td className="py-3 px-3 text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="font-bold text-sm">{safeString(entry.adults)}</div>
                             </td>
-                            <td className="py-4 px-4 text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="font-bold">{entry.ticketType === '150' ? '-' : safeString(entry.kids)}</div>
+                            <td className="py-3 px-3 text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="font-bold text-sm">{entry.ticketType === '150' ? '-' : safeString(entry.kids)}</div>
                             </td>
-                            <td className="py-4 px-4 font-bold text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div>{entry.ticketType === '150' ? safeString(entry.adults) : safeString(entry.totalPeople)}</div>
+                            <td className="py-3 px-3 font-bold text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="text-sm">{entry.ticketType === '150' ? safeString(entry.adults) : safeString(entry.totalPeople)}</div>
                             </td>
-                            <td className="py-4 px-4 font-bold text-green-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="whitespace-nowrap">₹{safeString(entry.finalAmount)}</div>
+                            <td className="py-3 px-3 font-bold text-green-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="text-sm whitespace-nowrap">₹{safeString(entry.finalAmount)}</div>
                             </td>
-                            <td className="py-4 px-4 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="whitespace-nowrap">₹{safeString(entry.cashAmount)}</div>
+                            <td className="py-3 px-3 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="text-sm whitespace-nowrap">₹{safeString(entry.cashAmount)}</div>
                             </td>
-                            <td className="py-4 px-4 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="whitespace-nowrap">₹{safeString(entry.upiAmount)}</div>
+                            <td className="py-3 px-3 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="text-sm whitespace-nowrap">₹{safeString(entry.upiAmount)}</div>
                             </td>
-                            <td className="py-4 px-4 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="whitespace-nowrap">₹{safeString(entry.advanceAmount)}</div>
+                            <td className="py-3 px-3 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="text-sm whitespace-nowrap">₹{safeString(entry.advanceAmount)}</div>
                             </td>
-                            <td className="py-4 px-4 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="whitespace-nowrap">₹{safeString(entry.otherAmount)}</div>
+                            <td className="py-3 px-3 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="text-sm whitespace-nowrap">₹{safeString(entry.otherAmount)}</div>
                             </td>
-                            <td className="py-4 px-4 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
-                              <div className="space-y-2 max-w-xs">
+                            <td className="py-3 px-3 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                              <div className="space-y-1 max-w-xs">
                                 {/* Fast Food Coupons */}
                                 {((entry as any).adultsFastFoodCoupon || (entry as any).kidsFastFoodCoupon) && (
                                   <div className="bg-orange-50 rounded-lg p-2 border border-orange-200">
                                     <div className="text-xs font-bold text-orange-800 mb-1">🍔 Fast Food</div>
                                     <div className="flex justify-between gap-2">
-                                      <span className="text-xs text-orange-700">
+                                      <span className="text-xs text-orange-700 font-medium">
                                         A: {safeString((entry as any).adultsFastFoodCoupon)}
                                       </span>
-                                      <span className="text-xs text-orange-700">
+                                      <span className="text-xs text-orange-700 font-medium">
                                         K: {safeString((entry as any).kidsFastFoodCoupon)}
                                       </span>
                                     </div>
@@ -921,10 +933,10 @@ export function AdminEntries() {
                                   <div className="bg-green-50 rounded-lg p-2 border border-green-200">
                                     <div className="text-xs font-bold text-green-800 mb-1">🍽️ Main Food</div>
                                     <div className="flex justify-between gap-2">
-                                      <span className="text-xs text-green-700">
+                                      <span className="text-xs text-green-700 font-medium">
                                         A: {safeString((entry as any).adultsMainFoodCoupon)}
                                       </span>
-                                      <span className="text-xs text-green-700">
+                                      <span className="text-xs text-green-700 font-medium">
                                         K: {safeString((entry as any).kidsMainFoodCoupon)}
                                       </span>
                                     </div>
@@ -933,41 +945,44 @@ export function AdminEntries() {
                                 
                                 {/* No Coupons */}
                                 {!((entry as any).adultsFastFoodCoupon || (entry as any).kidsFastFoodCoupon || (entry as any).adultsMainFoodCoupon || (entry as any).kidsMainFoodCoupon) && (
-                                  <div className="text-xs text-gray-500 italic">No coupons</div>
+                                  <div className="text-xs text-gray-500 italic text-center py-2">No coupons</div>
                                 )}
                               </div>
                             </td>
-                            <td className="py-4 px-4" style={{ verticalAlign: 'top' }}>
-                              <div className="flex gap-2 flex-wrap">
-                              <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => setViewing(entry)}
-                                className="px-2 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-900 font-bold text-xs border border-blue-200 transition"
-                              >
-                                👁
-                              </motion.button>
-                              {user?.role === 'admin' && (
+                            <td className="py-3 px-3" style={{ verticalAlign: 'top' }}>
+                              <div className="flex gap-1 flex-wrap justify-center">
                                 <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => setEditing(entry)}
-                                  className="px-2 py-1 rounded-lg bg-green-100 hover:bg-green-200 text-green-900 font-bold text-xs border border-green-200 transition"
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={() => setViewing(entry)}
+                                  className="px-2 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-900 font-bold text-xs border border-blue-200 transition"
+                                  title="View entry details"
                                 >
-                                  ✏️
+                                  👁
                                 </motion.button>
-                              )}
-                              {user?.role === 'admin' && (
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => handleDelete(entry._id)}
-                                  className="px-2 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-900 font-bold text-xs border border-red-200 transition"
-                                >
-                                  🗑
-                                </motion.button>
-                              )}
-                            </div>
+                                {user?.role === 'admin' && (
+                                  <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => setEditing(entry)}
+                                    className="px-2 py-1 rounded-lg bg-green-100 hover:bg-green-200 text-green-900 font-bold text-xs border border-green-200 transition"
+                                    title="Edit entry"
+                                  >
+                                    ✏️
+                                  </motion.button>
+                                )}
+                                {user?.role === 'admin' && (
+                                  <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => handleDelete(entry._id)}
+                                    className="px-2 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-900 font-bold text-xs border border-red-200 transition"
+                                    title="Delete entry"
+                                  >
+                                    🗑
+                                  </motion.button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         </tbody>
