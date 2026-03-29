@@ -6,6 +6,90 @@ const { Entry } = require('../models/Entry.js');
 
 const router = Router();
 
+// Real-time sync clients storage
+const syncClients = new Map();
+
+// Broadcast function for real-time updates
+const broadcastToClients = (event, data) => {
+  const message = JSON.stringify({ event, data, timestamp: new Date().toISOString() });
+  
+  syncClients.forEach((client, clientId) => {
+    try {
+      if (client.readyState === 1) { // WebSocket OPEN state
+        client.send(message);
+      } else {
+        // Remove disconnected clients
+        syncClients.delete(clientId);
+      }
+    } catch (error) {
+      console.error('Error broadcasting to client:', clientId, error);
+      syncClients.delete(clientId);
+    }
+  });
+  
+  console.log(`📡 Broadcasted ${event} to ${syncClients.size} clients`);
+};
+
+// Real-time sync endpoint - Server-Sent Events
+router.get('/sync', (req, res) => {
+  console.log('📡 New sync client connected');
+  
+  // Set SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Cache-Control'
+  });
+  
+  const clientId = Date.now() + '-' + Math.random();
+  
+  // Send initial connection event
+  res.write(`data: ${JSON.stringify({ 
+    event: 'connected', 
+    clientId, 
+    timestamp: new Date().toISOString() 
+  })}\n\n`);
+  
+  // Keep connection alive
+  const heartbeat = setInterval(() => {
+    res.write(`data: ${JSON.stringify({ 
+      event: 'heartbeat', 
+      timestamp: new Date().toISOString() 
+    })}\n\n`);
+  }, 30000); // 30 second heartbeat
+  
+  // Handle client disconnect
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    console.log('📡 Sync client disconnected:', clientId);
+  });
+  
+  // Trigger immediate sync
+  setTimeout(() => {
+    broadcastToClients('sync-required', { 
+      source: 'connection',
+      message: 'Initial sync required' 
+    });
+  }, 1000);
+});
+
+// Trigger sync endpoint - for other services to trigger updates
+router.post('/trigger-sync', (req, res) => {
+  const { event = 'sync-required', data = {} } = req.body;
+  
+  console.log('📡 Manual sync trigger:', event, data);
+  broadcastToClients(event, data);
+  
+  res.json({ 
+    success: true, 
+    clientsNotified: syncClients.size,
+    event,
+    timestamp: new Date().toISOString() 
+  });
+});
+
 // Simple authentication middleware without database
 const simpleAuth = (req, res, next) => {
   try {
@@ -578,6 +662,13 @@ router.post('/', async (req, res) => {
         const savedEntry = await newEntry.save();
         console.log('✅ Entry saved to database:', savedEntry.receiptNumber);
         
+        // Broadcast real-time update to all connected clients
+        broadcastToClients('entry-created', {
+          entry: savedEntry,
+          action: 'create',
+          timestamp: new Date().toISOString()
+        });
+        
         return res.status(201).json({
           success: true,
           message: 'Entry created successfully',
@@ -1023,6 +1114,14 @@ router.put('/:id', async (req, res) => {
         }
         
         console.log('✅ Entry updated in database:', updatedEntry.receiptNumber);
+        
+        // Broadcast real-time update to all connected clients
+        broadcastToClients('entry-updated', {
+          entry: updatedEntry,
+          action: 'update',
+          timestamp: new Date().toISOString()
+        });
+        
         return res.json({
           success: true,
           data: { entry: updatedEntry },
@@ -1158,6 +1257,15 @@ router.delete('/:id', async (req, res) => {
         }
         
         console.log('✅ Entry deleted from database:', deletedEntry.receiptNumber);
+        
+        // Broadcast real-time update to all connected clients
+        broadcastToClients('entry-deleted', {
+          entryId: id,
+          entry: deletedEntry,
+          action: 'delete',
+          timestamp: new Date().toISOString()
+        });
+        
         return res.json({
           success: true,
           message: 'Entry deleted successfully'

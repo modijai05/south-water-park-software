@@ -9,6 +9,7 @@ import { getTicketLabel, getTicketLabelSync, computeAmounts, computeAmountsSync,
 import { useEntryStore } from '@/store/entryStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useRealTimeSync } from '@/hooks/useRealTimeSync';
 import type { EntryRecord, TicketType } from '@/types';
 
 // Helper function to safely convert values to strings - v2
@@ -62,6 +63,76 @@ export function AdminEntries() {
   });
   const [activeDateGroup, setActiveDateGroup] = useState<'today' | 'yesterday' | 'older'>('today');
   const [olderPage, setOlderPage] = useState(1);
+
+  // Real-time sync integration
+  const { isConnected, reconnect } = useRealTimeSync({
+    onEntryCreated: (entry) => {
+      console.log('📡 Real-time: New entry created', entry);
+      // Add new entry to the beginning of the list
+      setAllEntries(prev => [entry, ...prev]);
+      setTotal(prev => prev + 1);
+      
+      // Show toast notification
+      setToast({ 
+        message: `🎫 New entry: ${entry.name} (${entry.ticketType})`, 
+        id: entry._id 
+      });
+      setTimeout(() => setToast(null), 4000);
+    },
+    
+    onEntryUpdated: (entry) => {
+      console.log('📡 Real-time: Entry updated', entry);
+      // Update entry in the list
+      setAllEntries(prev => prev.map(e => 
+        e._id === entry._id ? entry : e
+      ));
+      
+      // Highlight the updated entry
+      setHighlightId(entry._id);
+      setTimeout(() => setHighlightId(null), 3000);
+      
+      // Show toast notification
+      setToast({ 
+        message: `✏️ Entry updated: ${entry.name}`, 
+        id: entry._id 
+      });
+      setTimeout(() => setToast(null), 4000);
+    },
+    
+    onEntryDeleted: (entryId, entry) => {
+      console.log('📡 Real-time: Entry deleted', entryId);
+      // Remove entry from the list
+      setAllEntries(prev => prev.filter(e => e._id !== entryId));
+      setTotal(prev => prev - 1);
+      
+      // Show toast notification
+      setToast({ 
+        message: `🗑️ Entry deleted: ${entry?.name || 'Unknown'}`, 
+        id: entryId 
+      });
+      setTimeout(() => setToast(null), 4000);
+    },
+    
+    onSyncRequired: (data) => {
+      console.log('📡 Real-time: Sync required', data);
+      // Force refresh entries
+      fetchEntries(true);
+    },
+    
+    onConnected: () => {
+      console.log('📡 Real-time: Connected to sync server');
+      // Trigger initial sync when connected
+      setTimeout(() => fetchEntries(true), 1000);
+    },
+    
+    onDisconnected: () => {
+      console.log('📡 Real-time: Disconnected from sync server');
+    },
+    
+    onError: (error) => {
+      console.error('📡 Real-time: Sync error', error);
+    }
+  });
 
   // Fix hydration issues
   useEffect(() => {
@@ -571,6 +642,19 @@ export function AdminEntries() {
                   <p><strong>Search Term:</strong> "{search}"</p>
                   <p><strong>Date Groups:</strong> Today: {dateGroups.today.length} | Yesterday: {dateGroups.yesterday.length} | Older: {dateGroups.older.length}</p>
                   <p><strong>Virtualizer Count:</strong> {rowVirtualizer.getTotalSize()}</p>
+                  <p><strong>Real-time Sync:</strong> 
+                    <span className={`font-bold ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+                      {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+                    </span>
+                    {!isConnected && (
+                      <button 
+                        onClick={reconnect}
+                        className="ml-2 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition"
+                      >
+                        Reconnect
+                      </button>
+                    )}
+                  </p>
                   {allEntries.length > 0 && (
                     <p><strong>Date Range:</strong> {dayjs(allEntries[allEntries.length - 1]?.createdAt).format('DD MMM YYYY')} - {dayjs(allEntries[0]?.createdAt).format('DD MMM YYYY')}</p>
                   )}
