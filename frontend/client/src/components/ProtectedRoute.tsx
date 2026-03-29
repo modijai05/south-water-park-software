@@ -28,9 +28,9 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  // If no token, redirect to login
+  // If no token, show children
   if (!token) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <>{children}</>;
   }
 
   // If token exists but user data is still loading, wait
@@ -50,5 +50,6 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to={user.role === 'admin' ? '/admin' : '/staff'} replace />;
   }
 
+  // If authenticated and has correct role, show children
   return <>{children}</>;
 }
