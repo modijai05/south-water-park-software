@@ -395,6 +395,16 @@ app.put('/api/ticket-config/save/:ticketType', (req, res) => {
   });
 });
 
+// Simple test endpoint for debugging
+app.get('/api/discount-test', (req, res) => {
+  res.json({ 
+    success: true,
+    message: 'Discount test endpoint working',
+    timestamp: new Date().toISOString(),
+    version: '3.2-FINAL'
+  });
+});
+
 // Fallback discounts analytics endpoint - ENSURES IT WORKS (must be before analytics router)
 app.get('/api/analytics/discounts', async (req, res) => {
   try {
