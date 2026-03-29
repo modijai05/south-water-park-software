@@ -395,16 +395,7 @@ app.put('/api/ticket-config/save/:ticketType', (req, res) => {
   });
 });
 
-// Mount ALL routes - CRITICAL FIX
-app.use('/api/auth', authRoutes);
-app.use('/api/entries', entryRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/ticket-config', ticketConfigRoutes);
-app.use('/api/ticket-demand-analysis', ticketDemandAnalysisRoutes);
-app.use('/api/analytics', analyticsRouter);
-app.use('/api', sendSMSRouter);
-
-// Fallback discounts analytics endpoint - ENSURES IT WORKS
+// Fallback discounts analytics endpoint - ENSURES IT WORKS (must be before analytics router)
 app.get('/api/analytics/discounts', async (req, res) => {
   try {
     console.log('🚨 Fallback discounts analytics endpoint called');
@@ -500,6 +491,15 @@ app.get('/api/analytics/discounts', async (req, res) => {
     });
   }
 });
+
+// Mount ALL routes - CRITICAL FIX
+app.use('/api/auth', authRoutes);
+app.use('/api/entries', entryRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/ticket-config', ticketConfigRoutes);
+app.use('/api/ticket-demand-analysis', ticketDemandAnalysisRoutes);
+app.use('/api/analytics', analyticsRouter);
+app.use('/api', sendSMSRouter);
 
 app.use(errorHandler);
 
