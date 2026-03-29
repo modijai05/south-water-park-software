@@ -500,105 +500,304 @@ export function AdminEntries() {
                 </button>
               </div>
               
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <input
-                      type="text"
-                      value={editing ? editing.name : (viewing?.name || '')}
-                      onChange={(e) => editing && setEditing({...editing, name: e.target.value})}
-                      disabled={!editing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    />
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">👤 Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                      <input
+                        type="text"
+                        value={editing ? editing.name : (viewing?.name || '')}
+                        onChange={(e) => editing && setEditing({...editing, name: e.target.value})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Mobile *</label>
+                      <input
+                        type="text"
+                        value={editing ? editing.mobile : (viewing?.mobile || '')}
+                        onChange={(e) => editing && setEditing({...editing, mobile: e.target.value})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
+                </div>
+
+                {/* Ticket Information */}
+                <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">🎫 Ticket Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Adults *</label>
+                      <input
+                        type="number"
+                        value={editing ? editing.adults : (viewing?.adults?.toString() || '')}
+                        onChange={(e) => editing && setEditing({...editing, adults: parseInt(e.target.value) || 0})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Kids</label>
+                      <input
+                        type="number"
+                        value={editing ? editing.kids : (viewing?.kids?.toString() || '')}
+                        onChange={(e) => editing && setEditing({...editing, kids: parseInt(e.target.value) || 0})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Ticket Type *</label>
+                      <select
+                        value={editing ? editing.ticketType : (viewing?.ticketType || '150')}
+                        onChange={(e) => editing && setEditing({...editing, ticketType: e.target.value as TicketType})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      >
+                        {TICKET_OPTIONS.map(option => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {/* Upgrades */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">🔄 Upgrades</label>
+                    <div className="space-y-2">
+                      {editing?.upgrades?.map((upgrade, index) => (
+                        <div key={index} className="grid grid-cols-3 gap-2 p-3 bg-white rounded border border-gray-200">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Ticket Type</label>
+                            <select
+                              value={upgrade.ticketType}
+                              onChange={(e) => {
+                                const newUpgrades = [...(editing?.upgrades || [])];
+                                newUpgrades[index] = {...upgrade, ticketType: e.target.value as TicketType};
+                                setEditing({...editing, upgrades: newUpgrades});
+                              }}
+                              disabled={!editing}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                            >
+                              {TICKET_OPTIONS.map(option => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Adults</label>
+                            <input
+                              type="number"
+                              value={upgrade.adults}
+                              onChange={(e) => {
+                                const newUpgrades = [...(editing?.upgrades || [])];
+                                newUpgrades[index] = {...upgrade, adults: parseInt(e.target.value) || 0};
+                                setEditing({...editing, upgrades: newUpgrades});
+                              }}
+                              disabled={!editing}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Kids</label>
+                            <input
+                              type="number"
+                              value={upgrade.kids}
+                              onChange={(e) => {
+                                const newUpgrades = [...(editing?.upgrades || [])];
+                                newUpgrades[index] = {...upgrade, kids: parseInt(e.target.value) || 0};
+                                setEditing({...editing, upgrades: newUpgrades});
+                              }}
+                              disabled={!editing}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                            />
+                          </div>
+                        </div>
+                      )) || (
+                        <div className="text-sm text-gray-500 italic p-3 bg-gray-100 rounded">
+                          No upgrades added
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Food Coupons */}
+                <div className="bg-green-50 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">🍔 Food Coupons</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Adults Fast Food Coupon</label>
+                      <input
+                        type="text"
+                        value={editing ? (editing as any).adultsFastFoodCoupon : (viewing as any)?.adultsFastFoodCoupon || ''}
+                        onChange={(e) => editing && setEditing({...editing, adultsFastFoodCoupon: e.target.value})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Kids Fast Food Coupon</label>
+                      <input
+                        type="text"
+                        value={editing ? (editing as any).kidsFastFoodCoupon : (viewing as any)?.kidsFastFoodCoupon || ''}
+                        onChange={(e) => editing && setEditing({...editing, kidsFastFoodCoupon: e.target.value})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Adults Main Food Coupon</label>
+                      <input
+                        type="text"
+                        value={editing ? (editing as any).adultsMainFoodCoupon : (viewing as any)?.adultsMainFoodCoupon || ''}
+                        onChange={(e) => editing && setEditing({...editing, adultsMainFoodCoupon: e.target.value})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Kids Main Food Coupon</label>
+                      <input
+                        type="text"
+                        value={editing ? (editing as any).kidsMainFoodCoupon : (viewing as any)?.kidsMainFoodCoupon || ''}
+                        onChange={(e) => editing && setEditing({...editing, kidsMainFoodCoupon: e.target.value})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Information */}
+                <div className="bg-yellow-50 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">💳 Payment Information</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Cash Amount</label>
+                      <input
+                        type="number"
+                        value={editing ? editing.cashAmount?.toString() : (viewing?.cashAmount?.toString() || '')}
+                        onChange={(e) => editing && setEditing({...editing, cashAmount: parseInt(e.target.value) || 0})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">UPI Amount</label>
+                      <input
+                        type="number"
+                        value={editing ? editing.upiAmount?.toString() : (viewing?.upiAmount?.toString() || '')}
+                        onChange={(e) => editing && setEditing({...editing, upiAmount: parseInt(e.target.value) || 0})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Advance Amount</label>
+                      <input
+                        type="number"
+                        value={editing ? editing.advanceAmount?.toString() : (viewing?.advanceAmount?.toString() || '')}
+                        onChange={(e) => editing && setEditing({...editing, advanceAmount: parseInt(e.target.value) || 0})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Other Amount</label>
+                      <input
+                        type="number"
+                        value={editing ? editing.otherAmount?.toString() : (viewing?.otherAmount?.toString() || '')}
+                        onChange={(e) => editing && setEditing({...editing, otherAmount: parseInt(e.target.value) || 0})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Discount */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Additional Discount</label>
                     <input
-                      type="text"
-                      value={editing ? editing.mobile : (viewing?.mobile || '')}
-                      onChange={(e) => editing && setEditing({...editing, mobile: e.target.value})}
+                      type="number"
+                      value={editing ? (editing as any).additionalDiscount?.toString() : (viewing as any)?.additionalDiscount?.toString() || ''}
+                      onChange={(e) => editing && setEditing({...editing, additionalDiscount: parseInt(e.target.value) || 0})}
                       disabled={!editing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                     />
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Adults</label>
-                    <input
-                      type="number"
-                      value={editing ? editing.adults : (viewing?.adults?.toString() || '')}
-                      onChange={(e) => editing && setEditing({...editing, adults: parseInt(e.target.value) || 0})}
-                      disabled={!editing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Kids</label>
-                    <input
-                      type="number"
-                      value={editing ? editing.kids : (viewing?.kids?.toString() || '')}
-                      onChange={(e) => editing && setEditing({...editing, kids: parseInt(e.target.value) || 0})}
-                      disabled={!editing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ticket Type</label>
-                    <select
-                      value={editing ? editing.ticketType : (viewing?.ticketType || '150')}
-                      onChange={(e) => editing && setEditing({...editing, ticketType: e.target.value as TicketType})}
-                      disabled={!editing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    >
-                      {TICKET_OPTIONS.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+
+                {/* System Information */}
+                <div className="bg-purple-50 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">📋 System Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Receipt Number</label>
+                      <input
+                        type="text"
+                        value={editing ? (editing as any).receiptNumber : (viewing as any)?.receiptNumber || ''}
+                        onChange={(e) => editing && setEditing({...editing, receiptNumber: e.target.value})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Created Date</label>
+                      <input
+                        type="datetime-local"
+                        value={editing ? editing.createdAt : (viewing?.createdAt || '')}
+                        onChange={(e) => editing && setEditing({...editing, createdAt: e.target.value})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Created By</label>
+                      <input
+                        type="text"
+                        value={
+                        editing 
+                          ? (editing as any).createdBy?.username || ''
+                          : (viewing as any)?.createdBy?.username || ''
+                      }
+                        onChange={(e) => editing && setEditing({...editing, createdBy: {...(editing as any).createdBy, username: e.target.value}})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Filled By</label>
+                      <input
+                        type="text"
+                        value={editing ? editing.filledByFullName : (viewing?.filledByFullName || '')}
+                        onChange={(e) => editing && setEditing({...editing, filledByFullName: e.target.value})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-4 gap-4">
+
+                {/* Notes */}
+                <div className="bg-indigo-50 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">📝 Notes</h3>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cash</label>
-                    <input
-                      type="number"
-                      value={editing ? editing.cashAmount?.toString() : (viewing?.cashAmount?.toString() || '')}
-                      onChange={(e) => editing && setEditing({...editing, cashAmount: parseInt(e.target.value) || 0})}
-                      disabled={!editing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">UPI</label>
-                    <input
-                      type="number"
-                      value={editing ? editing.upiAmount?.toString() : (viewing?.upiAmount?.toString() || '')}
-                      onChange={(e) => editing && setEditing({...editing, upiAmount: parseInt(e.target.value) || 0})}
-                      disabled={!editing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Advance</label>
-                    <input
-                      type="number"
-                      value={editing ? editing.advanceAmount?.toString() : (viewing?.advanceAmount?.toString() || '')}
-                      onChange={(e) => editing && setEditing({...editing, advanceAmount: parseInt(e.target.value) || 0})}
-                      disabled={!editing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Other</label>
-                    <input
-                      type="number"
-                      value={editing ? editing.otherAmount?.toString() : (viewing?.otherAmount?.toString() || '')}
-                      onChange={(e) => editing && setEditing({...editing, otherAmount: parseInt(e.target.value) || 0})}
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes</label>
+                    <textarea
+                      rows={3}
+                      value={editing ? (editing as any).notes : (viewing as any)?.notes || ''}
+                      onChange={(e) => editing && setEditing({...editing, notes: e.target.value})}
                       disabled={!editing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                     />
