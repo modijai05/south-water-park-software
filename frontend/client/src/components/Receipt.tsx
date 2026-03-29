@@ -336,6 +336,14 @@ const Receipt: React.FC<ReceiptProps> = ({ data, onClose, batchData }) => {
                       <span className="receipt-label">Kids:</span>
                       <span>{entry.ticketType === '150' ? 0 : entry.kids}</span>
                     </div>
+                    <div className="receipt-row">
+                      <span className="receipt-label">Total People:</span>
+                      <span>{entry.totalPeople}</span>
+                    </div>
+                    <div className="receipt-row">
+                      <span className="receipt-label">Filled By:</span>
+                      <span>{entry.filledByFullName || entry.filledBy || 'Unknown'}</span>
+                    </div>
                     
                     {/* Upgrade Tickets for Batch Entry */}
                     {entry.upgrades && entry.upgrades.length > 0 && (
@@ -444,6 +452,14 @@ const Receipt: React.FC<ReceiptProps> = ({ data, onClose, batchData }) => {
                 <div className="receipt-row">
                   <span className="receipt-label">Kids:</span>
                   <span>{singleEntryData.ticketType === '150' ? 0 : singleEntryData.kids}</span>
+                </div>
+                <div className="receipt-row">
+                  <span className="receipt-label">Total People:</span>
+                  <span>{singleEntryData.totalPeople}</span>
+                </div>
+                <div className="receipt-row">
+                  <span className="receipt-label">Filled By:</span>
+                  <span>{singleEntryData.filledByFullName || singleEntryData.filledBy || 'Unknown'}</span>
                 </div>
               </div>
 

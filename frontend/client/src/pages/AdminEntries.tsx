@@ -119,6 +119,12 @@ export function AdminEntries() {
       fetchEntries(true);
     },
     
+    onReceiptGenerated: (data) => {
+      console.log('📡 Real-time: Receipt generated', data);
+      // Force refresh entries to get updated receipt numbers
+      fetchEntries(true);
+    },
+    
     onConnected: () => {
       console.log('📡 Real-time: Connected to sync server');
       // Trigger initial sync when connected

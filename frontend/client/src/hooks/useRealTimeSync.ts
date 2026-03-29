@@ -11,6 +11,7 @@ interface UseRealTimeSyncOptions {
   onEntryUpdated?: (entry: any) => void;
   onEntryDeleted?: (entryId: string, entry: any) => void;
   onSyncRequired?: (data: any) => void;
+  onReceiptGenerated?: (data: any) => void;
   onConnected?: () => void;
   onDisconnected?: () => void;
   onError?: (error: Event) => void;
@@ -73,6 +74,11 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
               options.onSyncRequired?.(data.data);
               break;
 
+            case 'receipt-generated':
+              console.log('📡 Receipt generated:', data.data);
+              options.onReceiptGenerated?.(data.data);
+              break;
+
             case 'heartbeat':
               // Just a heartbeat to keep connection alive
               break;
@@ -85,22 +91,22 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
         }
       };
 
-      eventSource.onerror = (error) => {
+      eventSource.addEventListener('error', (error) => {
         console.error('📡 Real-time sync error:', error);
         isConnectingRef.current = false;
-        options.onError?.(error);
+        options.onError?.(error as Event);
 
         // Attempt to reconnect if not explicitly closed
         if (eventSource.readyState !== EventSource.CLOSED) {
           reconnect();
         }
-      };
+      });
 
-      eventSource.onclose = () => {
+      eventSource.addEventListener('close', () => {
         console.log('📡 Real-time sync disconnected');
         isConnectingRef.current = false;
         options.onDisconnected?.();
-      };
+      });
 
     } catch (error) {
       console.error('📡 Failed to create EventSource:', error);

@@ -1093,30 +1093,43 @@ export function AdminExport() {
           name: entry.name,
           mobile: entry.mobile,
           ticketType: entry.ticketType,
-          adults: entry.adults,
-          kids: entry.kids,
+          adults: entry.adults || 0,
+          kids: entry.ticketType === '150' ? 0 : (entry.kids || 0),
           upgrades: entry.upgrades || [],
-          baseAmount: entry.baseAmount,
-          kidDiscount: entry.kidDiscount,
-          additionalDiscount: entry.additionalDiscount,
-          finalAmount: entry.finalAmount,
-          totalPeople: entry.totalPeople,
-          cashAmount: entry.cashAmount,
-          upiAmount: entry.upiAmount,
+          baseAmount: entry.baseAmount || 0,
+          kidDiscount: entry.kidDiscount || 0,
+          additionalDiscount: entry.additionalDiscount || 0,
+          finalAmount: entry.finalAmount || 0,
+          totalPeople: entry.ticketType === '150' ? (entry.adults || 0) : (entry.totalPeople || (entry.adults || 0) + (entry.kids || 0)),
+          cashAmount: entry.cashAmount || 0,
+          upiAmount: entry.upiAmount || 0,
           advanceAmount: entry.advanceAmount || 0,
           otherAmount: entry.otherAmount || 0,
-          filledBy: (entry as any).createdBy?.username || 'Unknown',
+          filledBy: (entry as any).createdBy?.username || (entry as any).filledByFullName || 'Unknown',
           filledByFullName: (entry as any).filledByFullName || (entry as any).createdBy?.fullName || (entry as any).createdBy?.username || 'Unknown',
+          createdBy: (entry as any).createdBy,
           createdAt: entry.createdAt,
-          adultsFastFoodCoupon: (entry as any).adultsFastFoodCoupon,
-          kidsFastFoodCoupon: (entry as any).kidsFastFoodCoupon,
-          adultsMainFoodCoupon: (entry as any).adultsMainFoodCoupon,
-          kidsMainFoodCoupon: (entry as any).kidsMainFoodCoupon,
+          adultsFastFoodCoupon: (entry as any).adultsFastFoodCoupon || '',
+          kidsFastFoodCoupon: (entry as any).kidsFastFoodCoupon || '',
+          adultsMainFoodCoupon: (entry as any).adultsMainFoodCoupon || '',
+          kidsMainFoodCoupon: (entry as any).kidsMainFoodCoupon || '',
         };
         
         console.log('🔍 AdminExport: Receipt data prepared:', receiptData);
         setReceiptData(receiptData);
         setShowReceipt(true);
+        
+        // Trigger real-time sync to update entry with receipt number
+        if (receiptNumber && !entry.receiptNumber) {
+          window.dispatchEvent(new CustomEvent('receipt-generated', {
+            detail: {
+              receiptNumber,
+              entryId: entry._id,
+              name: entry.name,
+              timestamp: new Date().toISOString()
+            }
+          }));
+        }
       } else {
         alert(`No entry found for: ${searchTerm}`);
       }
@@ -1159,25 +1172,26 @@ export function AdminExport() {
             name: entry.name,
             mobile: entry.mobile,
             ticketType: entry.ticketType,
-            adults: entry.adults,
-            kids: entry.kids,
+            adults: entry.adults || 0,
+            kids: entry.ticketType === '150' ? 0 : (entry.kids || 0),
             upgrades: entry.upgrades || [],
-            baseAmount: entry.baseAmount,
-            kidDiscount: entry.kidDiscount,
-            additionalDiscount: entry.additionalDiscount,
-            finalAmount: entry.finalAmount,
-            totalPeople: entry.totalPeople,
-            cashAmount: entry.cashAmount,
-            upiAmount: entry.upiAmount,
+            baseAmount: entry.baseAmount || 0,
+            kidDiscount: entry.kidDiscount || 0,
+            additionalDiscount: entry.additionalDiscount || 0,
+            finalAmount: entry.finalAmount || 0,
+            totalPeople: entry.ticketType === '150' ? (entry.adults || 0) : (entry.totalPeople || (entry.adults || 0) + (entry.kids || 0)),
+            cashAmount: entry.cashAmount || 0,
+            upiAmount: entry.upiAmount || 0,
             advanceAmount: entry.advanceAmount || 0,
             otherAmount: entry.otherAmount || 0,
-            filledBy: (entry as any).createdBy?.username || 'Unknown',
+            filledBy: (entry as any).createdBy?.username || (entry as any).filledByFullName || 'Unknown',
             filledByFullName: (entry as any).filledByFullName || (entry as any).createdBy?.fullName || (entry as any).createdBy?.username || 'Unknown',
+            createdBy: (entry as any).createdBy,
             createdAt: entry.createdAt,
-            adultsFastFoodCoupon: (entry as any).adultsFastFoodCoupon,
-            kidsFastFoodCoupon: (entry as any).kidsFastFoodCoupon,
-            adultsMainFoodCoupon: (entry as any).adultsMainFoodCoupon,
-            kidsMainFoodCoupon: (entry as any).kidsMainFoodCoupon,
+            adultsFastFoodCoupon: (entry as any).adultsFastFoodCoupon || '',
+            kidsFastFoodCoupon: (entry as any).kidsFastFoodCoupon || '',
+            adultsMainFoodCoupon: (entry as any).adultsMainFoodCoupon || '',
+            kidsMainFoodCoupon: (entry as any).kidsMainFoodCoupon || '',
           };
         }),
         dateRange: `${dayjs(f).format('DD MMMM YYYY')} - ${dayjs(t).format('DD MMMM YYYY')}`,
