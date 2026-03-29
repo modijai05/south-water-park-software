@@ -23,6 +23,11 @@ interface TodaySummary {
   totalKids: number;
   date: string;
   lastUpdated: string;
+  liveMetrics?: {
+    avgTicketValue: number;
+    peakHour: number;
+    recentActivity: number;
+  };
 }
 
 export function TodayAnalytics() {
@@ -144,7 +149,7 @@ export function TodayAnalytics() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8"
         >
           <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
             <div className="text-sm font-medium text-gray-600 mb-1">Total Revenue</div>
@@ -162,6 +167,19 @@ export function TodayAnalytics() {
             <div className="text-sm font-medium text-gray-600 mb-1">Adults/Kids</div>
             <div className="text-2xl font-bold text-orange-600">{summary.totalAdults}/{summary.totalKids}</div>
           </div>
+          {/* Live Metrics */}
+          {summary.liveMetrics && (
+            <>
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg shadow border border-blue-200">
+                <div className="text-sm font-medium text-blue-600 mb-1">Avg Ticket Value</div>
+                <div className="text-2xl font-bold text-blue-800">₹{summary.liveMetrics.avgTicketValue}</div>
+              </div>
+              <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg shadow border border-green-200">
+                <div className="text-sm font-medium text-green-600 mb-1">Peak Hour</div>
+                <div className="text-2xl font-bold text-green-800">{summary.liveMetrics.peakHour}:00</div>
+              </div>
+            </>
+          )}
         </motion.div>
       )}
 

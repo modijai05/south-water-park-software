@@ -1,6 +1,8 @@
 const { Router } = require('express');
 const { authenticate, requireAdmin } = require('../middleware/auth.js');
 const { User } = require('../models/User.js');
+const { Entry } = require('../models/Entry.js');
+const dayjs = require('dayjs');
 
 const router = Router();
 
@@ -185,6 +187,7 @@ router.get('/today', authenticate, requireAdmin, async (req, res) => {
     const totalAdults = entries.reduce((sum, e) => sum + (e.adults || 0), 0);
     const totalKids = entries.reduce((sum, e) => sum + (e.kids || 0), 0);
 
+    // Add live data timestamp and metrics
     const responseData = {
       todayAnalytics,
       summary: {
@@ -194,7 +197,18 @@ router.get('/today', authenticate, requireAdmin, async (req, res) => {
         totalAdults,
         totalKids,
         date: dayjs().format('YYYY-MM-DD'),
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
+        // Live performance indicators
+        liveMetrics: {
+          avgTicketValue: totalEntries > 0 ? Math.round(totalRevenue / totalEntries) : 0,
+          peakHour: entries.length > 0 ? 
+            dayjs(entries.reduce((max, e) => 
+              dayjs(e.createdAt).hour() > dayjs(max.createdAt).hour() ? e : max
+            ).createdAt).hour() : 0,
+          recentActivity: entries.filter(e => 
+            dayjs(e.createdAt).isAfter(dayjs().subtract(30, 'minute'))
+          ).length
+        }
       }
     };
     
@@ -336,6 +350,7 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
     const historicalTotalAdults = recentHistoricalEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
     const historicalTotalKids = recentHistoricalEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
 
+    // Enhanced response with live data insights
     const responseData = {
       todayAnalytics,
       historicalAnalytics,
@@ -347,6 +362,14 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
           totalAdults: todayTotalAdults,
           totalKids: todayTotalKids,
           date: now.format('YYYY-MM-DD'),
+          // Live performance indicators
+          avgTicketValue: todayTotalEntries > 0 ? Math.round(todayTotalRevenue / todayTotalEntries) : 0,
+          growthRate: historicalTotalEntries > 0 ? 
+            Math.round(((todayTotalEntries - historicalTotalEntries) / historicalTotalEntries) * 100) : 0,
+          peakHour: todayEntries.length > 0 ? 
+            dayjs(todayEntries.reduce((max, e) => 
+              dayjs(e.createdAt).hour() > dayjs(max.createdAt).hour() ? e : max
+            ).createdAt).hour() : 0
         },
         historical: {
           totalRevenue: historicalTotalRevenue,
@@ -355,8 +378,16 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
           totalAdults: historicalTotalAdults,
           totalKids: historicalTotalKids,
           dateRange: 'Last 30 days',
+          avgTicketValue: historicalTotalEntries > 0 ? Math.round(historicalTotalRevenue / historicalTotalEntries) : 0
         },
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
+        // Live comparison metrics
+        insights: {
+          performanceComparison: todayTotalRevenue > historicalTotalRevenue ? 'above' : 'below',
+          revenueDifference: todayTotalRevenue - historicalTotalRevenue,
+          entriesDifference: todayTotalEntries - historicalTotalEntries,
+          trendDirection: todayTotalEntries > historicalTotalEntries ? 'increasing' : 'decreasing'
+        }
       }
     };
     
