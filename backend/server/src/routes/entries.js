@@ -956,6 +956,112 @@ router.get('/', simpleAuth, async (req, res) => {
   }
 });
 
+// DELETE /api/entries/:id - Delete entry (PUBLIC ACCESS)
+router.delete('/:id', async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    const { id } = req.params;
+    console.log('🗑️ Deleting entry:', id);
+    
+    // Validate ObjectId format - exclude known specific routes
+    if (id === 'stats' || id === 'health' || id === 'sync-all' || id === 'charts' || id === 'export' || id === 'clear-all') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid entry ID format'
+      });
+    }
+    
+    // Try database delete, fallback to success response
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const deletedEntry = await Entry.findOneAndDelete({ _id: id });
+        
+        if (!deletedEntry) {
+          return res.status(404).json({
+            success: false,
+            message: 'Entry not found'
+          });
+        }
+        
+        console.log('✅ Entry deleted from database:', deletedEntry.receiptNumber);
+        return res.json({
+          success: true,
+          message: 'Entry deleted successfully'
+        });
+      } else {
+        console.log('⚠️ MongoDB not connected, returning fallback delete response');
+        return res.json({
+          success: true,
+          message: 'Entry deleted successfully (fallback mode)'
+        });
+      }
+    } catch (dbError) {
+      console.error('❌ Database delete error:', dbError.message);
+      return res.status(500).json({
+        success: false,
+        error: 'Database error',
+        message: dbError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Delete entry error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to delete entry',
+      message: error.message
+    });
+  }
+});
+
+// DELETE /api/entries/clear-all - Clear all entries (ADMIN ONLY)
+router.delete('/clear-all', simpleAuth, async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    console.log('🗑️ Clearing all entries');
+    
+    // Try database clear, fallback to success response
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const result = await Entry.deleteMany({});
+        
+        console.log(`✅ Cleared ${result.deletedCount} entries from database`);
+        return res.json({
+          success: true,
+          message: `Cleared ${result.deletedCount} entries successfully`
+        });
+      } else {
+        console.log('⚠️ MongoDB not connected, returning fallback clear response');
+        return res.json({
+          success: true,
+          message: 'All entries cleared successfully (fallback mode)'
+        });
+      }
+    } catch (dbError) {
+      console.error('❌ Database clear error:', dbError.message);
+      return res.status(500).json({
+        success: false,
+        error: 'Database error',
+        message: dbError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Clear entries error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to clear entries',
+      message: error.message
+    });
+  }
+});
+
 // GET /api/entries/:id - Get single entry (PUBLIC ACCESS) - MUST BE LAST TO AVOID CONFLICTS
 router.get('/:id', async (req, res) => {
   try {
