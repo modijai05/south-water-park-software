@@ -1,6 +1,6 @@
 {
   "name": "south-water-park-server",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "Backend for The South Water Park – Ticket Entry System",
   "main": "src/index.js",
   "type": "commonjs",
@@ -23,5 +23,6 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
     "node-fetch": "^3.3.2"
-  }
+  },
+  "build": "Build 1774757666105 - PRODUCTION FIX"
 }
