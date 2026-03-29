@@ -118,6 +118,8 @@ export const entriesApi = {
     if (params?.to) q.set('to', params.to);
     if (params?.page != null) q.set('page', String(params.page));
     if (params?.limit != null) q.set('limit', String(params.limit));
+    // Add cache-busting timestamp
+    q.set('_t', Date.now().toString());
     const query = q.toString();
     return api<{ success: boolean; data: { entries: unknown[]; total: number; page: number; limit: number; totalPages: number } }>(`/entries${query ? `?${query}` : ''}`)
       .then(response => {

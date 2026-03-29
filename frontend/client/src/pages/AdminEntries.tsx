@@ -46,9 +46,11 @@ export function AdminEntries() {
 
   const fetchEntries = () => {
     setLoading(true);
+    console.log('🔍 AdminEntries: Fetching entries with params:', { search: search || undefined, page, limit });
     entriesApi.list({ search: search || undefined, page, limit }).then((res) => {
-      setEntries((res.entries as EntryRecord[]) ?? []);
-      setTotal(res.total ?? 0);
+      console.log('🔍 AdminEntries: API response:', { success: res.success, entriesCount: res.data?.entries?.length || 0, total: res.data?.total || 0 });
+      setEntries((res.data?.entries as EntryRecord[]) ?? []);
+      setTotal(res.data?.total ?? 0);
     }).finally(() => setLoading(false));
   };
 
