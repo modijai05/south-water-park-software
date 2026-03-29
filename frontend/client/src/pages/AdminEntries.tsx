@@ -112,7 +112,8 @@ export function AdminEntries() {
         entry.name?.toLowerCase().includes(searchTerm) ||
         entry.mobile?.toLowerCase().includes(searchTerm) ||
         entry.filledByFullName?.toLowerCase().includes(searchTerm) ||
-        entry.ticketType?.toLowerCase().includes(searchTerm)
+        entry.ticketType?.toLowerCase().includes(searchTerm) ||
+        entry.additionalDiscount?.toString().includes(searchTerm)
       );
     }
     
@@ -266,7 +267,7 @@ export function AdminEntries() {
               {search && `Searching: "${search}"`}
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{entries.length}</div>
               <div className="text-sm text-gray-600">Filtered</div>
@@ -280,6 +281,12 @@ export function AdminEntries() {
                 {entries.reduce((sum, e) => sum + safeNumber(e.finalAmount), 0)}
               </div>
               <div className="text-sm text-gray-600">Filtered Revenue</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600">
+                {entries.reduce((sum, e) => sum + (e.additionalDiscount || 0), 0)}
+              </div>
+              <div className="text-sm text-gray-600">Total Discount</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600">
@@ -339,7 +346,7 @@ export function AdminEntries() {
             <div className="flex-1">
               <input
                 type="text"
-                placeholder="Search by name, mobile, ticket type..."
+                placeholder="Search by name, mobile, ticket type, discount..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -478,7 +485,7 @@ export function AdminEntries() {
                           ₹{safeString(entry.otherAmount)}
                         </td>
                         <td className="px-4 py-3 text-sm font-bold text-red-600 text-center border-r border-gray-100">
-                          ₹{safeString((entry as any).additionalDiscount)}
+                          ₹{entry.additionalDiscount ? safeString(entry.additionalDiscount) : '0'}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
                           <div className="space-y-1">
@@ -921,7 +928,7 @@ export function AdminEntries() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Additional Discount</label>
                     <input
                       type="number"
-                      value={editing ? (editing as any).additionalDiscount?.toString() : (viewing as any)?.additionalDiscount?.toString() || ''}
+                      value={editing ? editing.additionalDiscount?.toString() : (viewing?.additionalDiscount?.toString() || '0')}
                       onChange={(e) => editing && setEditing({...editing, additionalDiscount: parseInt(e.target.value) || 0})}
                       disabled={!editing}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
