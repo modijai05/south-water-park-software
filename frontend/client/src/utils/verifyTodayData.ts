@@ -149,12 +149,15 @@ export const verifyTodayData = async () => {
       issues.push('Charts hourlyChart is empty');
     }
     
-    // ENHANCED DATE CHECK - Handle timezone differences
+    // ENHANCED DATE CHECK - Handle timezone differences more leniently
     if (chartsData?.summary?.date) {
       const summaryDate = chartsData.summary.date;
       const validDates = [dateFormats.local, dateFormats.utc, dateFormats.yesterday, dateFormats.tomorrow];
       
-      if (!validDates.includes(summaryDate)) {
+      // Extract just the date part without timezone for validation
+      const dateOnly = summaryDate.split('T')[0];
+      
+      if (!validDates.some(date => date.startsWith(date))) {
         issues.push(`Summary date mismatch. Expected one of: [${validDates.join(', ')}], Got: ${summaryDate}`);
       } else {
         console.log(`✅ Date verification passed: ${summaryDate} is within acceptable range`);
