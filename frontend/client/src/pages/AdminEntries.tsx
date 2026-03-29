@@ -649,57 +649,164 @@ export function AdminEntries() {
                   
                   {/* Upgrades */}
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">🔄 Upgrades</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">🔄 Upgrades</label>
+                      {editing && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newUpgrades = [...(editing?.upgrades || [])];
+                            newUpgrades.push({
+                              ticketType: '300' as TicketType,
+                              adults: 0,
+                              kids: 0,
+                              adultsFastFoodCoupon: '',
+                              kidsFastFoodCoupon: '',
+                              adultsMainFoodCoupon: '',
+                              kidsMainFoodCoupon: ''
+                            });
+                            setEditing({...editing, upgrades: newUpgrades});
+                          }}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition"
+                        >
+                          ➕ Add Upgrade
+                        </button>
+                      )}
+                    </div>
                     <div className="space-y-2">
                       {editing?.upgrades?.map((upgrade, index) => (
-                        <div key={index} className="grid grid-cols-3 gap-2 p-3 bg-white rounded border border-gray-200">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Ticket Type</label>
-                            <select
-                              value={upgrade.ticketType}
-                              onChange={(e) => {
-                                const newUpgrades = [...(editing?.upgrades || [])];
-                                newUpgrades[index] = {...upgrade, ticketType: e.target.value as TicketType};
-                                setEditing({...editing, upgrades: newUpgrades});
-                              }}
-                              disabled={!editing}
-                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                            >
-                              {TICKET_OPTIONS.map(option => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
+                        <div key={index} className="space-y-2">
+                          <div className="grid grid-cols-4 gap-2 p-3 bg-white rounded border border-gray-200">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Ticket Type</label>
+                              <select
+                                value={upgrade.ticketType}
+                                onChange={(e) => {
+                                  const newUpgrades = [...(editing?.upgrades || [])];
+                                  newUpgrades[index] = {...upgrade, ticketType: e.target.value as TicketType};
+                                  setEditing({...editing, upgrades: newUpgrades});
+                                }}
+                                disabled={!editing}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                              >
+                                {TICKET_OPTIONS.map(option => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Adults</label>
+                              <input
+                                type="number"
+                                value={upgrade.adults}
+                                onChange={(e) => {
+                                  const newUpgrades = [...(editing?.upgrades || [])];
+                                  newUpgrades[index] = {...upgrade, adults: parseInt(e.target.value) || 0};
+                                  setEditing({...editing, upgrades: newUpgrades});
+                                }}
+                                disabled={!editing}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Kids</label>
+                              <input
+                                type="number"
+                                value={upgrade.kids}
+                                onChange={(e) => {
+                                  const newUpgrades = [...(editing?.upgrades || [])];
+                                  newUpgrades[index] = {...upgrade, kids: parseInt(e.target.value) || 0};
+                                  setEditing({...editing, upgrades: newUpgrades});
+                                }}
+                                disabled={!editing}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                              />
+                            </div>
+                            <div className="flex items-end">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newUpgrades = [...(editing?.upgrades || [])];
+                                  newUpgrades.splice(index, 1);
+                                  setEditing({...editing, upgrades: newUpgrades});
+                                }}
+                                disabled={!editing}
+                                className="w-full px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition"
+                              >
+                                🗑️ Remove
+                              </button>
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Adults</label>
-                            <input
-                              type="number"
-                              value={upgrade.adults}
-                              onChange={(e) => {
-                                const newUpgrades = [...(editing?.upgrades || [])];
-                                newUpgrades[index] = {...upgrade, adults: parseInt(e.target.value) || 0};
-                                setEditing({...editing, upgrades: newUpgrades});
-                              }}
-                              disabled={!editing}
-                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Kids</label>
-                            <input
-                              type="number"
-                              value={upgrade.kids}
-                              onChange={(e) => {
-                                const newUpgrades = [...(editing?.upgrades || [])];
-                                newUpgrades[index] = {...upgrade, kids: parseInt(e.target.value) || 0};
-                                setEditing({...editing, upgrades: newUpgrades});
-                              }}
-                              disabled={!editing}
-                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                            />
-                          </div>
+                          {/* Food coupons for this upgrade */}
+                          {(upgrade.ticketType === '450' || upgrade.ticketType === '600') && (
+                            <div className="ml-4 p-3 bg-green-50 rounded border border-green-200">
+                              <label className="block text-xs font-medium text-gray-700 mb-2">🍔 Food Coupons for Upgrade {index + 1}</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Adults FF</label>
+                                  <input
+                                    type="text"
+                                    value={upgrade.adultsFastFoodCoupon || ''}
+                                    onChange={(e) => {
+                                      const newUpgrades = [...(editing?.upgrades || [])];
+                                      newUpgrades[index] = {...upgrade, adultsFastFoodCoupon: e.target.value};
+                                      setEditing({...editing, upgrades: newUpgrades});
+                                    }}
+                                    disabled={!editing}
+                                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                                    placeholder="A1-A5"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Kids FF</label>
+                                  <input
+                                    type="text"
+                                    value={upgrade.kidsFastFoodCoupon || ''}
+                                    onChange={(e) => {
+                                      const newUpgrades = [...(editing?.upgrades || [])];
+                                      newUpgrades[index] = {...upgrade, kidsFastFoodCoupon: e.target.value};
+                                      setEditing({...editing, upgrades: newUpgrades});
+                                    }}
+                                    disabled={!editing}
+                                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                                    placeholder="K1-K3"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Adults MF</label>
+                                  <input
+                                    type="text"
+                                    value={upgrade.adultsMainFoodCoupon || ''}
+                                    onChange={(e) => {
+                                      const newUpgrades = [...(editing?.upgrades || [])];
+                                      newUpgrades[index] = {...upgrade, adultsMainFoodCoupon: e.target.value};
+                                      setEditing({...editing, upgrades: newUpgrades});
+                                    }}
+                                    disabled={!editing}
+                                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                                    placeholder="A6-A10"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Kids MF</label>
+                                  <input
+                                    type="text"
+                                    value={upgrade.kidsMainFoodCoupon || ''}
+                                    onChange={(e) => {
+                                      const newUpgrades = [...(editing?.upgrades || [])];
+                                      newUpgrades[index] = {...upgrade, kidsMainFoodCoupon: e.target.value};
+                                      setEditing({...editing, upgrades: newUpgrades});
+                                    }}
+                                    disabled={!editing}
+                                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                                    placeholder="K4-K6"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )) || (
                         <div className="text-sm text-gray-500 italic p-3 bg-gray-100 rounded">
