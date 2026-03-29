@@ -14,6 +14,12 @@ interface TodayAnalytics {
   adults: number;
   kids: number;
   avgPeoplePerEntry: number;
+  // Add discount properties
+  totalAdditionalDiscount?: number;
+  totalKidDiscount?: number;
+  totalDiscountAmount?: number;
+  entriesWithDiscounts?: number;
+  discountRate?: number;
 }
 
 interface TodaySummary {
@@ -24,6 +30,12 @@ interface TodaySummary {
   totalKids: number;
   date: string;
   lastUpdated: string;
+  // Add discount properties
+  totalAdditionalDiscount?: number;
+  totalKidDiscount?: number;
+  totalDiscountAmount?: number;
+  entriesWithDiscounts?: number;
+  discountRate?: number;
   liveMetrics?: {
     avgTicketValue: number;
     peakHour: number;
@@ -215,16 +227,27 @@ export function TodayAnalytics() {
             <div className="text-sm font-medium text-gray-600 mb-1">Adults/Kids</div>
             <div className="text-2xl font-bold text-orange-600">{summary.totalAdults}/{summary.totalKids}</div>
           </div>
+          {/* Discount Cards */}
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg shadow border border-blue-200">
+            <div className="text-sm font-medium text-blue-600 mb-1">Total Discounts</div>
+            <div className="text-2xl font-bold text-blue-800">₹{summary.totalDiscountAmount?.toLocaleString() || 0}</div>
+            <div className="text-xs text-blue-600 mt-1">{summary.entriesWithDiscounts || 0} entries</div>
+          </div>
+          <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg shadow border border-green-200">
+            <div className="text-sm font-medium text-green-600 mb-1">Discount Rate</div>
+            <div className="text-2xl font-bold text-green-800">{summary.discountRate?.toFixed(1) || 0}%</div>
+            <div className="text-xs text-green-600 mt-1">Additional: ₹{summary.totalAdditionalDiscount?.toLocaleString() || 0}</div>
+          </div>
           {/* Live Metrics */}
           {summary.liveMetrics && (
             <>
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg shadow border border-blue-200">
-                <div className="text-sm font-medium text-blue-600 mb-1">Avg Ticket Value</div>
-                <div className="text-2xl font-bold text-blue-800">₹{summary.liveMetrics.avgTicketValue}</div>
+              <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg shadow border border-purple-200">
+                <div className="text-sm font-medium text-purple-600 mb-1">Avg Ticket Value</div>
+                <div className="text-2xl font-bold text-purple-800">₹{summary.liveMetrics.avgTicketValue}</div>
               </div>
-              <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg shadow border border-green-200">
-                <div className="text-sm font-medium text-green-600 mb-1">Peak Hour</div>
-                <div className="text-2xl font-bold text-green-800">{summary.liveMetrics.peakHour}:00</div>
+              <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg shadow border border-orange-200">
+                <div className="text-sm font-medium text-orange-600 mb-1">Peak Hour</div>
+                <div className="text-2xl font-bold text-orange-800">{summary.liveMetrics.peakHour}:00</div>
               </div>
             </>
           )}
@@ -310,6 +333,24 @@ export function TodayAnalytics() {
                   </span>
                 </div>
               </div>
+
+              {/* Discount Info */}
+              {(ticket.totalDiscountAmount || 0) > 0 && (
+                <div className="mt-2 pt-2 border-t border-current border-opacity-20">
+                  <div className="flex justify-between items-center">
+                    <span className={`text-sm font-medium ${getTextColor(ticket.ticketType)}`}>Discounts:</span>
+                    <span className={`text-sm font-bold ${getTextColor(ticket.ticketType)}`}>
+                      ₹<AnimatedCounter value={ticket.totalDiscountAmount || 0} />
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className={`text-xs ${getTextColor(ticket.ticketType)}`}>Rate:</span>
+                    <span className={`text-xs font-bold ${getTextColor(ticket.ticketType)}`}>
+                      {ticket.discountRate?.toFixed(1) || 0}%
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         ))}

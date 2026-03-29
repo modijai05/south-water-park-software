@@ -309,6 +309,12 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
       const adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
       const kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
       const avgPeoplePerEntry = totalEntries > 0 ? totalPeople / totalEntries : 0;
+      
+      // Calculate discount data for today
+      const totalAdditionalDiscount = typeEntries.reduce((sum, e) => sum + (e.additionalDiscount || 0), 0);
+      const totalKidDiscount = typeEntries.reduce((sum, e) => sum + (e.kidDiscount || 0), 0);
+      const totalDiscountAmount = totalAdditionalDiscount + totalKidDiscount;
+      const entriesWithDiscounts = typeEntries.filter(e => (e.additionalDiscount || 0) > 0 || (e.kidDiscount || 0) > 0).length;
 
       const getTicketLabel = (ticketType) => {
         switch (ticketType) {
@@ -331,6 +337,12 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
         adults,
         kids,
         avgPeoplePerEntry: Math.round(avgPeoplePerEntry * 100) / 100,
+        // Add discount data
+        totalAdditionalDiscount,
+        totalKidDiscount,
+        totalDiscountAmount,
+        entriesWithDiscounts,
+        discountRate: totalEntries > 0 ? Math.round((entriesWithDiscounts / totalEntries) * 100 * 100) / 100 : 0,
         isToday: true // Mark as today's data
       };
     });
@@ -344,49 +356,64 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
     const historicalAnalytics = ticketTypes.map(type => {
       const typeEntries = recentHistoricalEntries.filter(e => e.ticketType === type);
       const totalEntries = typeEntries.length;
-      const revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
-      const totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
-      const adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
-      const kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
-      const avgPeoplePerEntry = totalEntries > 0 ? totalPeople / totalEntries : 0;
 
-      const getTicketLabel = (ticketType) => {
-        switch (ticketType) {
-          case '150': return 'Special tickets';
-          case '300': return '3-4hr tickets';
-          case '450': return 'Fast food tickets';
-          case '600': return 'Main food tickets';
-          case '100': return 'Sitting only';
-          default: return ticketType;
-        }
-      };
+  const getTicketLabel = (ticketType) => {
+    switch (ticketType) {
+      case '150': return 'Special tickets';
+      case '300': return '3-4hr tickets';
+      case '450': return 'Fast food tickets';
+      case '600': return 'Main food tickets';
+      case '100': return 'Sitting only';
+      default: return ticketType;
+    }
+  };
 
-      return {
-        ticketType: type,
-        label: getTicketLabel(type),
-        price: parseInt(type),
-        tickets: totalEntries,
-        revenue,
-        totalPeople,
-        adults,
-        kids,
-        avgPeoplePerEntry: Math.round(avgPeoplePerEntry * 100) / 100,
-        isToday: false // Mark as historical data
-      };
-    });
+  return {
+    ticketType: type,
+    label: getTicketLabel(type),
+    price: parseInt(type),
+    tickets: totalEntries,
+    revenue,
+    totalPeople,
+    adults,
+    kids,
+    avgPeoplePerEntry: Math.round(avgPeoplePerEntry * 100) / 100,
+    // Add discount data
+    totalAdditionalDiscount,
+    totalKidDiscount,
+    totalDiscountAmount,
+    entriesWithDiscounts,
+    discountRate: totalEntries > 0 ? Math.round((entriesWithDiscounts / totalEntries) * 100 * 100) / 100 : 0,
+    isHistorical: true // Mark as historical data
+  };
+});
 
-    // Calculate overall stats
-    const todayTotalRevenue = todayEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
-    const todayTotalEntries = todayEntries.length;
-    const todayTotalPeople = todayEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
-    const todayTotalAdults = todayEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
-    const todayTotalKids = todayEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+// Calculate overall stats
+const todayTotalRevenue = todayEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+const todayTotalEntries = todayEntries.length;
+const todayTotalPeople = todayEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+const todayTotalAdults = todayEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
+const todayTotalKids = todayEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
 
-    const historicalTotalRevenue = recentHistoricalEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
-    const historicalTotalEntries = recentHistoricalEntries.length;
-    const historicalTotalPeople = recentHistoricalEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
-    const historicalTotalAdults = recentHistoricalEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
-    const historicalTotalKids = recentHistoricalEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+// Calculate discount stats for today
+const todayTotalAdditionalDiscount = todayEntries.reduce((sum, e) => sum + (e.additionalDiscount || 0), 0);
+const todayTotalKidDiscount = todayEntries.reduce((sum, e) => sum + (e.kidDiscount || 0), 0);
+const todayTotalDiscountAmount = todayTotalAdditionalDiscount + todayTotalKidDiscount;
+const todayEntriesWithDiscounts = todayEntries.filter(e => (e.additionalDiscount || 0) > 0 || (e.kidDiscount || 0) > 0).length;
+const todayDiscountRate = todayTotalEntries > 0 ? Math.round((todayEntriesWithDiscounts / todayTotalEntries) * 100 * 100) / 100 : 0;
+
+const historicalTotalRevenue = recentHistoricalEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+const historicalTotalEntries = recentHistoricalEntries.length;
+const historicalTotalPeople = recentHistoricalEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+const historicalTotalAdults = recentHistoricalEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
+const historicalTotalKids = recentHistoricalEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+
+// Calculate discount stats for historical
+const historicalTotalAdditionalDiscount = recentHistoricalEntries.reduce((sum, e) => sum + (e.additionalDiscount || 0), 0);
+const historicalTotalKidDiscount = recentHistoricalEntries.reduce((sum, e) => sum + (e.kidDiscount || 0), 0);
+const historicalTotalDiscountAmount = historicalTotalAdditionalDiscount + historicalTotalKidDiscount;
+const historicalEntriesWithDiscounts = recentHistoricalEntries.filter(e => (e.additionalDiscount || 0) > 0 || (e.kidDiscount || 0) > 0).length;
+const historicalDiscountRate = historicalTotalEntries > 0 ? Math.round((historicalEntriesWithDiscounts / historicalTotalEntries) * 100 * 100) / 100 : 0;
 
     // Enhanced response with live data insights
     const responseData = {
@@ -400,6 +427,12 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
           totalAdults: todayTotalAdults,
           totalKids: todayTotalKids,
           date: now.format('YYYY-MM-DD'),
+          // Add discount data to today's summary
+          totalAdditionalDiscount: todayTotalAdditionalDiscount,
+          totalKidDiscount: todayTotalKidDiscount,
+          totalDiscountAmount: todayTotalDiscountAmount,
+          entriesWithDiscounts: todayEntriesWithDiscounts,
+          discountRate: todayDiscountRate,
           // Live performance indicators
           avgTicketValue: todayTotalEntries > 0 ? Math.round(todayTotalRevenue / todayTotalEntries) : 0,
           growthRate: historicalTotalEntries > 0 ? 
@@ -416,6 +449,12 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
           totalAdults: historicalTotalAdults,
           totalKids: historicalTotalKids,
           dateRange: 'Last 30 days',
+          // Add discount data to historical summary
+          totalAdditionalDiscount: historicalTotalAdditionalDiscount,
+          totalKidDiscount: historicalTotalKidDiscount,
+          totalDiscountAmount: historicalTotalDiscountAmount,
+          entriesWithDiscounts: historicalEntriesWithDiscounts,
+          discountRate: historicalDiscountRate,
           avgTicketValue: historicalTotalEntries > 0 ? Math.round(historicalTotalRevenue / historicalTotalEntries) : 0
         },
         lastUpdated: new Date().toISOString(),
