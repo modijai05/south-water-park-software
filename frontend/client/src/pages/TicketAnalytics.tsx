@@ -444,10 +444,10 @@ export function TicketAnalytics() {
   };
 
   const topPerformingTicket = useMemo(() => {
-    if (!data?.demandAnalysis) return null;
+    if (!data?.demandAnalysis || data.demandAnalysis.length === 0) return null;
     return data.demandAnalysis.reduce((max, current) => 
       current.revenue > max.revenue ? current : max
-    );
+    , data.demandAnalysis[0]);
   }, [data]);
 
   const mostPopularUpgrade = useMemo(() => {
@@ -660,10 +660,10 @@ export function TicketAnalytics() {
               <div className="text-2xl font-bold text-purple-800">
                 ₹{data.demandAnalysis.reduce((max, current) => 
                   current.growthRate > max.growthRate ? current : max
-                ).ticketType}
+                , data.demandAnalysis[0]).ticketType}
               </div>
               <div className="text-sm text-purple-600">
-                {Math.max(...data.demandAnalysis.map(d => d.growthRate)).toFixed(1)}% growth
+                {data.demandAnalysis.length > 0 ? Math.max(...data.demandAnalysis.map(d => d.growthRate)).toFixed(1) : '0'}% growth
               </div>
             </>
           )}
@@ -681,10 +681,10 @@ export function TicketAnalytics() {
               <div className="text-2xl font-bold text-orange-800">
                 {data.peakHours.reduce((max, current) => 
                   current.entries > max.entries ? current : max
-                ).hour}:00
+                , data.peakHours[0]).hour}:00
               </div>
               <div className="text-sm text-orange-600">
-                {Math.max(...data.peakHours.map(h => h.entries))} entries
+                {data.peakHours.length > 0 ? Math.max(...data.peakHours.map(h => h.entries)) : '0'} entries
               </div>
             </>
           )}
