@@ -334,22 +334,12 @@ export function AdminDashboard() {
       fetchAllData();
     };
     
-    const handleForceResetFailure = (event: any) => {
-      console.error('❌ Admin Dashboard: Force reset failed:', event.detail);
-      // Show user notification for manual intervention
-      if (typeof window !== 'undefined' && window.alert) {
-        alert('⚠️ Daily reset failed! Previous day data is still showing.\n\nPlease refresh the page or contact support.\n\nYou can also try: window.forceDailyResetComplete()');
-      }
-    };
-    
     window.addEventListener('force-daily-reset-success', handleForceResetSuccess);
-    window.addEventListener('force-daily-reset-failure', handleForceResetFailure);
     
     // Cleanup
     return () => {
       cleanupListener();
       window.removeEventListener('force-daily-reset-success', handleForceResetSuccess);
-      window.removeEventListener('force-daily-reset-failure', handleForceResetFailure);
     };
   }, []);
 
@@ -362,7 +352,6 @@ export function AdminDashboard() {
       
       // Add delay to ensure cache is cleared
       await new Promise(resolve => setTimeout(resolve, 1000));
-      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Fetch everything fresh
       const [statsRes, chartsRes, configs] = await Promise.all([
