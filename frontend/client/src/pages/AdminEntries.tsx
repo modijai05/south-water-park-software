@@ -267,7 +267,7 @@ export function AdminEntries() {
               {search && `Searching: "${search}"`}
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 lg:grid-cols-7 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{entries.length}</div>
               <div className="text-sm text-gray-600">Filtered</div>
@@ -284,9 +284,21 @@ export function AdminEntries() {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-red-600">
-                {entries.reduce((sum, e) => sum + (e.additionalDiscount || 0), 0)}
+                {entries.reduce((sum, e) => sum + (e.additionalDiscount || 0) + (e.kidDiscount || 0), 0)}
               </div>
               <div className="text-sm text-gray-600">Total Discount</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-pink-600">
+                {entries.reduce((sum, e) => sum + (e.additionalDiscount || 0), 0)}
+              </div>
+              <div className="text-sm text-gray-600">Add. Discount</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-indigo-600">
+                {entries.reduce((sum, e) => sum + (e.kidDiscount || 0), 0)}
+              </div>
+              <div className="text-sm text-gray-600">Kid Discount</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600">
@@ -417,6 +429,9 @@ export function AdminEntries() {
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '80px' }}>
                       Discount
                     </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '80px' }}>
+                      Kid Discount
+                    </th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '120px' }}>
                       Food Coupons
                     </th>
@@ -430,7 +445,7 @@ export function AdminEntries() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {entries.length === 0 ? (
                     <tr>
-                      <td colSpan={16} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={17} className="px-4 py-8 text-center text-gray-500">
                         {search ? 
                           `No entries found matching "${search}" in ${dateFilter === 'today' ? 'today' : dateFilter === 'yesterday' ? 'yesterday' : 'all time'} entries` :
                           `No entries found for ${dateFilter === 'today' ? 'today' : dateFilter === 'yesterday' ? 'yesterday' : 'all time'}`
@@ -486,6 +501,9 @@ export function AdminEntries() {
                         </td>
                         <td className="px-4 py-3 text-sm font-bold text-red-600 text-center border-r border-gray-100">
                           ₹{entry.additionalDiscount ? safeString(entry.additionalDiscount) : '0'}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-bold text-indigo-600 text-center border-r border-gray-100">
+                          ₹{entry.kidDiscount ? safeString(entry.kidDiscount) : '0'}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
                           <div className="space-y-1">
@@ -864,39 +882,29 @@ export function AdminEntries() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Kids Main Food Coupon</label>
-                      <input
-                        type="text"
-                        value={editing ? (editing as any).kidsMainFoodCoupon : (viewing as any)?.kidsMainFoodCoupon || ''}
-                        onChange={(e) => editing && setEditing({...editing, kidsMainFoodCoupon: e.target.value})}
-                        disabled={!editing}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                      />
-                    </div>
                   </div>
                 </div>
 
                 {/* Payment Information */}
-                <div className="bg-yellow-50 rounded-lg p-4 mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">💳 Payment Information</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="bg-green-50 rounded-lg p-4 mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">💰 Payment Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Cash Amount</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Base Amount</label>
                       <input
                         type="number"
-                        value={editing ? editing.cashAmount?.toString() : (viewing?.cashAmount?.toString() || '')}
-                        onChange={(e) => editing && setEditing({...editing, cashAmount: parseInt(e.target.value) || 0})}
+                        value={editing ? editing.baseAmount?.toString() : (viewing?.baseAmount?.toString() || '0')}
+                        onChange={(e) => editing && setEditing({...editing, baseAmount: parseInt(e.target.value) || 0})}
                         disabled={!editing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">UPI Amount</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Final Amount</label>
                       <input
                         type="number"
-                        value={editing ? editing.upiAmount?.toString() : (viewing?.upiAmount?.toString() || '')}
-                        onChange={(e) => editing && setEditing({...editing, upiAmount: parseInt(e.target.value) || 0})}
+                        value={editing ? editing.finalAmount?.toString() : (viewing?.finalAmount?.toString() || '0')}
+                        onChange={(e) => editing && setEditing({...editing, finalAmount: parseInt(e.target.value) || 0})}
                         disabled={!editing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       />
@@ -925,14 +933,28 @@ export function AdminEntries() {
                   
                   {/* Discount */}
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Additional Discount</label>
-                    <input
-                      type="number"
-                      value={editing ? editing.additionalDiscount?.toString() : (viewing?.additionalDiscount?.toString() || '0')}
-                      onChange={(e) => editing && setEditing({...editing, additionalDiscount: parseInt(e.target.value) || 0})}
-                      disabled={!editing}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Additional Discount</label>
+                        <input
+                          type="number"
+                          value={editing ? editing.additionalDiscount?.toString() : (viewing?.additionalDiscount?.toString() || '0')}
+                          onChange={(e) => editing && setEditing({...editing, additionalDiscount: parseInt(e.target.value) || 0})}
+                          disabled={!editing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Kid Discount</label>
+                        <input
+                          type="number"
+                          value={editing ? editing.kidDiscount?.toString() : (viewing?.kidDiscount?.toString() || '0')}
+                          onChange={(e) => editing && setEditing({...editing, kidDiscount: parseInt(e.target.value) || 0})}
+                          disabled={!editing}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
