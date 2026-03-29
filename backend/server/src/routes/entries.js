@@ -116,7 +116,12 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     // Performance metrics
     averageTicketValue: 0,
     peakHour: 'N/A',
-    conversionRate: 0
+    conversionRate: 0,
+    // Discount statistics
+    todayAdditionalDiscount: 0,
+    todayTotalDiscount: 0,
+    totalAdditionalDiscount: 0,
+    totalTotalDiscount: 0
   };
 
   // Calculate today's stats
@@ -181,6 +186,14 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
       stats.todayTotalMainFoodCoupons += (entry.foodCoupons.adultMainFoodCoupons || 0) + (entry.foodCoupons.kidMainFoodCoupons || 0);
       stats.todayTotalFoodCoupons += adultCoupons + kidCoupons;
     }
+
+    // Discount calculations
+    const additionalDiscount = entry.additionalDiscount || 0;
+    const kidDiscount = entry.kidDiscount || 0;
+    const totalDiscount = additionalDiscount + kidDiscount;
+    
+    stats.todayAdditionalDiscount += additionalDiscount;
+    stats.todayTotalDiscount += totalDiscount;
   });
 
   // Calculate total stats
@@ -242,6 +255,14 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
       stats.totalMainFoodCoupons += (entry.foodCoupons.adultMainFoodCoupons || 0) + (entry.foodCoupons.kidMainFoodCoupons || 0);
       stats.totalFoodCoupons += stats.totalAdultsFastFoodCoupons + stats.totalKidsFastFoodCoupons + stats.totalAdultsMainFoodCoupons + stats.totalKidsMainFoodCoupons;
     }
+
+    // Discount calculations
+    const additionalDiscount = entry.additionalDiscount || 0;
+    const kidDiscount = entry.kidDiscount || 0;
+    const totalDiscount = additionalDiscount + kidDiscount;
+    
+    stats.totalAdditionalDiscount += additionalDiscount;
+    stats.totalTotalDiscount += totalDiscount;
   });
 
   // Calculate performance metrics
@@ -472,6 +493,9 @@ router.get('/stats', async (req, res) => {
       totalFastFoodCoupons: 0, totalMainFoodCoupons: 0, totalFoodCoupons: 0,
       // Performance metrics
       averageTicketValue: 0, peakHour: 'N/A', conversionRate: 0,
+      // Discount statistics
+      todayAdditionalDiscount: 0, todayTotalDiscount: 0,
+      totalAdditionalDiscount: 0, totalTotalDiscount: 0,
       lastUpdated: new Date().toISOString(),
       dataFreshness: 'fallback',
       source: 'offline',
@@ -1207,5 +1231,3 @@ router.get('/:id', async (req, res) => {
 });
 
 module.exports = router;
-/ /   T r i g g e r   d e p l o y m e n t   -   0 3 / 2 9 / 2 0 2 6   1 0 : 4 1 : 3 3  
- 
