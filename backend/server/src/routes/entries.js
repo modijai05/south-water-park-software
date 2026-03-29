@@ -357,6 +357,14 @@ const getTodayRange = () => {
   const now = dayjs();
   const startOfDay = now.startOf('day').toDate();
   const endOfDay = now.endOf('day').toDate();
+  
+  console.log('📅 Today date range:', {
+    now: now.toISOString(),
+    startOfDay: startOfDay.toISOString(),
+    endOfDay: endOfDay.toISOString(),
+    timezone: now.format('Z')
+  });
+  
   return { startOfDay, endOfDay };
 };
 
@@ -659,15 +667,36 @@ router.get('/sync-all', async (req, res) => {
     
     // Get current date range
     const { startOfDay, endOfDay } = getTodayRange();
+    const now = dayjs();
+    
+    // Create explicit date filter for today's entries
+    const todayFilter = { 
+      createdAt: { 
+        $gte: startOfDay, 
+        $lte: endOfDay 
+      } 
+    };
+    
+    console.log('📅 Sync today filter:', JSON.stringify(todayFilter, null, 2));
     
     // Fetch all required data in parallel
     const [allEntries, todayEntries, recentEntries] = await Promise.all([
       Entry.find().sort({ createdAt: -1 }),
-      Entry.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).sort({ createdAt: -1 }),
+      Entry.find(todayFilter).sort({ createdAt: -1 }),
       Entry.find().sort({ createdAt: -1 }).limit(10)
     ]);
     
     console.log(`📊 Sync data: ${allEntries.length} total, ${todayEntries.length} today, ${recentEntries.length} recent`);
+    
+    // Log today's entries for debugging
+    if (todayEntries.length > 0) {
+      console.log('📋 Sync today entries sample:', todayEntries.slice(0, 2).map(e => ({
+        id: e._id,
+        name: e.name,
+        createdAt: e.createdAt,
+        date: dayjs(e.createdAt).format('YYYY-MM-DD HH:mm:ss')
+      })));
+    }
     
     // Calculate statistics
     const stats = calculateStatsFromEntries(todayEntries, allEntries);
@@ -756,14 +785,45 @@ router.get('/stats', async (req, res) => {
         console.log('🔗 MongoDB connected, fetching stats from database...');
         
         const { startOfDay, endOfDay } = getTodayRange();
+        const now = dayjs(); // Get current time for comparison
+        
+        // Create explicit date filter for today's entries
+        const todayFilter = { 
+          createdAt: { 
+            $gte: startOfDay, 
+            $lte: endOfDay 
+          } 
+        };
+        
+        console.log('📅 Today filter:', JSON.stringify(todayFilter, null, 2));
         
         // Fetch today's entries and all entries
         const [todayEntries, allEntries] = await Promise.all([
-          Entry.find({ createdAt: { $gte: startOfDay, $lte: endOfDay } }).sort({ createdAt: -1 }),
+          Entry.find(todayFilter).sort({ createdAt: -1 }),
           Entry.find().sort({ createdAt: -1 })
         ]);
         
         console.log(`📊 Found ${todayEntries.length} today entries, ${allEntries.length} total entries`);
+        
+        // Log today's entries for debugging
+        if (todayEntries.length > 0) {
+          console.log('📋 Today entries sample:', todayEntries.slice(0, 3).map(e => ({
+            id: e._id,
+            name: e.name,
+            createdAt: e.createdAt,
+            date: dayjs(e.createdAt).format('YYYY-MM-DD HH:mm:ss')
+          })));
+        } else {
+          console.log('📋 No today entries found. Checking recent entries...');
+          const recentEntries = await Entry.find().sort({ createdAt: -1 }).limit(5);
+          console.log('📋 Recent entries:', recentEntries.map(e => ({
+            id: e._id,
+            name: e.name,
+            createdAt: e.createdAt,
+            date: dayjs(e.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+            isToday: dayjs(e.createdAt).isSame(now, 'day')
+          })));
+        }
         
         // Calculate statistics using helper function
         const stats = calculateStatsFromEntries(todayEntries, allEntries);
