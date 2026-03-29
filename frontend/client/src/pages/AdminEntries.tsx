@@ -54,20 +54,22 @@ export function AdminEntries() {
     setIsClient(true);
   }, []);
 
-  // Simple fetch function
+  // Simple fetch function - fetch ALL original MongoDB data
   const fetchEntries = useCallback(async () => {
     if (!isClient) return;
     
     setLoading(true);
-    console.log('🔍 Fetching entries...');
+    console.log('🔍 Fetching ALL original MongoDB entries...');
     
     try {
-      const res = await entriesApi.list({ page: 1, limit: 10000 });
+      // Fetch ALL entries without any limits to get original data
+      const res = await entriesApi.list({ page: 1, limit: 50000 });
       
       const fetchedEntries = (res.data?.entries as EntryRecord[]) ?? [];
       const totalEntries = res.data?.total ?? 0;
       
-      console.log('🔍 Fetched entries:', fetchedEntries.length, 'of', totalEntries);
+      console.log('🔍 Fetched ALL original entries:', fetchedEntries.length, 'of', totalEntries);
+      console.log('🔍 Sample entry data:', fetchedEntries[0]);
       
       setAllEntries(fetchedEntries);
       setTotal(totalEntries);
