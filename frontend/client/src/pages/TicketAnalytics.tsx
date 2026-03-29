@@ -151,30 +151,53 @@ export function TicketAnalytics() {
         
         setData(analyticsData);
       } else {
-        // Use historical analytics for other time ranges
-        const [demandData, upgradesData, timeSeriesData, peakHoursData, customerPrefsData] = await Promise.all([
-          analyticsApi.demand(timeRange),
-          analyticsApi.upgrades(timeRange),
-          analyticsApi.timeSeries(timeRange),
-          analyticsApi.peakHours(timeRange),
-          analyticsApi.customerPreferences(timeRange)
-        ]);
+        // Use historical analytics for other time ranges with fallback handling
+        try {
+          const [demandData, upgradesData, timeSeriesData, peakHoursData, customerPrefsData] = await Promise.allSettled([
+            analyticsApi.demand(timeRange),
+            analyticsApi.upgrades(timeRange),
+            analyticsApi.timeSeries(timeRange),
+            analyticsApi.peakHours(timeRange),
+            analyticsApi.customerPreferences(timeRange)
+          ]);
+          
+          // Extract data with fallbacks
+          const demand = demandData.status === 'fulfilled' ? demandData.value : [];
+          const upgrades = upgradesData.status === 'fulfilled' ? upgradesData.value : [];
+          const timeSeries = timeSeriesData.status === 'fulfilled' ? timeSeriesData.value : [];
+          const peakHours = peakHoursData.status === 'fulfilled' ? peakHoursData.value : [];
+          const customerPrefs = customerPrefsData.status === 'fulfilled' ? customerPrefsData.value : [];
         
-        const analyticsData: ComponentAnalyticsData = {
-          demandAnalysis: demandData,
-          upgradeInsights: upgradesData,
-          timeSeriesData: timeSeriesData,
-          revenueBreakdown: demandData.map((d: DemandAnalysis) => ({
-            ticketType: d.ticketType,
-            revenue: d.revenue,
-            percentage: d.marketShare,
-            entries: d.totalEntries
-          })),
-          customerPreferences: customerPrefsData,
-          peakHours: peakHoursData
-        };
-        
-        setData(analyticsData);
+          const analyticsData: ComponentAnalyticsData = {
+            demandAnalysis: demand,
+            upgradeInsights: upgrades,
+            timeSeriesData: timeSeries,
+            revenueBreakdown: demand.map((d: DemandAnalysis) => ({
+              ticketType: d.ticketType,
+              revenue: d.revenue,
+              percentage: d.marketShare,
+              entries: d.totalEntries
+            })),
+            customerPreferences: customerPrefs,
+            peakHours: peakHours
+          };
+          
+          setData(analyticsData);
+        } catch (endpointError) {
+          Logger.error('Failed to fetch historical analytics, using fallback', endpointError, 'TicketAnalytics');
+          
+          // Provide minimal fallback data
+          const fallbackData: ComponentAnalyticsData = {
+            demandAnalysis: [],
+            upgradeInsights: [],
+            timeSeriesData: [],
+            revenueBreakdown: [],
+            customerPreferences: [],
+            peakHours: []
+          };
+          
+          setData(fallbackData);
+        }
       }
     } catch (error) {
       Logger.error('Failed to fetch analytics data', error, 'TicketAnalytics');
@@ -676,7 +699,7 @@ export function TicketAnalytics() {
           className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200"
         >
           <h3 className="text-lg font-bold text-orange-900 mb-2">⏰ Peak Hour</h3>
-          {data?.peakHours && (
+          {data?.peakHours && data.peakHours.length > 0 && (
             <>
               <div className="text-2xl font-bold text-orange-800">
                 {data.peakHours.reduce((max, current) => 
@@ -684,7 +707,7 @@ export function TicketAnalytics() {
                 , data.peakHours[0]).hour}:00
               </div>
               <div className="text-sm text-orange-600">
-                {data.peakHours.length > 0 ? Math.max(...data.peakHours.map(h => h.entries)) : '0'} entries
+                {Math.max(...data.peakHours.map(h => h.entries))} entries
               </div>
             </>
           )}
