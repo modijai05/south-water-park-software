@@ -1043,7 +1043,7 @@ export function AdminExport() {
         limit: 1,
       });
       
-      const entry = (res.entries as any[])[0];
+      const entry = (res.data?.entries as any[])?.[0];
       if (entry) {
         console.log('Export: Entry found for receipt:', entry);
         console.log('Export: Entry created by:', entry.createdBy);
