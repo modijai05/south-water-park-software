@@ -199,8 +199,8 @@ export function AdminEntries() {
     console.log('🔍 AdminEntries: Fetching entries...');
     
     try {
-      // Fetch with no search to get all entries for caching
-      const res = await entriesApi.list({ page: 1, limit: 1000 });
+      // First fetch to get total count and initial entries
+      const res = await entriesApi.list({ page: 1, limit: 5000 }); // Increased limit for old entries
       
       console.log('🔍 AdminEntries: API response:', { 
         success: res.success, 
@@ -209,21 +209,30 @@ export function AdminEntries() {
         actualData: res.data
       });
       
-      const fetchedEntries = (res.data?.entries as EntryRecord[]) ?? [];
-      console.log('🔍 AdminEntries: Fetched entries:', fetchedEntries.length);
+      let fetchedEntries = (res.data?.entries as EntryRecord[]) ?? [];
+      const totalEntries = res.data?.total ?? 0;
+      
+      console.log('🔍 AdminEntries: Initial fetch:', fetchedEntries.length, 'of', totalEntries);
+      
+      // If there are more entries than we fetched, fetch them all
+      if (totalEntries > fetchedEntries.length && totalEntries <= 10000) {
+        console.log('🔍 AdminEntries: Fetching remaining entries...');
+        const remainingRes = await entriesApi.list({ page: 1, limit: totalEntries });
+        fetchedEntries = (remainingRes.data?.entries as EntryRecord[]) ?? [];
+        console.log('🔍 AdminEntries: Total entries after full fetch:', fetchedEntries.length);
+      }
       
       if (fetchedEntries.length > 0) {
         setAllEntries(fetchedEntries);
-        setTotal(res.data?.total ?? 0);
+        setTotal(totalEntries);
         lastFetchTime.current = now;
         
         // Debug first entry
         const firstEntry = fetchedEntries[0];
-        console.log('🔍 AdminEntries: First entry:', {
-          id: firstEntry._id,
-          name: firstEntry.name,
-          createdAt: firstEntry.createdAt,
-          filledByFullName: firstEntry.filledByFullName
+        const lastEntry = fetchedEntries[fetchedEntries.length - 1];
+        console.log('🔍 AdminEntries: Entry range:', {
+          first: { id: firstEntry._id, name: firstEntry.name, createdAt: firstEntry.createdAt },
+          last: { id: lastEntry._id, name: lastEntry.name, createdAt: lastEntry.createdAt }
         });
       } else {
         console.log('🔍 AdminEntries: No entries found');
@@ -425,42 +434,54 @@ export function AdminEntries() {
         {/* Date-wise Navigation */}
         <div className="modern-card">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 mb-4">
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveDateGroup('today')}
                 className={`px-4 py-2 rounded-lg font-bold transition ${
-                  activeDateGroup === 'today' 
-                    ? 'bg-blue-600 text-white' 
+                  activeDateGroup === 'today'
+                    ? 'bg-blue-500 text-white shadow-lg'
                     : 'bg-blue-100 hover:bg-blue-200 text-blue-900'
                 }`}
               >
                 📅 Today ({dateGroups.today.length})
               </motion.button>
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveDateGroup('yesterday')}
                 className={`px-4 py-2 rounded-lg font-bold transition ${
-                  activeDateGroup === 'yesterday' 
-                    ? 'bg-blue-600 text-white' 
+                  activeDateGroup === 'yesterday'
+                    ? 'bg-blue-500 text-white shadow-lg'
                     : 'bg-blue-100 hover:bg-blue-200 text-blue-900'
                 }`}
               >
                 📅 Yesterday ({dateGroups.yesterday.length})
               </motion.button>
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveDateGroup('older')}
                 className={`px-4 py-2 rounded-lg font-bold transition ${
-                  activeDateGroup === 'older' 
-                    ? 'bg-blue-600 text-white' 
+                  activeDateGroup === 'older'
+                    ? 'bg-blue-500 text-white shadow-lg'
                     : 'bg-blue-100 hover:bg-blue-200 text-blue-900'
                 }`}
               >
                 📅 Older ({dateGroups.older.length})
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setActiveDateGroup('today');
+                  setSearch('');
+                  setOlderPage(1);
+                }}
+                className="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold transition shadow-lg"
+              >
+                🔄 Show All Entries ({allEntries.length})
               </motion.button>
             </div>
             
@@ -544,12 +565,15 @@ export function AdminEntries() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <h3 className="font-bold text-blue-900 mb-2">🔍 Debug Info</h3>
                 <div className="text-sm text-blue-800 space-y-1">
-                  <p>Total Entries: {allEntries.length}</p>
-                  <p>Current Entries: {currentEntries.length}</p>
-                  <p>Active Date Group: {activeDateGroup}</p>
-                  <p>Search Term: "{search}"</p>
-                  <p>Today: {dateGroups.today.length} | Yesterday: {dateGroups.yesterday.length} | Older: {dateGroups.older.length}</p>
-                  <p>Virtualizer Count: {rowVirtualizer.getTotalSize()}</p>
+                  <p><strong>Total Entries:</strong> {allEntries.length}</p>
+                  <p><strong>Current Entries:</strong> {currentEntries.length}</p>
+                  <p><strong>Active Date Group:</strong> {activeDateGroup}</p>
+                  <p><strong>Search Term:</strong> "{search}"</p>
+                  <p><strong>Date Groups:</strong> Today: {dateGroups.today.length} | Yesterday: {dateGroups.yesterday.length} | Older: {dateGroups.older.length}</p>
+                  <p><strong>Virtualizer Count:</strong> {rowVirtualizer.getTotalSize()}</p>
+                  {allEntries.length > 0 && (
+                    <p><strong>Date Range:</strong> {dayjs(allEntries[allEntries.length - 1]?.createdAt).format('DD MMM YYYY')} - {dayjs(allEntries[0]?.createdAt).format('DD MMM YYYY')}</p>
+                  )}
                 </div>
               </div>
               
