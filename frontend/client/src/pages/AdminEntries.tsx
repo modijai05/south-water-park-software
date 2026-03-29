@@ -369,7 +369,7 @@ export function AdminEntries() {
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
                           <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
-                            ₹{getTicketLabel(entry.ticketType as TicketType)}
+                            ₹{getTicketLabelSync(entry.ticketType as TicketType)}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
