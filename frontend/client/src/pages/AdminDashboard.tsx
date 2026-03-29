@@ -13,6 +13,7 @@ import { invalidateTicketConfigCache } from '@/lib/ticketUtils';
 import { useAuthStore } from '@/store/authStore';
 import type { TicketConfig } from '@/types';
 import { globalSyncService } from '@/services/globalSyncService';
+import { unifiedDailyResetService } from '@/services/unifiedDailyResetService';
 import { useDailyReset, performDailyReset, needsDailyReset } from '@/utils/dailyReset';
 import { checkAndTriggerReset } from '@/utils/systemReset';
 import { checkAndForceRefresh } from '@/utils/forceRefresh';
@@ -256,40 +257,26 @@ export function AdminDashboard() {
     }
   };
 
-  // Initialize daily reset
+  // Initialize unified daily reset service
   useEffect(() => {
-    const cleanup = useDailyReset(() => {
-      console.log('🔄 Daily reset triggered, refreshing dashboard data...');
-      // Force refresh all data after reset
+    console.log('🔄 Admin Dashboard: Initializing unified daily reset service...');
+    
+    // Add reset listener for unified service
+    const cleanupListener = unifiedDailyResetService.addResetListener(() => {
+      console.log('🔄 Admin Dashboard: Unified reset event received, refreshing data...');
       fetchAllData();
     });
 
-    // Listen for manual reset events
-    const handleDailyReset = (event: CustomEvent) => {
-      console.log('🔄 Daily reset event received:', event.detail);
-      setLastResetInfo(`Reset performed at ${dayjs(event.detail.timestamp).format('HH:mm:ss')}`);
-    };
-
-    window.addEventListener('daily-reset', handleDailyReset as EventListener);
-
-    return () => {
-      cleanup();
-      window.removeEventListener('daily-reset', handleDailyReset as EventListener);
-    };
-  }, []);
-
-  // Check if reset is needed on component mount
-  useEffect(() => {
-    // Prevent multiple reset triggers on same page load
-    const resetAlreadyTriggered = sessionStorage.getItem('admin-reset-triggered');
+    // Check if reset is needed on component mount
     const today = dayjs().format('YYYY-MM-DD');
+    const resetAlreadyTriggered = sessionStorage.getItem('admin-reset-triggered');
     
     // Clear session storage if it's a new day (LOCAL-based)
     const lastResetDate = sessionStorage.getItem('admin-reset-date');
     if (lastResetDate !== today) {
       sessionStorage.clear();
       sessionStorage.setItem('admin-reset-date', today);
-      console.log('🔄 New LOCAL day detected, cleared session storage:', {
+      console.log('🔄 Admin Dashboard: New LOCAL day detected, cleared session storage:', {
         lastResetDate,
         today,
         localTime: dayjs().format('YYYY-MM-DD'),
@@ -298,14 +285,14 @@ export function AdminDashboard() {
     }
     
     if (needsDailyReset()) {
-      console.log('🔄 AdminDashboard: Daily reset needed on mount');
+      console.log('🔄 Admin Dashboard: Daily reset needed on mount');
       performDailyReset();
       fetchAllData();
     }
     
     // Only trigger system reset if not already done this session
     if (!resetAlreadyTriggered) {
-      console.log('🔄 AdminDashboard: First time setup - triggering system refresh');
+      console.log('🔄 Admin Dashboard: First time setup - triggering system refresh');
       
       // Batch all reset operations together to prevent multiple triggers
       const performAllResets = async () => {
@@ -319,20 +306,20 @@ export function AdminDashboard() {
           // Mark as triggered for this session
           sessionStorage.setItem('admin-reset-triggered', 'true');
           
-          console.log('🔄 AdminDashboard: Reset operations completed', {
+          console.log('🔄 Admin Dashboard: Reset operations completed', {
             systemReset: systemResetNeeded,
             forceRefresh: forceRefreshNeeded,
             localDate: today
           });
         } catch (error) {
-          console.error('❌ AdminDashboard: Reset operations failed:', error);
+          console.error('❌ Admin Dashboard: Reset operations failed:', error);
         }
       };
       
       // Execute all resets together
       performAllResets();
     } else {
-      console.log('🔄 AdminDashboard: Reset already triggered this session - skipping');
+      console.log('🔄 Admin Dashboard: Reset already triggered this session - skipping');
     }
     
     // Auto-verify today's data is correct (always run but with delay)
@@ -342,13 +329,13 @@ export function AdminDashboard() {
     
     // Listen for force reset events
     const handleForceResetSuccess = (event: any) => {
-      console.log('🎉 Force reset successful:', event.detail);
+      console.log('🎉 Admin Dashboard: Force reset successful:', event.detail);
       // Refresh data after successful force reset
       fetchAllData();
     };
     
     const handleForceResetFailure = (event: any) => {
-      console.error('❌ Force reset failed:', event.detail);
+      console.error('❌ Admin Dashboard: Force reset failed:', event.detail);
       // Show user notification for manual intervention
       if (typeof window !== 'undefined' && window.alert) {
         alert('⚠️ Daily reset failed! Previous day data is still showing.\n\nPlease refresh the page or contact support.\n\nYou can also try: window.forceDailyResetComplete()');
@@ -358,8 +345,9 @@ export function AdminDashboard() {
     window.addEventListener('force-daily-reset-success', handleForceResetSuccess);
     window.addEventListener('force-daily-reset-failure', handleForceResetFailure);
     
-    // Cleanup listeners
+    // Cleanup
     return () => {
+      cleanupListener();
       window.removeEventListener('force-daily-reset-success', handleForceResetSuccess);
       window.removeEventListener('force-daily-reset-failure', handleForceResetFailure);
     };

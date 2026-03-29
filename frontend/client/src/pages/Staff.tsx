@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import dayjs from 'dayjs';
 import { Layout } from '@/components/Layout';
 import { entriesApi } from '@/lib/api';
 import { ticketConfigApi } from '@/lib/ticketApi';
@@ -11,55 +12,113 @@ import type { TicketConfig, EntryRecord as Entry, Stats, CustomEventData } from 
 import { useAuthStore } from '@/store/authStore';
 import { TICKET_OPTIONS } from '@/types';
 import { invalidateTicketConfigCache } from '@/lib/ticketUtils';
-import { globalSyncService } from '@/services/globalSyncService';
+import { unifiedDailyResetService } from '@/services/unifiedDailyResetService';
 import { useDailyReset, performDailyReset, needsDailyReset } from '@/utils/dailyReset';
+import { checkAndTriggerReset } from '@/utils/systemReset';
+import { checkAndForceRefresh } from '@/utils/forceRefresh';
+import { verifyTodayData, autoVerify } from '@/utils/verifyTodayData';
+import { forceDailyResetComplete, needsForceReset } from '@/utils/forceDailyReset';
 
 export function Staff() {
   const { user } = useAuthStore();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [ticketConfigs, setTicketConfigs] = useState<TicketConfig[]>([]);
   
-  // Initialize daily reset
+  // Initialize unified daily reset service
   useEffect(() => {
-    const cleanup = useDailyReset(() => {
-      console.log('🔄 Staff dashboard: Daily reset triggered, refreshing data...');
-      // Force refresh all data after reset
-      (async () => {
-        try {
-          const [statsRes, configs] = await Promise.all([
-            entriesApi.stats(),
-            fetchTicketConfigs()
-          ]);
-          setStats(statsRes as unknown as Stats);
-          setTicketConfigs(configs);
-        } catch (error) {
-          console.error('Staff dashboard: Error refreshing after reset:', error);
-        }
-      })();
+    console.log('🔄 Staff Dashboard: Initializing unified daily reset service...');
+    
+    // Add reset listener for unified service
+    const cleanupListener = unifiedDailyResetService.addResetListener(() => {
+      console.log('🔄 Staff Dashboard: Unified reset event received, refreshing data...');
+      fetchAllData();
     });
 
     // Check if reset is needed on component mount
-    if (needsDailyReset()) {
-      console.log('🔄 Staff dashboard: Daily reset needed on mount');
-      performDailyReset();
-      // Trigger the same refresh logic
-      (async () => {
-        try {
-          const [statsRes, configs] = await Promise.all([
-            entriesApi.stats(),
-            fetchTicketConfigs()
-          ]);
-          setStats(statsRes as unknown as Stats);
-          setTicketConfigs(configs);
-        } catch (error) {
-          console.error('Staff dashboard: Error refreshing on mount reset:', error);
-        }
-      })();
+    const today = dayjs().format('YYYY-MM-DD');
+    const resetAlreadyTriggered = sessionStorage.getItem('staff-reset-triggered');
+    
+    // Clear session storage if it's a new day (LOCAL-based)
+    const lastResetDate = sessionStorage.getItem('staff-reset-date');
+    if (lastResetDate !== today) {
+      sessionStorage.clear();
+      sessionStorage.setItem('staff-reset-date', today);
+      console.log('🔄 Staff Dashboard: New LOCAL day detected, cleared session storage:', {
+        lastResetDate,
+        today,
+        localTime: dayjs().format('YYYY-MM-DD'),
+        utcTime: dayjs().utc().format('YYYY-MM-DD')
+      });
     }
-
+    
+    if (needsDailyReset()) {
+      console.log('🔄 Staff Dashboard: Daily reset needed on mount');
+      performDailyReset();
+      fetchAllData();
+    }
+    
+    // Only trigger system reset if not already done this session
+    if (!resetAlreadyTriggered) {
+      console.log('🔄 Staff Dashboard: First time setup - triggering system refresh');
+      
+      // Batch all reset operations together to prevent multiple triggers
+      const performAllResets = async () => {
+        try {
+          // Check and trigger system reset for deployment changes
+          const systemResetNeeded = checkAndTriggerReset();
+          
+          // Check and force refresh to today's data
+          const forceRefreshNeeded = checkAndForceRefresh();
+          
+          // Mark as triggered for this session
+          sessionStorage.setItem('staff-reset-triggered', 'true');
+          
+          console.log('🔄 Staff Dashboard: Reset operations completed', {
+            systemReset: systemResetNeeded,
+            forceRefresh: forceRefreshNeeded,
+            localDate: today
+          });
+        } catch (error) {
+          console.error('❌ Staff Dashboard: Reset operations failed:', error);
+        }
+      };
+      
+      // Execute all resets together
+      performAllResets();
+    } else {
+      console.log('🔄 Staff Dashboard: Reset already triggered this session - skipping');
+    }
+    
+    // Auto-verify today's data is correct (always run but with delay)
+    setTimeout(() => {
+      autoVerify();
+    }, 5000); // Delay to allow resets to complete
+    
+    // Listen for force reset events
+    const handleForceResetSuccess = (event: any) => {
+      console.log('🎉 Staff Dashboard: Force reset successful:', event.detail);
+      // Refresh data after successful force reset
+      fetchAllData();
+    };
+    
+    const handleForceResetFailure = (event: any) => {
+      console.error('❌ Staff Dashboard: Force reset failed:', event.detail);
+      // Show user notification for manual intervention
+      if (typeof window !== 'undefined' && window.alert) {
+        alert('⚠️ Daily reset failed! Previous day data is still showing.\n\nPlease refresh the page or contact support.\n\nYou can also try: window.forceDailyResetComplete()');
+      }
+    };
+    
+    window.addEventListener('force-daily-reset-success', handleForceResetSuccess);
+    window.addEventListener('force-daily-reset-failure', handleForceResetFailure);
+    
+    // Cleanup
     return () => {
-      cleanup();
+      cleanupListener();
+      window.removeEventListener('force-daily-reset-success', handleForceResetSuccess);
+      window.removeEventListener('force-daily-reset-failure', handleForceResetFailure);
     };
   }, []);
   
@@ -137,20 +196,27 @@ export function Staff() {
     return fallbackPrice;
   };
 
-  // Enhanced sync function to force refresh all data
-  const forceRefreshAllData = async () => {
-    Logger.debug('Force refreshing all data', {}, 'Staff');
+  // Main data fetching function with comprehensive sync
+  const fetchAllData = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔄 Staff Dashboard: Fetching all data with comprehensive sync...');
+      
       // Use comprehensive sync for better data consistency
       const syncData = await entriesApi.syncAll();
       
       if (syncData && syncData.stats) {
         setStats(syncData.stats as unknown as Stats);
-        Logger.debug('Comprehensive sync completed', {
+        console.log('✅ Staff Dashboard: Comprehensive sync completed', {
           totalRecords: syncData.summary.totalRecords,
           todayRecords: syncData.summary.todayRecords,
           timestamp: syncData.summary.lastUpdated
-        }, 'Staff');
+        });
+        
+        // Fetch ticket configs separately
+        await fetchTicketConfigs();
         
         // Trigger global sync event with comprehensive data
         window.dispatchEvent(new CustomEvent('staff-synced', {
@@ -169,10 +235,14 @@ export function Staff() {
         ]);
         
         setStats(statsRes as unknown as Stats);
-        Logger.debug('Fallback sync completed', { stats: statsRes, configCount: configs.length }, 'Staff');
+        console.log('✅ Staff Dashboard: Fallback sync completed', { stats: statsRes, configCount: configs.length });
       }
+      
     } catch (error) {
-      Logger.error('Failed to force refresh data', error, 'Staff');
+      console.error('❌ Staff Dashboard: Error fetching data:', error);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -204,50 +274,34 @@ export function Staff() {
           totalEntries: 0,
           todayPeople: 0,
           totalPeople: 0,
-          todayAdults: 0,
-          totalAdults: 0,
-          todayKids: 0,
-          totalKids: 0,
-          todayAmount: 0,
-          totalAmount: 0,
-          todayCash: 0,
-          totalUpi: 0,
-          todayAdvance: 0,
-          totalAdvance: 0,
-          todayAdditionalDiscount: 0,
-          todayTotalDiscount: 0,
-          totalAdditionalDiscount: 0,
-          totalTotalDiscount: 0,
+          adults: { today: 0, total: 0 },
+          kids: { today: 0, total: 0 },
+          cash: { today: 0, total: 0 },
+          upi: { today: 0, total: 0 },
+          advance: { today: 0, total: 0 },
+          amount: { today: 0, total: 0 },
           today150: 0,
           total150: 0,
           today150Adults: 0,
-          total150Adults: 0,
           today150Kids: 0,
+          total150Adults: 0,
           total150Kids: 0,
           today300: 0,
           total300: 0,
           today300Adults: 0,
-          total300Adults: 0,
-          today300Kids: 0,
           total300Kids: 0,
           today450: 0,
           total450: 0,
           today450Adults: 0,
-          total450Adults: 0,
-          today450Kids: 0,
           total450Kids: 0,
           today600: 0,
           total600: 0,
           today600Adults: 0,
-          total600Adults: 0,
-          today600Kids: 0,
           total600Kids: 0,
           today100: 0,
           total100: 0,
           today100Adults: 0,
-          total100Adults: 0,
           today100Kids: 0,
-          total100Kids: 0,
           todayAdultsFastFoodCoupons: 0,
           todayKidsFastFoodCoupons: 0,
           todayAdultsMainFoodCoupons: 0,
@@ -262,6 +316,10 @@ export function Staff() {
           totalFastFoodCoupons: 0,
           totalMainFoodCoupons: 0,
           totalFoodCoupons: 0,
+          todayAdditionalDiscount: 0,
+          todayTotalDiscount: 0,
+          totalAdditionalDiscount: 0,
+          totalTotalDiscount: 0,
           averageTicketValue: 0,
           peakHour: 'N/A',
           conversionRate: 0,
@@ -383,8 +441,9 @@ export function Staff() {
     window.addEventListener('payment-completed', handleReceiptEvent);
     
     // Add discount-specific event listeners for real-time sync
-    const handleDiscountUpdate = (event: CustomEventData) => {
-      Logger.debug('Discount update event received', event.detail, 'Staff');
+    const handleDiscountUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      Logger.debug('Discount update event received', customEvent.detail, 'Staff');
       handleEntryUpdate();
     };
     
@@ -422,9 +481,10 @@ export function Staff() {
     let cancelled = false;
 
     // Handle global sync events from sync service
-    const handleGlobalSyncTriggered = (data: CustomEventData) => {
+    const handleGlobalSyncTriggered = (event: Event) => {
+      const customEvent = event as CustomEvent;
       if (!cancelled) {
-        Logger.debug('Global sync triggered', data, 'Staff');
+        Logger.debug('Global sync triggered', customEvent.detail, 'Staff');
         const fetchData = async () => {
           try {
             const [s] = await Promise.all([
@@ -443,41 +503,39 @@ export function Staff() {
     };
 
     // Handle immediate sync requirements
-    const handleImmediateSyncRequired = (data: CustomEventData) => {
+    const handleImmediateSyncRequired = (event: Event) => {
+      const customEvent = event as CustomEvent;
       if (!cancelled) {
-        Logger.debug('Immediate sync required', data, 'Staff');
-        handleGlobalSyncTriggered(data);
+        Logger.debug('Immediate sync required', customEvent.detail, 'Staff');
+        handleGlobalSyncTriggered(customEvent);
       }
     };
 
     // Handle daily reset events
-    const handleDailyReset = (data: CustomEventData) => {
+    const handleDailyReset = (event: Event) => {
+      const customEvent = event as CustomEvent;
       if (!cancelled) {
-        Logger.debug('Daily reset triggered, refreshing data', data, 'Staff');
-        handleGlobalSyncTriggered({ ...data, reason: 'daily-reset' });
+        Logger.debug('Daily reset triggered, refreshing data', customEvent.detail, 'Staff');
+        handleGlobalSyncTriggered(customEvent);
       }
     };
 
-    // Register listeners with global sync service
-    globalSyncService.addEventListener('global-sync-triggered', handleGlobalSyncTriggered);
-    globalSyncService.addEventListener('immediate-sync-required', handleImmediateSyncRequired);
-    globalSyncService.addEventListener('daily-reset-complete', handleDailyReset);
+    // Register listeners with unified daily reset service instead
+    // The unified service handles cross-dashboard communication automatically
 
     // Also listen for DOM events for compatibility
     window.addEventListener('daily-reset', handleDailyReset);
 
     return () => {
-      globalSyncService.removeEventListener('global-sync-triggered', handleGlobalSyncTriggered);
-      globalSyncService.removeEventListener('immediate-sync-required', handleImmediateSyncRequired);
-      globalSyncService.removeEventListener('daily-reset-complete', handleDailyReset);
+      // Only need to remove DOM event listeners since unified service handles the rest
       window.removeEventListener('daily-reset', handleDailyReset);
     };
   }, []);
   
   // Search functionality across all users for receipt generation
   const handleSearch = async (query: string) => {
-    Logger.debug('Staff: Starting cross-user search for:', query);
-    Logger.debug('Staff: Current user:', user?.username, 'Role:', user?.role);
+    Logger.debug('Staff: Starting cross-user search for:', { query }, 'Staff');
+    Logger.debug('Staff: Current user:', { username: user?.username, role: user?.role }, 'Staff');
     
     if (!query.trim()) {
       setSearchResults([]);
@@ -558,7 +616,7 @@ export function Staff() {
               }
             }));
           } else {
-            Logger.error('Failed to generate receipt number', error, 'Staff');
+            Logger.error('Failed to generate receipt number', new Error('Failed to generate receipt number'), 'Staff');
             // Generate fallback receipt number locally
             const today = new Date();
             const dateStr = today.getFullYear().toString() +
@@ -698,7 +756,7 @@ export function Staff() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={forceRefreshAllData}
+          onClick={fetchAllData}
           className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg flex items-center gap-2 transition-colors"
           title="Refresh all data and pricing"
         >

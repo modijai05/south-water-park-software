@@ -24,8 +24,6 @@ import dayjs from 'dayjs';
 
 import Receipt from '@/components/Receipt';
 
-import { globalSyncService } from '@/services/globalSyncService';
-
 
 
 const paymentSchema = z.object({
@@ -262,11 +260,11 @@ export function Payment() {
 
 
 
-        const todayEntries = todayRes.entries as any[] || [];
+        const todayEntries = todayRes.data?.entries as any[] || [];
 
-        const weekEntries = weekRes.entries as any[] || [];
+        const weekEntries = weekRes.data?.entries as any[] || [];
 
-        const monthEntries = monthRes.entries as any[] || [];
+        const monthEntries = monthRes.data?.entries as any[] || [];
 
 
 
@@ -685,11 +683,21 @@ export function Payment() {
 
       console.log('✅ Payment: All sync events dispatched successfully');
       
-      // Trigger global sync service for comprehensive real-time updates
-      globalSyncService.triggerImmediateSync('new-entry-created');
+      // Trigger window events for real-time updates instead of global sync service
+      window.dispatchEvent(new CustomEvent('immediate-sync', {
+        detail: {
+          source: 'new-entry-created',
+          timestamp: new Date().toISOString()
+        }
+      }));
       
-      // Also trigger specific data type syncs
-      globalSyncService.syncDataTypes(['stats', 'entries', 'discounts']);
+      // Trigger specific data type sync events
+      window.dispatchEvent(new CustomEvent('data-types-synced', {
+        detail: {
+          dataTypes: ['stats', 'entries', 'discounts'],
+          timestamp: new Date().toISOString()
+        }
+      }));
 
       
 

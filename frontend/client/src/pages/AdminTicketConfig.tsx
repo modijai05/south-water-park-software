@@ -3,26 +3,13 @@ import { motion } from 'framer-motion';
 import { Layout } from '@/components/Layout';
 import { useAuthStore } from '@/store/authStore';
 import { ticketConfigApi } from '@/lib/ticketApi';
+import type { TicketConfig } from '@/types';
 
 interface DayWisePricing {
   day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
   priceMultiplier: number;
   fixedAmount?: number;
   enabled: boolean;
-}
-
-interface TicketConfig {
-  ticketType: '100' | '150' | '300' | '450' | '600';
-  basePrice: number;
-  label: string;
-  hasKids: boolean;
-  description: string;
-  dayWisePricing: DayWisePricing[];
-  isActive: boolean;
-  maxAdults?: number;
-  maxKids?: number;
-  timeLimit?: number;
-  foodIncluded?: boolean;
 }
 
 const days: DayWisePricing['day'][] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -62,6 +49,7 @@ export function AdminTicketConfig() {
       // Ensure day-wise pricing has all required fields
       const processedData = data.map(config => ({
         ...config,
+        hasKids: config.hasKids !== undefined ? config.hasKids : ['300', '450', '600'].includes(config.ticketType),
         dayWisePricing: config.dayWisePricing ? config.dayWisePricing.map(dp => ({
           day: dp.day,
           priceMultiplier: dp.priceMultiplier || 1.0,
