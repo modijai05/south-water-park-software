@@ -383,10 +383,13 @@ export function AdminDashboard() {
         fetchTicketConfigs()
       ]);
       
-      setStats(statsRes as unknown as Stats);
+      // Extract the actual data from the stats response
+      const statsData = statsRes?.data || statsRes; // Handle both response structures
+      setStats(statsData as unknown as Stats);
       setCharts(chartsRes as unknown as Charts);
       console.log('Admin: Force refreshed - New prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
-      console.log('Admin: Force refreshed - New stats:', statsRes);
+      console.log('Admin: Force refreshed - New stats:', statsData);
+      console.log('Admin: Force refreshed - Full stats response:', statsRes);
       console.log('Admin: Force refreshed - New charts:', chartsRes);
       
       // Trigger global sync event
@@ -1048,7 +1051,8 @@ export function AdminDashboard() {
           if (!cancelled) {
             console.log('📊 Dashboard: New stats - todayAdvance:', (s as any)?.todayAdvance, 'totalAdvance:', (s as any)?.totalAdvance);
             console.log('🍔 Dashboard: Food coupons - todayTotal:', (s as any)?.todayTotalFoodCoupons, 'totalFoodCoupons:', (s as any)?.totalFoodCoupons);
-            setStats(s as unknown as Stats);
+            const statsData = s?.data || s; // Extract data from response
+            setStats(statsData as unknown as Stats);
             setCharts(c as unknown as Charts);
             console.log('✅ Dashboard: Data updated via global sync');
           }
@@ -1089,7 +1093,8 @@ export function AdminDashboard() {
               fetchTicketConfigs()
             ]);
             if (!cancelled) {
-              setStats(s as unknown as Stats);
+              const statsData = s?.data || s; // Extract data from response
+              setStats(statsData as unknown as Stats);
               setCharts(c as unknown as Charts);
               console.log('✅ AdminDashboard: Data updated via global sync');
             }
@@ -1127,10 +1132,11 @@ export function AdminDashboard() {
             ]);
             
             if (!cancelled) {
-              setStats(s as unknown as Stats); // Proper casting for Stats interface
+              const statsData = s?.data || s; // Extract data from response
+              setStats(statsData as unknown as Stats); // Proper casting for Stats interface
               setTicketConfigs(c); // c is TicketConfig[]
               setError(null);
-              console.log('📊 Dashboard: Raw stats data after complete cache clear:', s);
+              console.log('📊 Dashboard: Raw stats data after complete cache clear:', statsData);
               console.log('✅ Dashboard: Complete cache clear successful - today should be 0');
               
               // PROFESSIONAL FIX: Force reset API call if today stats not reset
@@ -1140,7 +1146,8 @@ export function AdminDashboard() {
                   const resetStats = await entriesApi.stats(true);
                   if (resetStats) {
                     console.log('✅ PROFESSIONAL FIX: Force reset successful, updating stats...');
-                    setStats(resetStats as unknown as Stats);
+                    const resetStatsData = resetStats?.data || resetStats;
+                    setStats(resetStatsData as unknown as Stats);
                   }
                 } catch (resetError) {
                   console.error('❌ PROFESSIONAL FIX: Force reset failed:', resetError);
