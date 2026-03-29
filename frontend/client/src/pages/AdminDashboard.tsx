@@ -15,6 +15,7 @@ import { globalSyncService } from '@/services/globalSyncService';
 import { useDailyReset, performDailyReset, needsDailyReset } from '@/utils/dailyReset';
 import { checkAndTriggerReset } from '@/utils/systemReset';
 import { checkAndForceRefresh } from '@/utils/forceRefresh';
+import { verifyTodayData, autoVerify } from '@/utils/verifyTodayData';
 
 // Helper functions for data transformation
 const generateQuarterlyData = (monthlyData: any[]) => {
@@ -269,6 +270,9 @@ export function AdminDashboard() {
     
     // Check and force refresh to today's data
     checkAndForceRefresh();
+    
+    // Auto-verify today's data is correct
+    autoVerify();
   }, []);
 
   // Enhanced sync function to force refresh all data
