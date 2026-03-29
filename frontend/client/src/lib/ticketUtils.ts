@@ -51,7 +51,13 @@ async function fetchTicketConfigs(): Promise<TicketConfig[]> {
     // Fetch full configs, not just current day pricing
     const response = await fetch(`${API_BASE}/ticket-config`);
     if (response.ok) {
-      const configs = await response.json();
+      const apiResponse = await response.json();
+      // Handle wrapped response format
+      let configs = apiResponse;
+      if (apiResponse && typeof apiResponse === 'object' && 'data' in apiResponse) {
+        configs = apiResponse.data;
+      }
+      
       // Ensure configs is an array before calling .map()
       if (Array.isArray(configs)) {
         // Ensure proper dayWisePricing structure

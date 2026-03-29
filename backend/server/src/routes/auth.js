@@ -123,7 +123,7 @@ router.post('/login', async (req, res) => {
       user: {
         id: user._id,
         username: user.username,
-        fullName: user.fullName,
+        fullName: user.fullName || user.username, // Fallback to username if fullName not set
         role: user.role,
         active: user.active
       }

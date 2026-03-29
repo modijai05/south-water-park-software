@@ -32,6 +32,7 @@ export function AdminEntries() {
   const navigate = useNavigate();
   const { clear } = useEntryStore();
   const { user } = useAuthStore();
+  const [isClient, setIsClient] = useState(false);
   const [entries, setEntries] = useState<EntryRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -44,7 +45,13 @@ export function AdminEntries() {
   const [inlineEditing, setInlineEditing] = useState<{ id: string; field: string; value: string } | null>(null);
   const limit = 1000; // Show all entries
 
+  // Fix hydration issues
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const fetchEntries = () => {
+    if (!isClient) return;
     setLoading(true);
     console.log('🔍 AdminEntries: Fetching entries with params:', { search: search || undefined, page, limit });
     entriesApi.list({ search: search || undefined, page, limit }).then((res) => {
@@ -326,7 +333,7 @@ export function AdminEntries() {
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
                               <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-blue-100 to-blue-200 text-blue-900 font-bold text-xs border border-blue-300">
-                                👤 {(entry as any).filledByFullName || (entry as any).filledBy || user?.fullName || user?.username || 'Unknown'}
+                                👤 {isClient ? ((entry as any).filledByFullName || (entry as any).filledBy || user?.fullName || user?.username || 'Unknown') : 'Loading...'}
                               </span>
                               {/* Debug info */}
                               <span className="text-xs text-gray-500 hidden" data-debug={`filledBy: ${(entry as any).filledBy}, filledByFullName: ${(entry as any).filledByFullName}, user: ${user?.username}`}>
