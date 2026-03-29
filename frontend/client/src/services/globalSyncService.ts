@@ -91,6 +91,20 @@ class GlobalSyncService {
     }
   }
 
+  // Trigger immediate sync for specific events
+  public triggerImmediateSyncRequired(source: string = 'global-sync') {
+    console.log(`⚡ GlobalSync: Immediate sync required from ${source}`);
+    
+    // Broadcast immediate sync required event
+    this.broadcastEvent('immediate-sync-required', {
+      source,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Perform async sync in background
+    this.performDateSync();
+  }
+
   // Simple manual sync trigger
   public triggerSync() {
     console.log('🔄 GlobalSync: Manual sync triggered');
