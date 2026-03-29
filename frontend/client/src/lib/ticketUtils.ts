@@ -52,12 +52,21 @@ async function fetchTicketConfigs(): Promise<TicketConfig[]> {
     const response = await fetch(`${API_BASE}/ticket-config`);
     if (response.ok) {
       const configs = await response.json();
-      // Ensure proper dayWisePricing structure
-      ticketConfigs = configs.map((config: any) => ({
-        ...config,
-        dayWisePricing: config.dayWisePricing || []
-      }));
-      lastFetchTime = now;
+      // Ensure configs is an array before calling .map()
+      if (Array.isArray(configs)) {
+        // Ensure proper dayWisePricing structure
+        ticketConfigs = configs.map((config: any) => ({
+          ...config,
+          dayWisePricing: config.dayWisePricing || []
+        }));
+        lastFetchTime = now;
+      } else {
+        console.warn('Ticket configs API did not return an array:', configs);
+        // Use fallback if API returns non-array
+        throw new Error('Invalid response format');
+      }
+    } else {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
   } catch (error) {
     console.error('Failed to fetch ticket configs:', error);
