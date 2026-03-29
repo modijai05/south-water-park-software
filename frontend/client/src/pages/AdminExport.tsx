@@ -1037,10 +1037,8 @@ export function AdminExport() {
   const generateSingleReceipt = async (searchTerm: string) => {
     try {
       const res = await entriesApi.list({
-        from: '2020-01-01T00:00:00.000Z',
-        to: new Date().toISOString(),
         search: searchTerm,
-        limit: 1,
+        limit: 1
       });
       
       const entry = (res.data?.entries as any[])?.[0];
@@ -1054,7 +1052,7 @@ export function AdminExport() {
         if (!receiptNumber) {
           try {
             console.log('Export: Generating receipt number for existing entry...');
-            const receiptRes = await fetch(`/api/entries/${entry.id}/generate-receipt`, {
+            const receiptRes = await fetch(`/api/entries/${entry._id}/generate-receipt`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

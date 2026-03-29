@@ -910,29 +910,34 @@ router.get('/', async (req, res) => {
     // Try database query, fallback to mock data
     try {
       if (mongoose.connection.readyState === 1) {
-        // Build search query
-        const query = search ? {
-          $or: [
+        // Build optimized search query with indexes
+        let query = {};
+        if (search && search.trim()) {
+          // Use indexed fields for better performance
+          query.$or = [
             { name: { $regex: search, $options: 'i' } },
             { mobile: { $regex: search, $options: 'i' } },
-            { ticketType: { $regex: search, $options: 'i' } }
-          ]
-        } : {};
+            { receiptNumber: { $regex: search, $options: 'i' } },
+            { filledBy: { $regex: search, $options: 'i' } }
+          ];
+        }
         
-        // Fetch entries with pagination
-        const entries = await Entry.find(query)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limitNum)
-          .lean();
+        // Optimized fetch with lean() for better performance
+        const [entries, total] = await Promise.all([
+          Entry.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .lean() // Use lean for faster queries
+            .select('name mobile ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon receiptNumber createdAt filledBy filledByFullName createdBy upgrades'), // Select only required fields
+          Entry.countDocuments(query)
+        ]);
         
         // Fix filledByFullName for existing entries
         const fixedEntries = entries.map(entry => ({
           ...entry,
           filledByFullName: entry.filledByFullName || entry.filledBy || 'Unknown'
         }));
-        
-        const total = await Entry.countDocuments(query);
         
         console.log(`✅ Found ${fixedEntries.length} entries (total: ${total})`);
         
@@ -973,16 +978,16 @@ router.get('/', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('❌ Entries fetch error:', error);
+    console.error('❌ Entries endpoint error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to fetch entries',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch entries',
+      message: error.message
     });
   }
 });
 
-// PUT /api/entries/:id - Update entry (PUBLIC ACCESS)
+// PUT /api/entries/:id - Update single entry
 router.put('/:id', async (req, res) => {
   try {
     // Set CORS headers for all origins
@@ -1050,7 +1055,79 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/entries/:id - Delete entry (PUBLIC ACCESS)
+// POST /api/entries/:id/generate-receipt - Generate receipt number for entry
+router.post('/:id/generate-receipt', async (req, res) => {
+  try {
+    // Set CORS headers for all origins
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Credentials', 'false');
+    
+    const { id } = req.params;
+    console.log('🧾 Generating receipt for entry:', id);
+    
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const entry = await Entry.findById(id);
+        if (!entry) {
+          return res.status(404).json({
+            success: false,
+            error: 'Entry not found'
+          });
+        }
+        
+        // Generate receipt number using the utility
+        const { generateReceiptNumber } = require('../utils/receiptNumberGenerator');
+        const receiptNumber = generateReceiptNumber();
+        
+        // Update entry with receipt number
+        entry.receiptNumber = receiptNumber;
+        await entry.save();
+        
+        console.log('✅ Receipt number generated:', receiptNumber);
+        
+        return res.json({
+          success: true,
+          receiptNumber,
+          entryId: entry._id
+        });
+        
+      } catch (dbError) {
+        console.error('❌ Database error generating receipt:', dbError);
+        return res.status(500).json({
+          success: false,
+          error: 'Database error',
+          message: dbError.message
+        });
+      }
+    } else {
+      console.log('⚠️ MongoDB not connected, generating fallback receipt number');
+      
+      // Generate fallback receipt number
+      const today = new Date();
+      const dateStr = today.getFullYear().toString() +
+                      (today.getMonth() + 1).toString().padStart(2, '0') +
+                      today.getDate().toString().padStart(2, '0');
+      const timestamp = today.getTime().toString().slice(-4);
+      const receiptNumber = `SWP-${dateStr}-${timestamp}`;
+      
+      return res.json({
+        success: true,
+        receiptNumber,
+        entryId: id,
+        fallback: true
+      });
+    }
+  } catch (error) {
+    console.error('❌ Receipt generation error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to generate receipt',
+      message: error.message
+    });
+  }
+});
+
+// DELETE /api/entries/:id - Delete single entry (PUBLIC ACCESS)
 router.delete('/:id', async (req, res) => {
   try {
     // Set CORS headers for all origins

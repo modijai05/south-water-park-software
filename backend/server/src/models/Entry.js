@@ -43,6 +43,15 @@ const entrySchema = new mongoose.Schema({
 
 entrySchema.index({ createdAt: -1 });
 entrySchema.index({ name: 'text', mobile: 'text' });
+entrySchema.index({ ticketType: 1 });
+entrySchema.index({ receiptNumber: 1 });
+entrySchema.index({ filledBy: 1 });
+entrySchema.index({ finalAmount: 1 });
+entrySchema.index({ createdBy: 1 });
+// Compound index for date-wise queries
+entrySchema.index({ createdAt: -1, ticketType: 1 });
+// Compound index for search optimization
+entrySchema.index({ name: 1, mobile: 1, receiptNumber: 1 });
 
 const Entry = mongoose.model('Entry', entrySchema);
 
