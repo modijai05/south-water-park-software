@@ -407,6 +407,9 @@ export function AdminEntries() {
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '80px' }}>
                       Other
                     </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '80px' }}>
+                      Discount
+                    </th>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '120px' }}>
                       Food Coupons
                     </th>
@@ -420,7 +423,7 @@ export function AdminEntries() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {entries.length === 0 ? (
                     <tr>
-                      <td colSpan={15} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={16} className="px-4 py-8 text-center text-gray-500">
                         {search ? 
                           `No entries found matching "${search}" in ${dateFilter === 'today' ? 'today' : dateFilter === 'yesterday' ? 'yesterday' : 'all time'} entries` :
                           `No entries found for ${dateFilter === 'today' ? 'today' : dateFilter === 'yesterday' ? 'yesterday' : 'all time'}`
@@ -473,6 +476,9 @@ export function AdminEntries() {
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
                           ₹{safeString(entry.otherAmount)}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-bold text-red-600 text-center border-r border-gray-100">
+                          ₹{safeString((entry as any).additionalDiscount)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
                           <div className="space-y-1">
