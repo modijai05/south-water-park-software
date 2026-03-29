@@ -880,6 +880,8 @@ function EditEntryModal({ entry, onClose, onSaved, setToast }: { entry: EntryRec
   const [otherAmount, setOtherAmount] = useState<number>(entry.otherAmount ?? 0);
   const [notes, setNotes] = useState(entry.notes ?? '');
   const [entryDate, setEntryDate] = useState(entry.createdAt ? dayjs(entry.createdAt).format('YYYY-MM-DDTHH:mm') : '');
+  const [filledBy, setFilledBy] = useState((entry as any).filledBy || '');
+  const [filledByFullName, setFilledByFullName] = useState((entry as any).filledByFullName || '');
   const [saving, setSaving] = useState(false);
 
   // compute amounts using imported helper
@@ -954,6 +956,8 @@ function EditEntryModal({ entry, onClose, onSaved, setToast }: { entry: EntryRec
         otherAmount,
         notes: notes.trim() || undefined,
         createdAt: entryDate ? new Date(entryDate).toISOString() : undefined,
+        filledBy: filledBy.trim() || undefined,
+        filledByFullName: filledByFullName.trim() || undefined,
       };
 
       console.log('🔧 EditEntryModal: Payload to send:', payload);
@@ -1033,6 +1037,35 @@ function EditEntryModal({ entry, onClose, onSaved, setToast }: { entry: EntryRec
             <p className="text-xs text-gray-500 mt-1">
               Original: {dayjs(entry.createdAt).format('DD/MM/YYYY hh:mm A')}
             </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">👤 Filled By (Username)</label>
+              <input 
+                type="text" 
+                value={filledBy} 
+                onChange={(e) => setFilledBy(e.target.value)} 
+                className="input-modern"
+                placeholder="Enter username"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Original: {(entry as any).filledBy || 'Not set'}
+              </p>
+            </div>
+            <div>
+              <label className="block text-blue-900 font-bold text-sm mb-2">👤 Filled By (Full Name)</label>
+              <input 
+                type="text" 
+                value={filledByFullName} 
+                onChange={(e) => setFilledByFullName(e.target.value)} 
+                className="input-modern"
+                placeholder="Enter full name"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Original: {(entry as any).filledByFullName || 'Not set'}
+              </p>
+            </div>
           </div>
 
           <div>
