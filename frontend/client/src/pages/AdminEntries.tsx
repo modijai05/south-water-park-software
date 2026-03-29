@@ -49,6 +49,16 @@ export function AdminEntries() {
     console.log('🔍 AdminEntries: Fetching entries with params:', { search: search || undefined, page, limit });
     entriesApi.list({ search: search || undefined, page, limit }).then((res) => {
       console.log('🔍 AdminEntries: API response:', { success: res.success, entriesCount: res.data?.entries?.length || 0, total: res.data?.total || 0 });
+      // Debug first entry filled by fields
+      if (res.data?.entries?.length > 0) {
+        const firstEntry = res.data.entries[0];
+        console.log('🔍 AdminEntries: First entry filledBy debug:', {
+          filledBy: firstEntry.filledBy,
+          filledByFullName: firstEntry.filledByFullName,
+          createdBy: firstEntry.createdBy,
+          user: user?.username
+        });
+      }
       setEntries((res.data?.entries as EntryRecord[]) ?? []);
       setTotal(res.data?.total ?? 0);
     }).finally(() => setLoading(false));
@@ -317,6 +327,10 @@ export function AdminEntries() {
                             <div className="flex items-center gap-2">
                               <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-blue-100 to-blue-200 text-blue-900 font-bold text-xs border border-blue-300">
                                 👤 {(entry as any).filledByFullName || (entry as any).filledBy || user?.fullName || user?.username || 'Unknown'}
+                              </span>
+                              {/* Debug info */}
+                              <span className="text-xs text-gray-500 hidden" data-debug={`filledBy: ${(entry as any).filledBy}, filledByFullName: ${(entry as any).filledByFullName}, user: ${user?.username}`}>
+                                DEBUG: {(entry as any).filledBy || 'null'} / {(entry as any).filledByFullName || 'null'}
                               </span>
                               {(entry as any).createdBy?.username && (
                                 <span className="px-2 py-1 rounded-lg bg-purple-100 text-purple-900 font-bold text-xs border border-purple-300">
