@@ -370,7 +370,7 @@ const getTodayRange = () => {
     timezone: now.format('Z'),
     localDate: now.format('YYYY-MM-DD'),
     localTime: now.format('HH:mm:ss'),
-    utcTime: now.utc().format('YYYY-MM-DD HH:mm:ss')
+    utcTime: dayjs().utc().format('YYYY-MM-DD HH:mm:ss')
   });
   
   return { startOfDay, endOfDay };
