@@ -102,6 +102,7 @@ export interface EntryRecord {
   createdAt: string;
   createdBy?: User | { username: string; fullName?: string };
   filledByFullName?: string;
+  _updated?: boolean; // For tracking updated entries in real-time
 }
 
 // API Response Types

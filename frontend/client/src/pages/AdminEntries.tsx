@@ -45,7 +45,7 @@ export function AdminEntries() {
   const [initialLoading, setInitialLoading] = useState(false); // Only for first load
   const [editing, setEditing] = useState<EntryRecord | null>(null);
   const [viewing, setViewing] = useState<EntryRecord | null>(null);
-  const [toast, setToast] = useState<{ message: string; id: string } | null>(null);
+  const [toast, setToast] = useState<{ message: string; id: string; type?: 'success' | 'info' | 'warning' | 'error' } | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [inlineEditing, setInlineEditing] = useState<{ id: string; field: string; value: string } | null>(null);
   const limit = 50; // Reduced for better performance
@@ -65,78 +65,145 @@ export function AdminEntries() {
   const [olderPage, setOlderPage] = useState(1);
 
   // Real-time sync integration
-  const { isConnected, reconnect } = useRealTimeSync({
+  const { isConnected, reconnect, connectionId, connectionState } = useRealTimeSync({
     onEntryCreated: (entry) => {
       console.log('📡 Real-time: New entry created', entry);
-      // Add new entry to the beginning of the list
-      setAllEntries(prev => [entry, ...prev]);
+      
+      // Add new entry to the beginning of the list with immediate visibility
+      setAllEntries(prev => {
+        const newEntries = [entry, ...prev];
+        console.log('📡 Entry added to list. New count:', newEntries.length);
+        return newEntries;
+      });
+      
       setTotal(prev => prev + 1);
       
-      // Show toast notification
+      // Highlight the new entry immediately
+      setHighlightId(entry._id);
+      setTimeout(() => setHighlightId(null), 5000); // Longer highlight for new entries
+      
+      // Show prominent toast notification
       setToast({ 
-        message: `🎫 New entry: ${entry.name} (${entry.ticketType})`, 
-        id: entry._id 
+        message: `🎫 NEW ENTRY: ${entry.name} - ${getTicketLabelSync(entry.ticketType as TicketType)} - ₹${entry.finalAmount}`, 
+        id: `new-${entry._id}`,
+        type: 'success'
       });
-      setTimeout(() => setToast(null), 4000);
+      setTimeout(() => setToast(null), 6000);
+      
+      // Play a subtle notification sound if available
+      if (typeof window !== 'undefined' && 'Audio' in window) {
+        try {
+          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
+          audio.volume = 0.3;
+          audio.play().catch(() => {}); // Ignore audio errors
+        } catch (e) {}
+      }
     },
     
     onEntryUpdated: (entry) => {
       console.log('📡 Real-time: Entry updated', entry);
-      // Update entry in the list
-      setAllEntries(prev => prev.map(e => 
-        e._id === entry._id ? entry : e
-      ));
       
-      // Highlight the updated entry
+      // Update entry in the list with immediate visibility
+      setAllEntries(prev => {
+        const updatedEntries = prev.map(e => 
+          e._id === entry._id ? { ...entry, _updated: true } : e
+        );
+        console.log('📡 Entry updated in list:', entry._id);
+        return updatedEntries;
+      });
+      
+      // Highlight the updated entry with different color
       setHighlightId(entry._id);
       setTimeout(() => setHighlightId(null), 3000);
       
       // Show toast notification
       setToast({ 
-        message: `✏️ Entry updated: ${entry.name}`, 
-        id: entry._id 
+        message: `✏️ ENTRY UPDATED: ${entry.name} - ${getTicketLabelSync(entry.ticketType as TicketType)}`, 
+        id: `update-${entry._id}`,
+        type: 'info'
       });
       setTimeout(() => setToast(null), 4000);
     },
     
     onEntryDeleted: (entryId, entry) => {
       console.log('📡 Real-time: Entry deleted', entryId);
-      // Remove entry from the list
-      setAllEntries(prev => prev.filter(e => e._id !== entryId));
-      setTotal(prev => prev - 1);
+      
+      // Remove entry from the list with animation
+      setHighlightId(entryId);
+      setTimeout(() => {
+        setAllEntries(prev => {
+          const filteredEntries = prev.filter(e => e._id !== entryId);
+          console.log('📡 Entry removed from list. New count:', filteredEntries.length);
+          return filteredEntries;
+        });
+        setTotal(prev => prev - 1);
+        setHighlightId(null);
+      }, 500); // Brief highlight before removal
       
       // Show toast notification
       setToast({ 
-        message: `🗑️ Entry deleted: ${entry?.name || 'Unknown'}`, 
-        id: entryId 
+        message: `🗑️ ENTRY DELETED: ${entry?.name || 'Unknown'}`, 
+        id: `delete-${entryId}`,
+        type: 'warning'
       });
       setTimeout(() => setToast(null), 4000);
     },
     
     onSyncRequired: (data) => {
       console.log('📡 Real-time: Sync required', data);
-      // Force refresh entries
+      // Force refresh entries with loading indicator
+      setToast({ 
+        message: `🔄 Syncing entries...`, 
+        id: 'sync-required',
+        type: 'info'
+      });
       fetchEntries(true);
     },
     
     onReceiptGenerated: (data) => {
       console.log('📡 Real-time: Receipt generated', data);
       // Force refresh entries to get updated receipt numbers
+      setToast({ 
+        message: `🧾 Receipt generated - refreshing entries...`, 
+        id: 'receipt-generated',
+        type: 'info'
+      });
       fetchEntries(true);
     },
     
     onConnected: () => {
       console.log('📡 Real-time: Connected to sync server');
+      // Show success notification
+      setToast({ 
+        message: `🟢 Real-time sync connected (ID: ${connectionId || 'Unknown'})`, 
+        id: 'connected',
+        type: 'success'
+      });
+      setTimeout(() => setToast(null), 3000);
       // Trigger initial sync when connected
       setTimeout(() => fetchEntries(true), 1000);
     },
     
     onDisconnected: () => {
       console.log('📡 Real-time: Disconnected from sync server');
+      // Show warning notification
+      setToast({ 
+        message: `🔴 Real-time sync disconnected`, 
+        id: 'disconnected',
+        type: 'warning'
+      });
+      setTimeout(() => setToast(null), 4000);
     },
     
     onError: (error) => {
       console.error('📡 Real-time: Sync error', error);
+      // Show error notification
+      setToast({ 
+        message: `⚠️ Sync error: ${(error as any).message || 'Connection issue'}`, 
+        id: 'sync-error',
+        type: 'error'
+      });
+      setTimeout(() => setToast(null), 5000);
     }
   });
 
@@ -349,8 +416,8 @@ export function AdminEntries() {
   const rowVirtualizer = useVirtualizer({
     count: currentEntries.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 80, // Estimated row height
-    overscan: 5, // Render 5 extra rows above/below viewport
+    estimateSize: () => 120, // Increased height for better spacing
+    overscan: 10, // Render more extra rows for smoother scrolling
   });
   useEffect(() => {
     const handleEntryUpdate = () => {
@@ -376,6 +443,18 @@ export function AdminEntries() {
     window.addEventListener('staff-synced', handleEntryUpdate);
     window.addEventListener('payment-completed', handleEntryUpdate);
 
+    // Listen for sync connection failures
+    const handleSyncConnectionFailed = (event: any) => {
+      console.log('📡 Sync connection failed event:', event.detail);
+      setToast({ 
+        message: `⚠️ ${event.detail.message || 'Real-time sync connection failed. Please refresh the page.'}`, 
+        id: 'sync-connection-failed'
+      });
+      setTimeout(() => setToast(null), 8000); // Show for 8 seconds
+    };
+
+    window.addEventListener('sync-connection-failed', handleSyncConnectionFailed);
+
     return () => {
       window.removeEventListener('entry-created', handleEntryUpdate);
       window.removeEventListener('entry-updated', handleEntryUpdate);
@@ -386,6 +465,7 @@ export function AdminEntries() {
       window.removeEventListener('receipt-printed', handleReceiptEvent);
       window.removeEventListener('staff-synced', handleEntryUpdate);
       window.removeEventListener('payment-completed', handleEntryUpdate);
+      window.removeEventListener('sync-connection-failed', handleSyncConnectionFailed);
     };
   }, [fetchEntries]);
 
@@ -669,29 +749,29 @@ export function AdminEntries() {
               
               <div 
                 ref={parentRef}
-                className="overflow-x-auto"
-                style={{ height: '600px', overflow: 'auto' }}
+                className="overflow-x-auto border border-gray-200 rounded-lg"
+                style={{ height: '700px', overflow: 'auto' }}
               >
               {/* Table Header */}
-              <div className="sticky top-0 bg-white z-10">
-                <table className="w-full text-left text-sm">
+              <div className="sticky top-0 bg-white z-10 border-b-2 border-gray-300">
+                <table className="w-full text-left text-sm" style={{ tableLayout: 'fixed' }}>
                   <thead>
-                    <tr className="border-b-2 border-blue-200">
-                      <th className="py-3 px-4 text-blue-900 font-bold">Date & Time</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">Filled By</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">Name</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">Mobile</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">Ticket</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">Adults</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">Kids</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">Total</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">Amount</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">💵 Cash</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">💳 UPI</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">🤝 Advance</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">💳 Other</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">🍔 Food Coupons</th>
-                      <th className="py-3 px-4 text-blue-900 font-bold">Actions</th>
+                    <tr className="bg-gray-50">
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '120px' }}>Date & Time</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '140px' }}>Filled By</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '140px' }}>Name</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '120px' }}>Mobile</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '80px' }}>Ticket</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '70px' }}>Adults</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '70px' }}>Kids</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '70px' }}>Total</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '90px' }}>Amount</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '80px' }}>💵 Cash</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '80px' }}>💳 UPI</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '90px' }}>🤝 Advance</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '80px' }}>💳 Other</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold border-r border-gray-200" style={{ width: '140px' }}>🍔 Food Coupons</th>
+                      <th className="py-4 px-4 text-gray-900 font-bold" style={{ width: '120px' }}>Actions</th>
                     </tr>
                   </thead>
                 </table>
@@ -718,52 +798,78 @@ export function AdminEntries() {
                         left: 0,
                         width: '100%',
                         height: `${virtualItem.size}px`,
-                        transform: `translateY(${virtualItem.start}px)`
+                        transform: `translateY(${virtualItem.start}px)`,
+                        willChange: 'transform' // Optimize for performance
                       }}
                     >
-                      <table className="w-full text-left text-sm">
+                      <table className="w-full text-left text-sm" style={{ tableLayout: 'fixed' }}>
                         <tbody>
-                          <tr className="border-b border-gray-100 hover:bg-blue-50 transition">
-                            <td className="py-3 px-4 text-blue-900">
-                              <div>
-                                <p className="font-medium">{dayjs(entry.createdAt).format('DD/MM/YY')}</p>
-                                <p className="text-xs text-blue-600">{dayjs(entry.createdAt).format('hh:mm A')}</p>
+                          <tr className={`border-b border-gray-200 hover:bg-gray-50 transition-all duration-300 ${
+                            highlightId === entry._id 
+                              ? (entry._updated 
+                                  ? 'bg-blue-100 border-blue-300 shadow-lg transform scale-105' 
+                                  : 'bg-green-100 border-green-300 shadow-lg transform scale-105')
+                              : ''
+                          }`}>
+                            <td className="py-4 px-4 text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                              <div className="space-y-1">
+                                <p className="font-medium text-sm">{dayjs(entry.createdAt).format('DD/MM/YY')}</p>
+                                <p className="text-xs text-gray-600">{dayjs(entry.createdAt).format('hh:mm A')}</p>
                               </div>
                             </td>
-                            <td className="py-3 px-4">
-                              <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-blue-100 to-blue-200 text-blue-900 font-bold text-xs border border-blue-300">
+                            <td className="py-4 px-4 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                              <div className="space-y-2">
+                                <div className="flex flex-col gap-1">
+                                  <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-blue-100 to-blue-200 text-blue-900 font-bold text-xs border border-blue-300 inline-block">
                                     👤 {isClient ? (entry.filledByFullName || user?.fullName || user?.username || 'Unknown') : 'Loading...'}
                                   </span>
                                   {entry.createdBy && (
-                                    <span className="px-2 py-1 rounded-lg bg-purple-100 text-purple-900 font-bold text-xs border border-purple-300">
+                                    <span className="px-2 py-1 rounded-lg bg-purple-100 text-purple-900 font-bold text-xs border border-purple-300 inline-block">
                                       {(entry.createdBy as any).username === user?.username ? '👤 You' : '👨 Staff'}
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-gray-500">
-                                  {dayjs(entry.createdAt).format('DD/MM/YY hh:mm A')}
-                                </p>
                               </div>
                             </td>
-                            <td className="py-3 px-4 font-bold text-blue-900">{safeString(entry.name)}</td>
-                            <td className="py-3 px-4 text-blue-900">{safeString(entry.mobile)}</td>
-                            <td className="py-3 px-4">
-                              <span className="px-2 py-1 rounded-lg bg-blue-100 text-blue-900 font-bold text-xs">
+                            <td className="py-4 px-4 font-bold text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                              <div className="truncate" title={safeString(entry.name)}>
+                                {safeString(entry.name)}
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                              <div className="font-mono text-sm">{safeString(entry.mobile)}</div>
+                            </td>
+                            <td className="py-4 px-4 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                              <span className="px-2 py-1 rounded-lg bg-blue-100 text-blue-900 font-bold text-xs inline-block">
                                 {getTicketLabelSync(entry.ticketType as TicketType)}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-blue-900">{safeString(entry.adults)}</td>
-                            <td className="py-3 px-4 text-blue-900">{entry.ticketType === '150' ? '-' : safeString(entry.kids)}</td>
-                            <td className="py-3 px-4 font-bold text-blue-900">{entry.ticketType === '150' ? safeString(entry.adults) : safeString(entry.totalPeople)}</td>
-                            <td className="py-3 px-4 font-bold text-green-900">₹{safeString(entry.finalAmount)}</td>
-                            <td className="py-3 px-4 text-blue-900 font-medium">₹{safeString(entry.cashAmount)}</td>
-                            <td className="py-3 px-4 text-blue-900 font-medium">₹{safeString(entry.upiAmount)}</td>
-                            <td className="py-3 px-4 text-blue-900 font-medium">₹{safeString(entry.advanceAmount)}</td>
-                            <td className="py-3 px-4 text-blue-900 font-medium">₹{safeString(entry.otherAmount)}</td>
-                            <td className="py-3 px-4">
-                              <div className="space-y-1">
+                            <td className="py-4 px-4 text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="font-bold">{safeString(entry.adults)}</div>
+                            </td>
+                            <td className="py-4 px-4 text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="font-bold">{entry.ticketType === '150' ? '-' : safeString(entry.kids)}</div>
+                            </td>
+                            <td className="py-4 px-4 font-bold text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div>{entry.ticketType === '150' ? safeString(entry.adults) : safeString(entry.totalPeople)}</div>
+                            </td>
+                            <td className="py-4 px-4 font-bold text-green-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="whitespace-nowrap">₹{safeString(entry.finalAmount)}</div>
+                            </td>
+                            <td className="py-4 px-4 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="whitespace-nowrap">₹{safeString(entry.cashAmount)}</div>
+                            </td>
+                            <td className="py-4 px-4 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="whitespace-nowrap">₹{safeString(entry.upiAmount)}</div>
+                            </td>
+                            <td className="py-4 px-4 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="whitespace-nowrap">₹{safeString(entry.advanceAmount)}</div>
+                            </td>
+                            <td className="py-4 px-4 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
+                              <div className="whitespace-nowrap">₹{safeString(entry.otherAmount)}</div>
+                            </td>
+                            <td className="py-4 px-4 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
+                              <div className="space-y-2 max-w-xs">
                                 {/* Fast Food Coupons */}
                                 {((entry as any).adultsFastFoodCoupon || (entry as any).kidsFastFoodCoupon) && (
                                   <div className="bg-orange-50 rounded-lg p-2 border border-orange-200">
@@ -800,7 +906,8 @@ export function AdminEntries() {
                                 )}
                               </div>
                             </td>
-                            <td className="py-3 px-4 space-x-2">
+                            <td className="py-4 px-4" style={{ verticalAlign: 'top' }}>
+                              <div className="flex gap-2 flex-wrap">
                               <motion.button
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
@@ -829,6 +936,7 @@ export function AdminEntries() {
                                   🗑
                                 </motion.button>
                               )}
+                            </div>
                             </td>
                           </tr>
                         </tbody>
@@ -842,16 +950,42 @@ export function AdminEntries() {
           )}
         </div>
 
-        {/* Toast Notification */}
+        {/* Professional Toast Notifications */}
         <AnimatePresence>
           {toast && (
             <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50 }}
-              className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50"
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className={`fixed bottom-4 right-4 px-6 py-4 rounded-xl shadow-2xl z-50 max-w-md border-2 ${
+                toast.type === 'success' ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-green-400' :
+                toast.type === 'info' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-400' :
+                toast.type === 'warning' ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-yellow-400' :
+                toast.type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600 text-white border-red-400' :
+                'bg-gradient-to-r from-green-500 to-green-600 text-white border-green-400'
+              }`}
             >
-              {toast.message}
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  {toast.type === 'success' && <span className="text-2xl">✅</span>}
+                  {toast.type === 'info' && <span className="text-2xl">ℹ️</span>}
+                  {toast.type === 'warning' && <span className="text-2xl">⚠️</span>}
+                  {toast.type === 'error' && <span className="text-2xl">❌</span>}
+                  {!toast.type && <span className="text-2xl">✅</span>}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-white">{toast.message}</p>
+                </div>
+                <button
+                  onClick={() => setToast(null)}
+                  className="flex-shrink-0 text-white/80 hover:text-white transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

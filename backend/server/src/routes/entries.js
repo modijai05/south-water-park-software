@@ -34,16 +34,19 @@ const broadcastToClients = (event, data) => {
 router.get('/sync', (req, res) => {
   console.log('📡 New sync client connected');
   
-  // Set SSE headers
+  // Set SSE headers with improved settings
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Connection': 'keep-alive',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Cache-Control'
+    'Access-Control-Allow-Headers': 'Cache-Control',
+    'Access-Control-Allow-Credentials': 'false',
+    'X-Accel-Buffering': 'no' // Disable nginx buffering
   });
   
   const clientId = Date.now() + '-' + Math.random();
+  let isAlive = true;
   
   // Send initial connection event
   res.write(`data: ${JSON.stringify({ 
@@ -52,26 +55,39 @@ router.get('/sync', (req, res) => {
     timestamp: new Date().toISOString() 
   })}\n\n`);
   
-  // Keep connection alive
+  // Keep connection alive with more frequent heartbeat
   const heartbeat = setInterval(() => {
-    res.write(`data: ${JSON.stringify({ 
-      event: 'heartbeat', 
-      timestamp: new Date().toISOString() 
-    })}\n\n`);
-  }, 30000); // 30 second heartbeat
+    if (isAlive) {
+      res.write(`data: ${JSON.stringify({ 
+        event: 'heartbeat', 
+        timestamp: new Date().toISOString() 
+      })}\n\n`);
+    } else {
+      clearInterval(heartbeat);
+    }
+  }, 15000); // 15 second heartbeat (reduced from 30)
   
   // Handle client disconnect
   req.on('close', () => {
+    isAlive = false;
     clearInterval(heartbeat);
     console.log('📡 Sync client disconnected:', clientId);
   });
   
+  req.on('error', (error) => {
+    isAlive = false;
+    clearInterval(heartbeat);
+    console.error('📡 Sync client error:', error);
+  });
+  
   // Trigger immediate sync
   setTimeout(() => {
-    broadcastToClients('sync-required', { 
-      source: 'connection',
-      message: 'Initial sync required' 
-    });
+    if (isAlive) {
+      broadcastToClients('sync-required', { 
+        source: 'connection',
+        message: 'Initial sync required' 
+      });
+    }
   }, 1000);
 });
 
