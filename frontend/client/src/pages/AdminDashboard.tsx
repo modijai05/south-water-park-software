@@ -384,7 +384,7 @@ export function AdminDashboard() {
       ]);
       
       // Extract the actual data from the stats response
-      const statsData = statsRes?.data || statsRes; // Handle both response structures
+      const statsData = statsRes; // API returns data directly
       setStats(statsData as unknown as Stats);
       setCharts(chartsRes as unknown as Charts);
       console.log('Admin: Force refreshed - New prices:', configs.map(c => ({ type: c.ticketType, price: c.basePrice })));
@@ -1051,7 +1051,7 @@ export function AdminDashboard() {
           if (!cancelled) {
             console.log('📊 Dashboard: New stats - todayAdvance:', (s as any)?.todayAdvance, 'totalAdvance:', (s as any)?.totalAdvance);
             console.log('🍔 Dashboard: Food coupons - todayTotal:', (s as any)?.todayTotalFoodCoupons, 'totalFoodCoupons:', (s as any)?.totalFoodCoupons);
-            const statsData = s?.data || s; // Extract data from response
+            const statsData = s; // API returns data directly
             setStats(statsData as unknown as Stats);
             setCharts(c as unknown as Charts);
             console.log('✅ Dashboard: Data updated via global sync');
@@ -1093,7 +1093,7 @@ export function AdminDashboard() {
               fetchTicketConfigs()
             ]);
             if (!cancelled) {
-              const statsData = s?.data || s; // Extract data from response
+              const statsData = s; // API returns data directly
               setStats(statsData as unknown as Stats);
               setCharts(c as unknown as Charts);
               console.log('✅ AdminDashboard: Data updated via global sync');
@@ -1132,7 +1132,7 @@ export function AdminDashboard() {
             ]);
             
             if (!cancelled) {
-              const statsData = s?.data || s; // Extract data from response
+              const statsData = s; // API returns data directly
               setStats(statsData as unknown as Stats); // Proper casting for Stats interface
               setTicketConfigs(c); // c is TicketConfig[]
               setError(null);
@@ -1146,7 +1146,7 @@ export function AdminDashboard() {
                   const resetStats = await entriesApi.stats(true);
                   if (resetStats) {
                     console.log('✅ PROFESSIONAL FIX: Force reset successful, updating stats...');
-                    const resetStatsData = resetStats?.data || resetStats;
+                    const resetStatsData = resetStats; // API returns data directly
                     setStats(resetStatsData as unknown as Stats);
                   }
                 } catch (resetError) {
@@ -1943,6 +1943,10 @@ export function AdminDashboard() {
                           <p className="text-3xl font-extrabold text-white">
                             ₹{!stats ? '0' : <AnimatedCounter value={stats.todayAdditionalDiscount ?? 0} />}
                           </p>
+                          {/* Debug info */}
+                          <div className="text-xs text-amber-200 mt-2">
+                            Debug: stats={stats ? 'exists' : 'null'}, todayAdditionalDiscount={stats?.todayAdditionalDiscount ?? 'undefined'}
+                          </div>
                         </div>
                         <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center shadow-lg">
                           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2602,6 +2606,10 @@ export function AdminDashboard() {
                           <p className="text-3xl font-extrabold text-white">
                             ₹{!stats ? '0' : <AnimatedCounter value={stats.totalAdditionalDiscount ?? 0} />}
                           </p>
+                          {/* Debug info */}
+                          <div className="text-xs text-purple-200 mt-2">
+                            Debug: totalAdditionalDiscount={stats?.totalAdditionalDiscount ?? 'undefined'}
+                          </div>
                         </div>
                         <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center shadow-lg">
                           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
