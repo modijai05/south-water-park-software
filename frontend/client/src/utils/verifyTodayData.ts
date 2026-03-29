@@ -2,6 +2,42 @@
 import { entriesApi } from '@/lib/api';
 import dayjs from 'dayjs';
 
+// Type definitions for API responses
+interface StatsData {
+  todayEntries: number;
+  totalEntries: number;
+  todayPeople: number;
+  totalPeople: number;
+  todayAdults: number;
+  totalAdults: number;
+  todayKids: number;
+  totalKids: number;
+  todayAmount: number;
+  totalAmount: number;
+  todayCash: number;
+  totalCash: number;
+  todayUpi: number;
+  totalUpi: number;
+  todayAdvance: number;
+  totalAdvance: number;
+  lastUpdated?: string;
+  dataFreshness?: string;
+  source?: string;
+  syncStatus?: string;
+}
+
+interface ChartsData {
+  hourlyChart: { _id: string; count: number; amount: number }[];
+  ticketDistribution: { _id: string; count: number; amount: number }[];
+  hourlyComparison: { hour: string; entries: number; revenue: number }[];
+  summary: {
+    totalEntries: number;
+    totalRevenue: number;
+    date: string;
+    lastUpdated: string;
+  };
+}
+
 export const verifyTodayData = async () => {
   console.log('🔍 Verifying today\'s data is displaying correctly...');
   
@@ -16,10 +52,10 @@ export const verifyTodayData = async () => {
     ]);
     
     console.log('📊 Stats data verification:', {
-      todayEntries: statsData?.todayEntries || 0,
-      todayAmount: statsData?.todayAmount || 0,
-      todayPeople: statsData?.todayPeople || 0,
-      lastUpdated: statsData?.lastUpdated
+      todayEntries: (statsData as StatsData)?.todayEntries || 0,
+      todayAmount: (statsData as StatsData)?.todayAmount || 0,
+      todayPeople: (statsData as StatsData)?.todayPeople || 0,
+      lastUpdated: (statsData as StatsData)?.lastUpdated
     });
     
     console.log('📈 Charts data verification:', {
@@ -34,7 +70,7 @@ export const verifyTodayData = async () => {
     const issues = [];
     
     // Check if stats show today's data
-    if (!statsData?.todayEntries || statsData.todayEntries < 0) {
+    if (!(statsData as StatsData)?.todayEntries || (statsData as StatsData).todayEntries < 0) {
       issues.push('Stats todayEntries is missing or invalid');
     }
     
@@ -50,7 +86,7 @@ export const verifyTodayData = async () => {
     
     // Check if data is fresh (updated within last 5 minutes)
     const now = dayjs();
-    const lastUpdated = dayjs(statsData?.lastUpdated || chartsData?.summary?.lastUpdated);
+    const lastUpdated = dayjs((statsData as StatsData)?.lastUpdated || chartsData?.summary?.lastUpdated);
     const minutesSinceUpdate = now.diff(lastUpdated, 'minute');
     
     if (minutesSinceUpdate > 5) {
@@ -71,16 +107,16 @@ export const verifyTodayData = async () => {
       data: { statsData, chartsData },
       verification: {
         date: today,
-        entries: statsData?.todayEntries || 0,
-        revenue: statsData?.todayAmount || 0,
-        lastUpdated: statsData?.lastUpdated,
+        entries: (statsData as StatsData)?.todayEntries || 0,
+        revenue: (statsData as StatsData)?.todayAmount || 0,
+        lastUpdated: (statsData as StatsData)?.lastUpdated,
         freshness: `${minutesSinceUpdate} minutes ago`
       }
     };
     
   } catch (error) {
     console.error('❌ Verification failed:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: (error as Error).message };
   }
 };
 
