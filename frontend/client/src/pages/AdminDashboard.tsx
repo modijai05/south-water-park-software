@@ -13,6 +13,7 @@ import { useAuthStore } from '@/store/authStore';
 import type { TicketConfig } from '@/types';
 import { globalSyncService } from '@/services/globalSyncService';
 import { useDailyReset, performDailyReset, needsDailyReset } from '@/utils/dailyReset';
+import { checkAndTriggerReset } from '@/utils/systemReset';
 
 // Helper functions for data transformation
 const generateQuarterlyData = (monthlyData: any[]) => {
@@ -257,10 +258,13 @@ export function AdminDashboard() {
   // Check if reset is needed on component mount
   useEffect(() => {
     if (needsDailyReset()) {
-      console.log('🔄 Daily reset needed on dashboard mount');
+      console.log('🔄 AdminDashboard: Daily reset needed on mount');
       performDailyReset();
       fetchAllData();
     }
+    
+    // Check and trigger system reset for deployment changes
+    checkAndTriggerReset();
   }, []);
 
   // Enhanced sync function to force refresh all data
