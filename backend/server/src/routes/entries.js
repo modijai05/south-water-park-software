@@ -352,20 +352,21 @@ const simpleAuth = (req, res, next) => {
   }
 };
 
-// Helper function to get today's date range (UTC-based for consistency)
+// Helper function to get today's date range (LOCAL timezone to match MongoDB timestamps)
 const getTodayRange = () => {
-  // Use UTC timezone to ensure consistent date handling across server and client
-  const now = dayjs().utc();
-  const startOfDay = now.startOf('day').utc().toDate();
-  const endOfDay = now.endOf('day').utc().toDate();
+  // Use local timezone to match MongoDB stored timestamps
+  const now = dayjs();
+  const startOfDay = now.startOf('day').toDate();
+  const endOfDay = now.endOf('day').toDate();
   
-  console.log('📅 Today date range (UTC):', {
+  console.log('📅 Today date range (LOCAL):', {
     now: now.toISOString(),
     startOfDay: startOfDay.toISOString(),
     endOfDay: endOfDay.toISOString(),
-    timezone: 'UTC',
+    timezone: now.format('Z'),
     localDate: now.format('YYYY-MM-DD'),
-    localTime: now.format('HH:mm:ss')
+    localTime: now.format('HH:mm:ss'),
+    utcTime: now.utc().format('YYYY-MM-DD HH:mm:ss')
   });
   
   return { startOfDay, endOfDay };
@@ -1452,54 +1453,44 @@ router.get('/export', async (req, res) => {
           success: true,
           data: exportData
         });
-      } else {
-        console.log('⚠️ MongoDB not connected, returning fallback export data');
         
-        return res.json({
-          success: true,
-          data: {
-            entries: [],
-            total: 0,
-            query: { search, ticketType, from, to, limit },
-            exportDate: new Date().toISOString(),
-            exportStats: {
-              averageTicketValue: 0,
-              totalPeople: 0,
-              totalRevenue: 0,
-              ticketTypeDistribution: {}
-            },
-            metadata: {
-              exportVersion: '2.0',
-              dataIntegrity: 'fallback',
-              source: 'database-disconnected',
-              performance: {
-                queryTime: Date.now(),
-                recordCount: 0,
-                cacheStatus: 'offline'
-              }
-            }
-          }
+      } catch (dbError) {
+        console.error('❌ Database export error:', dbError.message);
+        return res.status(500).json({
+          success: false,
+          error: 'Database error',
+          message: dbError.message
         });
       }
-    } catch (dbError) {
-      console.error('❌ Database export error:', dbError.message);
-      return res.status(500).json({
-        success: false,
-        error: 'Database error',
-        message: dbError.message
+    } else {
+      console.log('⚠️ MongoDB not connected, returning fallback export data');
+      
+      return res.json({
+        success: true,
+        data: {
+          entries: [],
+          total: 0,
+          query: { search, ticketType, from, to, limit },
+          exportDate: new Date().toISOString(),
+          exportStats: {
+            averageTicketValue: 0,
+            totalPeople: 0,
+            totalRevenue: 0,
+            ticketTypeDistribution: {}
+          },
+          metadata: {
+            exportVersion: '2.0',
+            dataIntegrity: 'fallback',
+            source: 'mock',
+            performance: {
+              queryTime: Date.now(),
+              recordCount: 0,
+              cacheStatus: 'fallback'
+            }
+          }
+        }
       });
     }
-    
-  } catch (error) {
-    console.error('❌ Export endpoint error:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to export entries',
-      message: error.message
-    });
-  }
-});
-    
   } catch (error) {
     console.error('❌ Export endpoint error:', error);
     return res.status(500).json({

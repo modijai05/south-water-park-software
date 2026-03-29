@@ -2,10 +2,6 @@
 import { performDailyReset, clearTodayCache, markDailyReset } from './dailyReset';
 import { entriesApi } from '@/lib/api';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-
-// Enable UTC plugin
-dayjs.extend(utc);
 
 /**
  * Force a complete daily reset regardless of current state
@@ -15,8 +11,8 @@ export const forceDailyResetComplete = async () => {
   console.log('🚨 FORCING COMPLETE DAILY RESET - Manual Intervention');
   
   try {
-    const today = dayjs().utc().format('YYYY-MM-DD');
-    const now = dayjs().utc().toISOString();
+    const today = dayjs().format('YYYY-MM-DD');
+    const now = dayjs().toISOString();
     
     console.log('📅 Force reset details:', {
       today,
@@ -97,7 +93,7 @@ export const forceDailyResetComplete = async () => {
     
     // Dispatch error event
     window.dispatchEvent(new CustomEvent('force-daily-reset-error', {
-      detail: { error: error.message, timestamp: dayjs().utc().toISOString() }
+      detail: { error: error.message, timestamp: dayjs().toISOString() }
     }));
     
     return { success: false, error: error.message };
@@ -110,7 +106,7 @@ export const forceDailyResetComplete = async () => {
 export const needsForceReset = (statsData: any): boolean => {
   if (!statsData) return false;
   
-  const today = dayjs().utc().format('YYYY-MM-DD');
+  const today = dayjs().format('YYYY-MM-DD');
   const hasTodayEntries = (statsData.todayEntries || 0) > 0;
   const hasTodayAmount = (statsData.todayAmount || 0) > 0;
   const hasTodayPeople = (statsData.todayPeople || 0) > 0;

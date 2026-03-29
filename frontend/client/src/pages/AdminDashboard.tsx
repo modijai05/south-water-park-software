@@ -266,14 +266,14 @@ export function AdminDashboard() {
   useEffect(() => {
     // Prevent multiple reset triggers on same page load
     const resetAlreadyTriggered = sessionStorage.getItem('admin-reset-triggered');
-    const today = dayjs().utc().format('YYYY-MM-DD');
+    const today = dayjs().format('YYYY-MM-DD');
     
-    // Clear session storage if it's a new day (UTC-based)
+    // Clear session storage if it's a new day (LOCAL-based)
     const lastResetDate = sessionStorage.getItem('admin-reset-date');
     if (lastResetDate !== today) {
       sessionStorage.clear();
       sessionStorage.setItem('admin-reset-date', today);
-      console.log('🔄 New UTC day detected, cleared session storage:', {
+      console.log('🔄 New LOCAL day detected, cleared session storage:', {
         lastResetDate,
         today,
         localTime: dayjs().format('YYYY-MM-DD'),
@@ -306,7 +306,7 @@ export function AdminDashboard() {
           console.log('🔄 AdminDashboard: Reset operations completed', {
             systemReset: systemResetNeeded,
             forceRefresh: forceRefreshNeeded,
-            utcDate: today
+            localDate: today
           });
         } catch (error) {
           console.error('❌ AdminDashboard: Reset operations failed:', error);

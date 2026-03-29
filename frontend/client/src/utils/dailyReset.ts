@@ -1,8 +1,4 @@
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-
-// Enable UTC plugin
-dayjs.extend(utc);
 
 // Storage key for last reset date
 const LAST_RESET_KEY = 'south-water-park-last-reset';
@@ -15,13 +11,13 @@ export interface DailyResetStats {
 }
 
 /**
- * Check if a daily reset is needed based on the current date (UTC-based)
+ * Check if a daily reset is needed based on the current date (LOCAL timezone)
  */
 export const needsDailyReset = (): boolean => {
   const lastReset = localStorage.getItem(LAST_RESET_KEY);
-  const today = dayjs().utc().format('YYYY-MM-DD');
+  const today = dayjs().format('YYYY-MM-DD');
   
-  console.log('🔄 Daily reset check (UTC):', { 
+  console.log('🔄 Daily reset check (LOCAL):', { 
     lastReset, 
     today, 
     localTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
@@ -38,13 +34,13 @@ export const needsDailyReset = (): boolean => {
 };
 
 /**
- * Mark that a daily reset has been performed for today (UTC-based)
+ * Mark that a daily reset has been performed for today (LOCAL timezone)
  */
 export const markDailyReset = (): void => {
-  const today = dayjs().utc().format('YYYY-MM-DD');
-  const timestamp = dayjs().utc().toISOString();
+  const today = dayjs().format('YYYY-MM-DD');
+  const timestamp = dayjs().toISOString();
   
-  console.log('🌅 Performing daily reset for UTC date:', today);
+  console.log('🌅 Performing daily reset for LOCAL date:', today);
   
   // Store the reset date
   localStorage.setItem(LAST_RESET_KEY, today);
