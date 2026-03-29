@@ -22,21 +22,58 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Username and password required' });
     }
     
-    // Always check fallback authentication first (for production reliability)
-    if (username === 'admin1' && password === 'admin1') {
+    // Check database authentication first
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const user = await User.findOne({ username });
+        console.log('🔐 Database user found:', user ? 'YES' : 'NO');
+        
+        if (user && user.password === password) {
+          console.log('🔐 Database authentication successful');
+          const token = jwt.sign(
+            { userId: user._id, username: user.username, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+          );
+          
+          const response = {
+            message: 'Login successful',
+            token,
+            user: {
+              id: user._id,
+              username: user.username,
+              fullName: user.fullName,
+              role: user.role,
+              active: user.active
+            }
+          };
+          
+          console.log('🔐 Database login successful');
+          // Set CORS headers
+          res.header('Access-Control-Allow-Origin', '*');
+          res.header('Access-Control-Allow-Credentials', 'true');
+          return res.json(response);
+        }
+      }
+    } catch (dbError) {
+      console.error('🔐 Database authentication error:', dbError.message);
+    }
+    
+    // Fallback authentication for admin user (temporary - should be removed in production)
+    if (username === 'admin' && password === 'admin123') {
       console.log('🔐 Using fallback admin authentication');
       const token = jwt.sign(
-        { userId: 'fallback-admin', username: 'admin1', role: 'admin' },
+        { userId: 'fallback-admin', username: 'admin', role: 'admin' },
         JWT_SECRET,
         { expiresIn: '24h' }
       );
       
       const response = {
-        message: 'Login successful (fallback mode)',
+        message: 'Login successful (admin)',
         token,
         user: {
           id: 'fallback-admin',
-          username: 'admin1',
+          username: 'admin',
           fullName: 'Admin User',
           role: 'admin',
           active: true
@@ -50,34 +87,6 @@ router.post('/login', async (req, res) => {
       return res.json(response);
     }
     
-    if (username === 'staff1' && password === 'staff1') {
-      console.log('🔐 Using fallback staff authentication');
-      const token = jwt.sign(
-        { userId: 'fallback-staff', username: 'staff1', role: 'staff' },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-      
-      const response = {
-        message: 'Login successful (fallback mode)',
-        token,
-        user: {
-          id: 'fallback-staff',
-          username: 'staff1',
-          fullName: 'Staff User',
-          role: 'staff',
-          active: true
-        }
-      };
-      
-      console.log('🔐 Fallback staff login successful');
-      // Set CORS headers
-      res.header('Access-Control-Allow-Origin', '*');
-      res.header('Access-Control-Allow-Credentials', 'true');
-      return res.json(response);
-    }
-    
-    // Check database connection only after fallback attempts
     if (mongoose.connection.readyState !== 1) {
       console.log('⚠️ Login: Database not connected and no valid fallback credentials');
       return res.status(401).json({ message: 'Invalid username or password' });
