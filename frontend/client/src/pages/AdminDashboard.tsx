@@ -14,6 +14,7 @@ import type { TicketConfig } from '@/types';
 import { globalSyncService } from '@/services/globalSyncService';
 import { useDailyReset, performDailyReset, needsDailyReset } from '@/utils/dailyReset';
 import { checkAndTriggerReset } from '@/utils/systemReset';
+import { checkAndForceRefresh } from '@/utils/forceRefresh';
 
 // Helper functions for data transformation
 const generateQuarterlyData = (monthlyData: any[]) => {
@@ -265,6 +266,9 @@ export function AdminDashboard() {
     
     // Check and trigger system reset for deployment changes
     checkAndTriggerReset();
+    
+    // Check and force refresh to today's data
+    checkAndForceRefresh();
   }, []);
 
   // Enhanced sync function to force refresh all data
