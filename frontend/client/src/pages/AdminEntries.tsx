@@ -2,17 +2,15 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import dayjs from 'dayjs';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { Layout } from '@/components/Layout';
 import { entriesApi } from '@/lib/api';
-import { getTicketLabel, getTicketLabelSync, computeAmounts, computeAmountsSync, TICKET_OPTIONS } from '@/lib/ticketUtils';
+import { getTicketLabel, computeAmounts, TICKET_OPTIONS } from '@/lib/ticketUtils';
 import { useEntryStore } from '@/store/entryStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useRealTimeSync } from '@/hooks/useRealTimeSync';
 import type { EntryRecord, TicketType } from '@/types';
 
-// Helper function to safely convert values to strings - v2
+// Helper function to safely convert values to strings
 const safeString = (value: any): string => {
   if (value === null || value === undefined) return '0';
   if (typeof value === 'string') return value;
@@ -37,376 +35,46 @@ export function AdminEntries() {
   const { user } = useAuthStore();
   const [isClient, setIsClient] = useState(false);
   const [entries, setEntries] = useState<EntryRecord[]>([]);
-  const [allEntries, setAllEntries] = useState<EntryRecord[]>([]); // Cache for all entries
+  const [allEntries, setAllEntries] = useState<EntryRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(false); // Only for first load
+  const [initialLoading, setInitialLoading] = useState(false);
   const [editing, setEditing] = useState<EntryRecord | null>(null);
   const [viewing, setViewing] = useState<EntryRecord | null>(null);
   const [toast, setToast] = useState<{ message: string; id: string; type?: 'success' | 'info' | 'warning' | 'error' } | null>(null);
-  const [highlightId, setHighlightId] = useState<string | null>(null);
-  const [inlineEditing, setInlineEditing] = useState<{ id: string; field: string; value: string } | null>(null);
-  const limit = 50; // Reduced for better performance
   
   // Performance optimizations
   const debouncedSearch = useDebounce(search, 300);
-  const searchCache = useRef<Map<string, EntryRecord[]>>(new Map());
   const lastFetchTime = useRef<number>(0);
-  
-  // Date-wise pagination state
-  const [dateGroups, setDateGroups] = useState<{ today: EntryRecord[], yesterday: EntryRecord[], older: EntryRecord[] }>({
-    today: [],
-    yesterday: [], 
-    older: []
-  });
-  const [activeDateGroup, setActiveDateGroup] = useState<'today' | 'yesterday' | 'older'>('today');
-  const [olderPage, setOlderPage] = useState(1);
-
-  // Real-time sync integration
-  const { isConnected, reconnect, connectionId, connectionState } = useRealTimeSync({
-    onEntryCreated: (entry) => {
-      console.log('📡 Real-time: New entry created', entry);
-      
-      // Add new entry to the beginning of the list with immediate visibility
-      setAllEntries(prev => {
-        const newEntries = [entry, ...prev];
-        console.log('📡 Entry added to list. New count:', newEntries.length);
-        return newEntries;
-      });
-      
-      setTotal(prev => prev + 1);
-      
-      // Highlight the new entry immediately
-      setHighlightId(entry._id);
-      setTimeout(() => setHighlightId(null), 5000); // Longer highlight for new entries
-      
-      // Show prominent toast notification
-      setToast({ 
-        message: `🎫 NEW ENTRY: ${entry.name} - ${getTicketLabelSync(entry.ticketType as TicketType)} - ₹${entry.finalAmount}`, 
-        id: `new-${entry._id}`,
-        type: 'success'
-      });
-      setTimeout(() => setToast(null), 6000);
-      
-      // Play a subtle notification sound if available
-      if (typeof window !== 'undefined' && 'Audio' in window) {
-        try {
-          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
-          audio.volume = 0.3;
-          audio.play().catch(() => {}); // Ignore audio errors
-        } catch (e) {}
-      }
-    },
-    
-    onEntryUpdated: (entry) => {
-      console.log('📡 Real-time: Entry updated', entry);
-      
-      // Update entry in the list with immediate visibility
-      setAllEntries(prev => {
-        const updatedEntries = prev.map(e => 
-          e._id === entry._id ? { ...entry, _updated: true } : e
-        );
-        console.log('📡 Entry updated in list:', entry._id);
-        return updatedEntries;
-      });
-      
-      // Highlight the updated entry with different color
-      setHighlightId(entry._id);
-      setTimeout(() => setHighlightId(null), 3000);
-      
-      // Show toast notification
-      setToast({ 
-        message: `✏️ ENTRY UPDATED: ${entry.name} - ${getTicketLabelSync(entry.ticketType as TicketType)}`, 
-        id: `update-${entry._id}`,
-        type: 'info'
-      });
-      setTimeout(() => setToast(null), 4000);
-    },
-    
-    onEntryDeleted: (entryId, entry) => {
-      console.log('📡 Real-time: Entry deleted', entryId);
-      
-      // Remove entry from the list with animation
-      setHighlightId(entryId);
-      setTimeout(() => {
-        setAllEntries(prev => {
-          const filteredEntries = prev.filter(e => e._id !== entryId);
-          console.log('📡 Entry removed from list. New count:', filteredEntries.length);
-          return filteredEntries;
-        });
-        setTotal(prev => prev - 1);
-        setHighlightId(null);
-      }, 500); // Brief highlight before removal
-      
-      // Show toast notification
-      setToast({ 
-        message: `🗑️ ENTRY DELETED: ${entry?.name || 'Unknown'}`, 
-        id: `delete-${entryId}`,
-        type: 'warning'
-      });
-      setTimeout(() => setToast(null), 4000);
-    },
-    
-    onSyncRequired: (data) => {
-      console.log('📡 Real-time: Sync required', data);
-      // Force refresh entries with loading indicator
-      setToast({ 
-        message: `🔄 Syncing entries...`, 
-        id: 'sync-required',
-        type: 'info'
-      });
-      fetchEntries(true);
-    },
-    
-    onReceiptGenerated: (data) => {
-      console.log('📡 Real-time: Receipt generated', data);
-      // Force refresh entries to get updated receipt numbers
-      setToast({ 
-        message: `🧾 Receipt generated - refreshing entries...`, 
-        id: 'receipt-generated',
-        type: 'info'
-      });
-      fetchEntries(true);
-    },
-    
-    onConnected: () => {
-      console.log('📡 Real-time: Connected to sync server');
-      // Show success notification
-      setToast({ 
-        message: `🟢 Real-time sync connected (ID: ${connectionId || 'Unknown'})`, 
-        id: 'connected',
-        type: 'success'
-      });
-      setTimeout(() => setToast(null), 3000);
-      // Trigger initial sync when connected
-      setTimeout(() => fetchEntries(true), 1000);
-    },
-    
-    onDisconnected: () => {
-      console.log('📡 Real-time: Disconnected from sync server');
-      // Show warning notification
-      setToast({ 
-        message: `🔴 Real-time sync disconnected`, 
-        id: 'disconnected',
-        type: 'warning'
-      });
-      setTimeout(() => setToast(null), 4000);
-    },
-    
-    onError: (error) => {
-      console.error('📡 Real-time: Sync error', error);
-      // Show error notification
-      setToast({ 
-        message: `⚠️ Sync error: ${(error as any).message || 'Connection issue'}`, 
-        id: 'sync-error',
-        type: 'error'
-      });
-      setTimeout(() => setToast(null), 5000);
-    }
-  });
 
   // Fix hydration issues
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Group entries by date for optimized display
-  const groupEntriesByDate = useCallback((entries: EntryRecord[]) => {
-    const now = dayjs();
-    const today = now.startOf('day');
-    const yesterday = today.subtract(1, 'day');
-    
-    const groups = {
-      today: [] as EntryRecord[],
-      yesterday: [] as EntryRecord[],
-      older: [] as EntryRecord[]
-    };
-    
-    entries.forEach(entry => {
-      const entryDate = dayjs(entry.createdAt).startOf('day');
-      if (entryDate.isSame(today, 'day')) {
-        groups.today.push(entry);
-      } else if (entryDate.isSame(yesterday, 'day')) {
-        groups.yesterday.push(entry);
-      } else {
-        groups.older.push(entry);
-      }
-    });
-    
-    return groups;
-  }, []);
-  
-  // In-memory search filtering for instant results
-  const filterEntries = useCallback((entries: EntryRecord[], searchTerm: string) => {
-    if (!searchTerm.trim()) return entries;
-    
-    const term = searchTerm.toLowerCase();
-    return entries.filter(entry => 
-      entry.name?.toLowerCase().includes(term) ||
-      entry.mobile?.toLowerCase().includes(term) ||
-      entry.ticketType?.toLowerCase().includes(term) ||
-      entry.receiptNumber?.toLowerCase().includes(term) ||
-      entry.filledByFullName?.toLowerCase().includes(term) ||
-      (entry.createdBy as any)?.username?.toLowerCase().includes(term)
-    );
-  }, []);
-  
-  // Memoized filtered entries for instant search
-  const filteredEntries = useMemo(() => {
-    if (!search.trim()) {
-      return allEntries; // Return all entries if no search
-    }
-    
-    // Check cache first
-    const cacheKey = search.toLowerCase();
-    if (searchCache.current.has(cacheKey)) {
-      return searchCache.current.get(cacheKey)!;
-    }
-    
-    // Filter and cache
-    const filtered = filterEntries(allEntries, search);
-    searchCache.current.set(cacheKey, filtered);
-    
-    // Clear cache if it gets too large
-    if (searchCache.current.size > 50) {
-      const firstKey = searchCache.current.keys().next().value;
-      searchCache.current.delete(firstKey);
-    }
-    
-    return filtered;
-  }, [allEntries, search, filterEntries]);
-  
-  // Get current entries based on active date group and pagination
-  const currentEntries = useMemo(() => {
-    console.log('🔍 Current entries calculation:', {
-      totalEntries: allEntries.length,
-      activeDateGroup,
-      searchTerm: search,
-      todayCount: dateGroups.today.length,
-      yesterdayCount: dateGroups.yesterday.length,
-      olderCount: dateGroups.older.length
-    });
-    
-    // If search exists, use filtered entries
-    if (search.trim()) {
-      console.log('🔍 Using filtered entries for search:', filteredEntries.length);
-      return filteredEntries;
-    }
-    
-    // If no search, show entries by date group
-    let entriesToShow: EntryRecord[] = [];
-    
-    if (activeDateGroup === 'today') {
-      entriesToShow = dateGroups.today;
-    } else if (activeDateGroup === 'yesterday') {
-      entriesToShow = dateGroups.yesterday;
-    } else {
-      // Older entries with pagination
-      const startIndex = (olderPage - 1) * limit;
-      const endIndex = startIndex + limit;
-      entriesToShow = dateGroups.older.slice(startIndex, endIndex);
-    }
-    
-    // Fallback: if no entries in selected date group, show all entries
-    if (entriesToShow.length === 0 && allEntries.length > 0) {
-      console.log('🔍 No entries in date group, showing all entries');
-      return allEntries;
-    }
-    
-    console.log('🔍 Final entries to show:', entriesToShow.length);
-    return entriesToShow;
-  }, [allEntries, activeDateGroup, dateGroups, olderPage, limit, search, filteredEntries]);
-  
-  // Update date groups when all entries change
-  useEffect(() => {
-    const groups = groupEntriesByDate(allEntries);
-    setDateGroups(groups);
-  }, [allEntries, groupEntriesByDate]);
-  
-  // Optimized fetch with caching and improved error handling
-  const fetchEntries = useCallback(async (forceRefresh = false) => {
+  // Simple fetch function
+  const fetchEntries = useCallback(async () => {
     if (!isClient) return;
     
-    const now = Date.now();
-    const cacheDuration = 30000; // 30 seconds cache
-    
-    // Always fetch if forceRefresh or no entries exist
-    if (!forceRefresh && allEntries.length > 0 && (now - lastFetchTime.current) < cacheDuration) {
-      console.log('🔍 Using cached entries:', allEntries.length);
-      return;
-    }
-    
-    setInitialLoading(allEntries.length === 0); // Only show loading on first fetch
     setLoading(true);
-    console.log('🔍 AdminEntries: Fetching entries...', { forceRefresh, currentEntries: allEntries.length });
+    console.log('🔍 Fetching entries...');
     
     try {
-      // Try multiple approaches to get entries
-      let fetchedEntries: EntryRecord[] = [];
-      let totalEntries = 0;
+      const res = await entriesApi.list({ page: 1, limit: 10000 });
       
-      // First attempt: Use syncAll API for comprehensive data
-      try {
-        console.log('🔍 Trying syncAll API...');
-        const syncData = await entriesApi.syncAll();
-        if (syncData && syncData.recentEntries && syncData.recentEntries.length > 0) {
-          fetchedEntries = syncData.recentEntries as EntryRecord[];
-          totalEntries = syncData.summary.totalRecords || fetchedEntries.length;
-          console.log('🔍 SyncAll successful:', fetchedEntries.length, 'entries');
-        }
-      } catch (syncError) {
-        console.warn('🔍 SyncAll failed, trying list API:', syncError);
-      }
+      const fetchedEntries = (res.data?.entries as EntryRecord[]) ?? [];
+      const totalEntries = res.data?.total ?? 0;
       
-      // Second attempt: Use list API if syncAll failed or returned no data
-      if (fetchedEntries.length === 0) {
-        console.log('🔍 Using list API...');
-        const res = await entriesApi.list({ page: 1, limit: 5000 });
-        
-        console.log('🔍 AdminEntries: API response:', { 
-          success: res.success, 
-          entriesCount: res.data?.entries?.length || 0, 
-          total: res.data?.total || 0
-        });
-        
-        fetchedEntries = (res.data?.entries as EntryRecord[]) ?? [];
-        totalEntries = res.data?.total ?? 0;
-        
-        // If there are more entries than we fetched, fetch them all
-        if (totalEntries > fetchedEntries.length && totalEntries <= 10000) {
-          console.log('🔍 AdminEntries: Fetching remaining entries...');
-          const remainingRes = await entriesApi.list({ page: 1, limit: totalEntries });
-          fetchedEntries = (remainingRes.data?.entries as EntryRecord[]) ?? [];
-        }
-      }
+      console.log('🔍 Fetched entries:', fetchedEntries.length, 'of', totalEntries);
       
-      console.log('🔍 AdminEntries: Final fetch result:', fetchedEntries.length, 'of', totalEntries);
+      setAllEntries(fetchedEntries);
+      setTotal(totalEntries);
+      setEntries(fetchedEntries);
       
-      if (fetchedEntries.length > 0) {
-        setAllEntries(fetchedEntries);
-        setTotal(totalEntries);
-        lastFetchTime.current = now;
-        
-        // Debug first and last entries
-        const firstEntry = fetchedEntries[0];
-        const lastEntry = fetchedEntries[fetchedEntries.length - 1];
-        console.log('🔍 AdminEntries: Entry range:', {
-          first: { id: firstEntry._id, name: firstEntry.name, createdAt: firstEntry.createdAt },
-          last: { id: lastEntry._id, name: lastEntry.name, createdAt: lastEntry.createdAt }
-        });
-      } else {
-        console.log('🔍 AdminEntries: No entries found - setting empty state');
-        setAllEntries([]);
-        setTotal(0);
-        lastFetchTime.current = now;
-      }
     } catch (error) {
-      console.error('🔍 AdminEntries: Failed to fetch entries:', error);
-      // Set empty state on error to prevent infinite loading
-      setAllEntries([]);
-      setTotal(0);
+      console.error('🔍 Failed to fetch entries:', error);
       setToast({ 
         message: '⚠️ Failed to load entries. Please refresh the page.', 
         id: 'fetch-error',
@@ -417,1412 +85,569 @@ export function AdminEntries() {
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [isClient, allEntries.length]);
-  
-  // Initial load - always fetch on mount
+  }, [isClient]);
+
+  // Filter entries based on search
+  const filteredEntries = useMemo(() => {
+    if (!search.trim()) return allEntries;
+    
+    const searchTerm = search.toLowerCase().trim();
+    return allEntries.filter(entry => 
+      entry.name?.toLowerCase().includes(searchTerm) ||
+      entry.mobile?.toLowerCase().includes(searchTerm) ||
+      entry.filledByFullName?.toLowerCase().includes(searchTerm) ||
+      entry.ticketType?.toLowerCase().includes(searchTerm)
+    );
+  }, [allEntries, search]);
+
+  // Initial load
   useEffect(() => {
-    console.log('🔍 AdminEntries: Component mounted, fetching entries...');
-    fetchEntries(true); // Force refresh on initial load
-  }, []);
-  
+    console.log('🔍 Component mounted, fetching entries...');
+    fetchEntries();
+  }, [fetchEntries]);
+
   // Handle search with debounced value
   useEffect(() => {
     if (debouncedSearch !== search) {
-      // Search changed, but debounced value hasn't caught up yet
       return;
     }
     
-    // Clear search cache when search changes
+    // Apply search filter
     if (search.trim() === '') {
-      searchCache.current.clear();
+      setEntries(allEntries);
+    } else {
+      setEntries(filteredEntries);
     }
-    
-    // For search, we use in-memory filtering, no API call needed
-    console.log('🔍 Using in-memory search for:', search);
-  }, [debouncedSearch, search]);
+  }, [debouncedSearch, search, allEntries, filteredEntries]);
 
-  // Virtualization setup for large lists
-  const parentRef = useRef<HTMLDivElement>(null);
-  
-  const rowVirtualizer = useVirtualizer({
-    count: currentEntries.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 120, // Increased height for better spacing
-    overscan: 10, // Render more extra rows for smoother scrolling
-  });
-  useEffect(() => {
-    const handleEntryUpdate = () => {
-      console.log('AdminEntries: Real-time sync triggered');
-      fetchEntries(true); // Force refresh on updates
-    };
-
-    // Listen for various entry events
-    window.addEventListener('entry-created', handleEntryUpdate);
-    window.addEventListener('entry-updated', handleEntryUpdate);
-    window.addEventListener('entry-deleted', handleEntryUpdate);
-    window.addEventListener('dashboard-synced', handleEntryUpdate);
-    window.addEventListener('entries-refresh', handleEntryUpdate); // Listen for admin sync coordinator
-    
-    // Listen for receipt events from staff dashboard
-    const handleReceiptEvent = (event: any) => {
-      console.log('🧾 AdminEntries: Receipt event received:', event.detail);
-      fetchEntries(true);
-    };
-    
-    window.addEventListener('receipt-generated', handleReceiptEvent);
-    window.addEventListener('receipt-printed', handleReceiptEvent);
-    window.addEventListener('staff-synced', handleEntryUpdate);
-    window.addEventListener('payment-completed', handleEntryUpdate);
-
-    // Listen for sync connection failures
-    const handleSyncConnectionFailed = (event: any) => {
-      console.log('📡 Sync connection failed event:', event.detail);
-      setToast({ 
-        message: `⚠️ ${event.detail.message || 'Real-time sync connection failed. Please refresh the page.'}`, 
-        id: 'sync-connection-failed'
-      });
-      setTimeout(() => setToast(null), 8000); // Show for 8 seconds
-    };
-
-    window.addEventListener('sync-connection-failed', handleSyncConnectionFailed);
-
-    return () => {
-      window.removeEventListener('entry-created', handleEntryUpdate);
-      window.removeEventListener('entry-updated', handleEntryUpdate);
-      window.removeEventListener('entry-deleted', handleEntryUpdate);
-      window.removeEventListener('dashboard-synced', handleEntryUpdate);
-      window.removeEventListener('entries-refresh', handleEntryUpdate); // Remove admin sync coordinator event
-      window.removeEventListener('receipt-generated', handleReceiptEvent);
-      window.removeEventListener('receipt-printed', handleReceiptEvent);
-      window.removeEventListener('staff-synced', handleEntryUpdate);
-      window.removeEventListener('payment-completed', handleEntryUpdate);
-      window.removeEventListener('sync-connection-failed', handleSyncConnectionFailed);
-    };
-  }, [fetchEntries]);
-
+  // Delete entry function
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this entry?')) return;
+    if (!confirm('Are you sure you want to delete this entry?')) return;
+    
     try {
       await entriesApi.delete(id);
+      setAllEntries(prev => prev.filter(entry => entry._id !== id));
+      setEntries(prev => prev.filter(entry => entry._id !== id));
+      setTotal(prev => prev - 1);
       
-      // Trigger real-time sync event for dashboard
-      window.dispatchEvent(new CustomEvent('entry-deleted', { 
-        detail: { 
-          entryId: id, 
-          action: 'delete',
-          timestamp: new Date().toISOString()
-        } 
-      }));
-      
-      fetchEntries(true); // Force refresh after delete
-    } catch (e) {
-      alert((e as Error).message);
-    }
-  };
-
-  const handleInlineEdit = async (id: string, field: string, value: string) => {
-    try {
-      const entry = allEntries.find(e => e._id === id);
-      if (!entry) return;
-      
-      const updateData = { ...entry, [field]: value };
-      await entriesApi.update(id, updateData);
-      
-      // Update local state instantly
-      setAllEntries(prev => prev.map(e => 
-        e._id === id ? { ...e, [field]: value } : e
-      ));
-      
-      setToast({ message: `✅ ${field} updated successfully!`, id: `inline-${id}-${field}` });
+      setToast({ 
+        message: '✅ Entry deleted successfully', 
+        id: 'delete-success',
+        type: 'success'
+      });
       setTimeout(() => setToast(null), 3000);
-      
-      // Trigger real-time sync
-      window.dispatchEvent(new CustomEvent('entry-updated', { 
-        detail: { 
-          entryId: id, 
-          action: 'inline-edit',
-          field,
-          timestamp: new Date().toISOString()
-        } 
-      }));
-      
-    } catch (e) {
-      alert((e as Error).message);
+    } catch (error) {
+      console.error('Delete error:', error);
+      setToast({ 
+        message: '❌ Failed to delete entry', 
+        id: 'delete-error',
+        type: 'error'
+      });
+      setTimeout(() => setToast(null), 3000);
     }
   };
 
-  const handleInlineEditSubmit = () => {
-    if (inlineEditing) {
-      handleInlineEdit(inlineEditing.id, inlineEditing.field, inlineEditing.value);
-      setInlineEditing(null);
-    }
-  };
-
+  // Clear all entries function
   const handleClearAllEntries = async () => {
-    if (!confirm('Are you sure you want to clear all entries? This action cannot be undone!')) return;
+    if (!confirm('Are you sure you want to clear ALL entries? This action cannot be undone!')) return;
+    
     try {
       await entriesApi.clearAll();
+      setAllEntries([]);
+      setEntries([]);
+      setTotal(0);
       
-      // Trigger real-time sync event for dashboard and export
-      window.dispatchEvent(new CustomEvent('entry-deleted', { 
-        detail: { 
-          action: 'clear-all',
-          timestamp: new Date().toISOString()
-        } 
-      }));
-      
-      fetchEntries();
-      setToast({ message: '✅ All entries cleared successfully!', id: 'clear-all' });
-      setTimeout(() => setToast(null), 4000);
-    } catch (e) {
-      alert((e as Error).message);
+      setToast({ 
+        message: '✅ All entries cleared successfully', 
+        id: 'clear-success',
+        type: 'success'
+      });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      console.error('Clear all error:', error);
+      setToast({ 
+        message: '❌ Failed to clear entries', 
+        id: 'clear-error',
+        type: 'error'
+      });
+      setTimeout(() => setToast(null), 3000);
     }
   };
 
-  // Handle Escape key for inline editing
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && inlineEditing) {
-        setInlineEditing(null);
-      }
-    };
+  // Refresh entries
+  const handleRefresh = () => {
+    fetchEntries();
+  };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [inlineEditing]);
+  if (!isClient) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500">Loading...</div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
-    <Layout title="📋 All Entries" showAdminLink>
+    <Layout>
       <div className="space-y-6">
-        <div className="modern-card">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <input
-              type="search"
-              placeholder="Search by name, mobile, ticket type..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="input-modern flex-1"
-            />
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Entries Management</h1>
+            <p className="text-gray-600 mt-1">View and manage all customer entries</p>
+          </div>
+          <div className="flex gap-3">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                clear();
-                navigate('/ticket');
-              }}
-              className="btn-primary"
+              onClick={handleRefresh}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition"
+              disabled={loading}
             >
-              ➕ New Entry
+              🔄 Refresh
             </motion.button>
-          </div>
-        </div>
-
-        {/* Date-wise Navigation */}
-        <div className="modern-card">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex gap-2 mb-4">
+            <Link to="/entries/new">
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setActiveDateGroup('today')}
-                className={`px-4 py-2 rounded-lg font-bold transition ${
-                  activeDateGroup === 'today'
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : 'bg-blue-100 hover:bg-blue-200 text-blue-900'
-                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition"
               >
-                📅 Today ({dateGroups.today.length})
+                ➕ New Entry
               </motion.button>
+            </Link>
+            {user?.role === 'admin' && (
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setActiveDateGroup('yesterday')}
-                className={`px-4 py-2 rounded-lg font-bold transition ${
-                  activeDateGroup === 'yesterday'
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : 'bg-blue-100 hover:bg-blue-200 text-blue-900'
-                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleClearAllEntries}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition"
               >
-                📅 Yesterday ({dateGroups.yesterday.length})
+                🗑️ Clear All
               </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setActiveDateGroup('older')}
-                className={`px-4 py-2 rounded-lg font-bold transition ${
-                  activeDateGroup === 'older'
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : 'bg-blue-100 hover:bg-blue-200 text-blue-900'
-                }`}
-              >
-                📅 Older ({dateGroups.older.length})
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  setActiveDateGroup('today');
-                  setSearch('');
-                  setOlderPage(1);
-                }}
-                className="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white font-bold transition shadow-lg"
-              >
-                🔄 Show All Entries ({allEntries.length})
-              </motion.button>
-            </div>
-            
-            {/* Older entries pagination */}
-            {activeDateGroup === 'older' && dateGroups.older.length > limit && (
-              <div className="flex items-center gap-2">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setOlderPage(p => Math.max(1, p - 1))}
-                  disabled={olderPage === 1}
-                  className="px-3 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-900 font-bold disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                  ←
-                </motion.button>
-                <span className="px-3 py-1 rounded-lg bg-blue-50 text-blue-900 font-bold text-sm">
-                  {olderPage}
-                </span>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setOlderPage(p => Math.min(Math.ceil(dateGroups.older.length / limit), p + 1))}
-                  disabled={olderPage * limit >= dateGroups.older.length}
-                  className="px-3 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-900 font-bold disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                  →
-                </motion.button>
-              </div>
             )}
           </div>
         </div>
 
-        {/* Search Results Info */}
-        {search.trim() && (
-          <div className="modern-card bg-blue-50">
-            <p className="text-blue-800 text-center">
-              🔍 Found {currentEntries.length} entries matching "{search}"
-              {search.trim() && allEntries.length > 0 && (
-                <span className="text-blue-600">
-                  {' '}from {allEntries.length} total entries
-                </span>
-              )}
-            </p>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="modern-card">
-          <div className="flex flex-wrap gap-4">
-            <Link to="/admin/export" className="btn-primary">
-              📊 Export to Excel
-            </Link>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleClearAllEntries}
-              className="px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition"
-            >
-              🗑️ Clear All Entries
-            </motion.button>
-          </div>
-        </div>
-
         {/* Summary Card */}
-        <div className="modern-card bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-900">{allEntries.length}</div>
+              <div className="text-2xl font-bold text-blue-600">{allEntries.length}</div>
               <div className="text-sm text-gray-600">Total Entries</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-900">{currentEntries.length}</div>
-              <div className="text-sm text-gray-600">Visible</div>
+              <div className="text-2xl font-bold text-green-600">{filteredEntries.length}</div>
+              <div className="text-sm text-gray-600">Filtered</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-900">{dateGroups.today.length}</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {allEntries.filter(e => dayjs(e.createdAt).isSame(dayjs(), 'day')).length}
+              </div>
               <div className="text-sm text-gray-600">Today</div>
             </div>
             <div className="text-center">
-              <div className={`text-2xl font-bold ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
-                {isConnected ? '🟢' : '🔴'}
+              <div className="text-2xl font-bold text-orange-600">
+                ₹{allEntries.reduce((sum, e) => sum + safeNumber(e.finalAmount), 0)}
               </div>
-              <div className="text-sm text-gray-600">Real-time</div>
+              <div className="text-sm text-gray-600">Total Revenue</div>
             </div>
           </div>
         </div>
 
-        {/* Entries Table with Virtualization */}
-        <div className="modern-card">
+        {/* Search and Filters */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Search by name, mobile, ticket type..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSearch('')}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Professional Excel-like Table */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
           {initialLoading ? (
-            // Skeleton loader for first load only
-            <div className="space-y-4">
-              <div className="animate-pulse">
-                <div className="h-4 bg-blue-200 rounded w-1/4 mb-4"></div>
-                <div className="space-y-2">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-12 bg-blue-100 rounded"></div>
-                  ))}
-                </div>
-              </div>
+            <div className="flex items-center justify-center h-64">
+              <div className="text-gray-500">Loading entries...</div>
             </div>
           ) : (
-            <>
-              <div 
-                ref={parentRef}
-                className="overflow-x-auto border border-gray-300 rounded-lg shadow-lg bg-white"
-                style={{ height: '700px', overflow: 'auto' }}
-              >
-              {/* Table Header */}
-              <div className="sticky top-0 bg-white z-10 border-b-2 border-gray-300">
-                <table className="w-full text-left text-sm" style={{ tableLayout: 'fixed', minWidth: '1400px' }}>
-                  <thead>
-                    <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '110px' }}>Date</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '130px' }}>Filled By</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '150px' }}>Name</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '110px' }}>Mobile</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '120px' }}>Ticket Type</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '60px' }}>Adults</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '60px' }}>Kids</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '60px' }}>Total</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '80px' }}>Amount</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '80px' }}>Cash</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '80px' }}>UPI</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '80px' }}>Advance</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300 text-center" style={{ width: '80px' }}>Other</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold border-r border-gray-300" style={{ width: '120px' }}>Food Coupons</th>
-                      <th className="py-3 px-3 text-gray-900 font-bold" style={{ width: '100px' }}>Actions</th>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                {/* Table Header */}
+                <thead>
+                  <tr className="bg-gray-50 border-b-2 border-gray-200">
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '120px' }}>
+                      Date & Time
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '140px' }}>
+                      Filled By
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '150px' }}>
+                      Name
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '120px' }}>
+                      Mobile
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '100px' }}>
+                      Ticket Type
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '60px' }}>
+                      Adults
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '60px' }}>
+                      Kids
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '60px' }}>
+                      Total
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '80px' }}>
+                      Amount
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '80px' }}>
+                      Cash
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '80px' }}>
+                      UPI
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '80px' }}>
+                      Advance
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '80px' }}>
+                      Other
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '120px' }}>
+                      Food Coupons
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider" style={{ width: '100px' }}>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+
+                {/* Table Body */}
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {entries.length === 0 ? (
+                    <tr>
+                      <td colSpan={15} className="px-4 py-8 text-center text-gray-500">
+                        {search ? 'No entries found matching your search' : 'No entries found'}
+                      </td>
                     </tr>
-                  </thead>
-                </table>
-              </div>
-              
-              {/* Virtualized Table Body */}
-              <div
-                style={{
-                  height: `${rowVirtualizer.getTotalSize()}px`,
-                  width: '100%',
-                  position: 'relative'
-                }}
-              >
-                {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                  const entry = currentEntries[virtualItem.index];
-                  if (!entry) return null;
-                  
-                  return (
-                    <div
-                      key={virtualItem.index}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: `${virtualItem.size}px`,
-                        transform: `translateY(${virtualItem.start}px)`,
-                        willChange: 'transform' // Optimize for performance
-                      }}
-                    >
-                      <table className="w-full text-left text-sm" style={{ tableLayout: 'fixed' }}>
-                        <tbody>
-                          <tr className={`border-b border-gray-200 hover:bg-gray-50 transition-all duration-300 ${
-                            highlightId === entry._id 
-                              ? (entry._updated 
-                                  ? 'bg-blue-100 border-blue-300 shadow-lg transform scale-105' 
-                                  : 'bg-green-100 border-green-300 shadow-lg transform scale-105')
-                              : ''
-                          }`}>
-                            <td className="py-3 px-3 text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
-                              <div className="space-y-1">
-                                <p className="font-medium text-sm">{dayjs(entry.createdAt).format('DD/MM/YY')}</p>
-                                <p className="text-xs text-gray-500 font-medium">{dayjs(entry.createdAt).format('hh:mm A')}</p>
+                  ) : (
+                    entries.map((entry, index) => (
+                      <tr key={entry._id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
+                          <div>
+                            <div className="font-medium">{dayjs(entry.createdAt).format('DD/MM/YY')}</div>
+                            <div className="text-xs text-gray-500">{dayjs(entry.createdAt).format('hh:mm A')}</div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
+                          <div className="font-medium">{safeString(entry.filledByFullName || 'Unknown')}</div>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-100">
+                          {safeString(entry.name)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
+                          <div className="font-mono">{safeString(entry.mobile)}</div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
+                          <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                            ₹{getTicketLabel(entry.ticketType as TicketType)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
+                          {safeString(entry.adults)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
+                          {entry.ticketType === '150' ? '-' : safeString(entry.kids)}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center border-r border-gray-100">
+                          {entry.ticketType === '150' ? safeString(entry.adults) : safeString(entry.totalPeople)}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-bold text-green-600 text-center border-r border-gray-100">
+                          ₹{safeString(entry.finalAmount)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
+                          ₹{safeString(entry.cashAmount)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
+                          ₹{safeString(entry.upiAmount)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
+                          ₹{safeString(entry.advanceAmount)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
+                          ₹{safeString(entry.otherAmount)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
+                          <div className="space-y-1">
+                            {((entry as any).adultsFastFoodCoupon || (entry as any).kidsFastFoodCoupon) && (
+                              <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">
+                                🍔 FF: A:{safeString((entry as any).adultsFastFoodCoupon)} K:{safeString((entry as any).kidsFastFoodCoupon)}
                               </div>
-                            </td>
-                            <td className="py-3 px-3 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
-                              <div className="space-y-1">
-                                <div className="flex flex-col gap-1">
-                                  <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-blue-100 to-blue-200 text-blue-900 font-bold text-xs border border-blue-300 inline-block">
-                                    👤 {isClient ? (entry.filledByFullName || user?.fullName || user?.username || 'Unknown') : 'Loading...'}
-                                  </span>
-                                  {entry.createdBy && (
-                                    <span className="px-2 py-1 rounded-lg bg-purple-100 text-purple-900 font-bold text-xs border border-purple-300 inline-block">
-                                      {(entry.createdBy as any).username === user?.username ? '👤 You' : '👨 Staff'}
-                                    </span>
-                                  )}
-                                </div>
+                            )}
+                            {((entry as any).adultsMainFoodCoupon || (entry as any).kidsMainFoodCoupon) && (
+                              <div className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                                🍽️ MF: A:{safeString((entry as any).adultsMainFoodCoupon)} K:{safeString((entry as any).kidsMainFoodCoupon)}
                               </div>
-                            </td>
-                            <td className="py-3 px-3 font-bold text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
-                              <div className="truncate" title={safeString(entry.name)}>
-                                <span className="text-sm">{safeString(entry.name)}</span>
-                              </div>
-                            </td>
-                            <td className="py-3 px-3 text-gray-900 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
-                              <div className="font-mono text-sm font-medium">{safeString(entry.mobile)}</div>
-                            </td>
-                            <td className="py-3 px-3 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-1">
-                                  <span className="px-2 py-1 rounded-lg bg-blue-100 text-blue-900 font-bold text-xs inline-block">
-                                    ₹{getTicketLabelSync(entry.ticketType as TicketType)}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-gray-500 truncate" title={getTicketLabelSync(entry.ticketType as TicketType)}>
-                                  {(() => {
-                                    const ticketType = entry.ticketType as TicketType;
-                                    switch(ticketType) {
-                                      case '150': return '1 Hour';
-                                      case '300': return '3-4 Hours';
-                                      case '450': return 'Fast Food';
-                                      case '600': return 'Main Food';
-                                      case '100': return 'Sitting';
-                                      default: return ticketType;
-                                    }
-                                  })()}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="py-3 px-3 text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="font-bold text-sm">{safeString(entry.adults)}</div>
-                            </td>
-                            <td className="py-3 px-3 text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="font-bold text-sm">{entry.ticketType === '150' ? '-' : safeString(entry.kids)}</div>
-                            </td>
-                            <td className="py-3 px-3 font-bold text-gray-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="text-sm">{entry.ticketType === '150' ? safeString(entry.adults) : safeString(entry.totalPeople)}</div>
-                            </td>
-                            <td className="py-3 px-3 font-bold text-green-900 border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="text-sm whitespace-nowrap">₹{safeString(entry.finalAmount)}</div>
-                            </td>
-                            <td className="py-3 px-3 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="text-sm whitespace-nowrap">₹{safeString(entry.cashAmount)}</div>
-                            </td>
-                            <td className="py-3 px-3 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="text-sm whitespace-nowrap">₹{safeString(entry.upiAmount)}</div>
-                            </td>
-                            <td className="py-3 px-3 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="text-sm whitespace-nowrap">₹{safeString(entry.advanceAmount)}</div>
-                            </td>
-                            <td className="py-3 px-3 text-gray-900 font-medium border-r border-gray-100 text-center" style={{ verticalAlign: 'top' }}>
-                              <div className="text-sm whitespace-nowrap">₹{safeString(entry.otherAmount)}</div>
-                            </td>
-                            <td className="py-3 px-3 border-r border-gray-100" style={{ verticalAlign: 'top' }}>
-                              <div className="space-y-1 max-w-xs">
-                                {/* Fast Food Coupons */}
-                                {((entry as any).adultsFastFoodCoupon || (entry as any).kidsFastFoodCoupon) && (
-                                  <div className="bg-orange-50 rounded-lg p-2 border border-orange-200">
-                                    <div className="text-xs font-bold text-orange-800 mb-1">🍔 Fast Food</div>
-                                    <div className="flex justify-between gap-2">
-                                      <span className="text-xs text-orange-700 font-medium">
-                                        A: {safeString((entry as any).adultsFastFoodCoupon)}
-                                      </span>
-                                      <span className="text-xs text-orange-700 font-medium">
-                                        K: {safeString((entry as any).kidsFastFoodCoupon)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* Main Food Coupons */}
-                                {((entry as any).adultsMainFoodCoupon || (entry as any).kidsMainFoodCoupon) && (
-                                  <div className="bg-green-50 rounded-lg p-2 border border-green-200">
-                                    <div className="text-xs font-bold text-green-800 mb-1">🍽️ Main Food</div>
-                                    <div className="flex justify-between gap-2">
-                                      <span className="text-xs text-green-700 font-medium">
-                                        A: {safeString((entry as any).adultsMainFoodCoupon)}
-                                      </span>
-                                      <span className="text-xs text-green-700 font-medium">
-                                        K: {safeString((entry as any).kidsMainFoodCoupon)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* No Coupons */}
-                                {!((entry as any).adultsFastFoodCoupon || (entry as any).kidsFastFoodCoupon || (entry as any).adultsMainFoodCoupon || (entry as any).kidsMainFoodCoupon) && (
-                                  <div className="text-xs text-gray-500 italic text-center py-2">No coupons</div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3 px-3" style={{ verticalAlign: 'top' }}>
-                              <div className="flex gap-1 flex-wrap justify-center">
-                                <motion.button
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  onClick={() => setViewing(entry)}
-                                  className="px-2 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-900 font-bold text-xs border border-blue-200 transition"
-                                  title="View entry details"
-                                >
-                                  👁
-                                </motion.button>
-                                {user?.role === 'admin' && (
-                                  <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => setEditing(entry)}
-                                    className="px-2 py-1 rounded-lg bg-green-100 hover:bg-green-200 text-green-900 font-bold text-xs border border-green-200 transition"
-                                    title="Edit entry"
-                                  >
-                                    ✏️
-                                  </motion.button>
-                                )}
-                                {user?.role === 'admin' && (
-                                  <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleDelete(entry._id)}
-                                    className="px-2 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-900 font-bold text-xs border border-red-200 transition"
-                                    title="Delete entry"
-                                  >
-                                    🗑
-                                  </motion.button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })}
-              </div>
+                            )}
+                            {!((entry as any).adultsFastFoodCoupon || (entry as any).kidsFastFoodCoupon || (entry as any).adultsMainFoodCoupon || (entry as any).kidsMainFoodCoupon) && (
+                              <div className="text-xs text-gray-500 italic">No coupons</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <div className="flex gap-1 justify-center">
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => setViewing(entry)}
+                              className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded text-xs font-medium transition"
+                              title="View entry"
+                            >
+                              👁
+                            </motion.button>
+                            {user?.role === 'admin' && (
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setEditing(entry)}
+                                className="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-800 rounded text-xs font-medium transition"
+                                title="Edit entry"
+                              >
+                                ✏️
+                              </motion.button>
+                            )}
+                            {user?.role === 'admin' && (
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => handleDelete(entry._id)}
+                                className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-xs font-medium transition"
+                                title="Delete entry"
+                              >
+                                🗑️
+                              </motion.button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-            </>
           )}
         </div>
 
-        {/* Professional Toast Notifications */}
+        {/* Toast Notifications */}
         <AnimatePresence>
           {toast && (
             <motion.div
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 50, scale: 0.9 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className={`fixed bottom-4 right-4 px-6 py-4 rounded-xl shadow-2xl z-50 max-w-md border-2 ${
-                toast.type === 'success' ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-green-400' :
-                toast.type === 'info' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-400' :
-                toast.type === 'warning' ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-yellow-400' :
-                toast.type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600 text-white border-red-400' :
-                'bg-gradient-to-r from-green-500 to-green-600 text-white border-green-400'
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                toast.type === 'success' ? 'bg-green-500 text-white' :
+                toast.type === 'error' ? 'bg-red-500 text-white' :
+                toast.type === 'warning' ? 'bg-yellow-500 text-white' :
+                'bg-blue-500 text-white'
               }`}
             >
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  {toast.type === 'success' && <span className="text-2xl">✅</span>}
-                  {toast.type === 'info' && <span className="text-2xl">ℹ️</span>}
-                  {toast.type === 'warning' && <span className="text-2xl">⚠️</span>}
-                  {toast.type === 'error' && <span className="text-2xl">❌</span>}
-                  {!toast.type && <span className="text-2xl">✅</span>}
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-white">{toast.message}</p>
-                </div>
-                <button
-                  onClick={() => setToast(null)}
-                  className="flex-shrink-0 text-white/80 hover:text-white transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+              {toast.message}
             </motion.div>
           )}
         </AnimatePresence>
 
-        <AnimatePresence>
-          {viewing && (
-            <ViewEntryModal
-              entry={viewing}
-              onClose={() => setViewing(null)}
-            />
-          )}
-
-          {editing && (
-            <EditEntryModal
-              entry={editing}
-              onClose={() => setEditing(null)}
-              onSaved={(id) => {
-                setEditing(null);
-                fetchEntries();
-                setToast({ message: '✅ Entry updated successfully!', id });
-                setHighlightId(id);
-                setTimeout(() => setHighlightId(null), 3000);
-                setTimeout(() => setToast(null), 4000);
-              }}
-              setToast={(toast) => {
-                setToast(toast);
-              }}
-            />
-          )}
-        </AnimatePresence>
+        {/* View/Edit Modals */}
+        {(viewing || editing) && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {editing ? 'Edit Entry' : 'View Entry'}
+                </h2>
+                <button
+                  onClick={() => {
+                    setViewing(null);
+                    setEditing(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input
+                      type="text"
+                      value={editing ? editing.name : (viewing?.name || '')}
+                      onChange={(e) => editing && setEditing({...editing, name: e.target.value})}
+                      disabled={!editing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile</label>
+                    <input
+                      type="text"
+                      value={editing ? editing.mobile : (viewing?.mobile || '')}
+                      onChange={(e) => editing && setEditing({...editing, mobile: e.target.value})}
+                      disabled={!editing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Adults</label>
+                    <input
+                      type="number"
+                      value={editing ? editing.adults : (viewing?.adults?.toString() || '')}
+                      onChange={(e) => editing && setEditing({...editing, adults: parseInt(e.target.value) || 0})}
+                      disabled={!editing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Kids</label>
+                    <input
+                      type="number"
+                      value={editing ? editing.kids : (viewing?.kids?.toString() || '')}
+                      onChange={(e) => editing && setEditing({...editing, kids: parseInt(e.target.value) || 0})}
+                      disabled={!editing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Ticket Type</label>
+                    <select
+                      value={editing ? editing.ticketType : (viewing?.ticketType || '150')}
+                      onChange={(e) => editing && setEditing({...editing, ticketType: e.target.value as TicketType})}
+                      disabled={!editing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                    >
+                      {TICKET_OPTIONS.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cash</label>
+                    <input
+                      type="number"
+                      value={editing ? editing.cashAmount?.toString() : (viewing?.cashAmount?.toString() || '')}
+                      onChange={(e) => editing && setEditing({...editing, cashAmount: parseInt(e.target.value) || 0})}
+                      disabled={!editing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">UPI</label>
+                    <input
+                      type="number"
+                      value={editing ? editing.upiAmount?.toString() : (viewing?.upiAmount?.toString() || '')}
+                      onChange={(e) => editing && setEditing({...editing, upiAmount: parseInt(e.target.value) || 0})}
+                      disabled={!editing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Advance</label>
+                    <input
+                      type="number"
+                      value={editing ? editing.advanceAmount?.toString() : (viewing?.advanceAmount?.toString() || '')}
+                      onChange={(e) => editing && setEditing({...editing, advanceAmount: parseInt(e.target.value) || 0})}
+                      disabled={!editing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Other</label>
+                    <input
+                      type="number"
+                      value={editing ? editing.otherAmount?.toString() : (viewing?.otherAmount?.toString() || '')}
+                      onChange={(e) => editing && setEditing({...editing, otherAmount: parseInt(e.target.value) || 0})}
+                      disabled={!editing}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setViewing(null);
+                    setEditing(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                {editing && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await entriesApi.update(editing._id, editing);
+                        setAllEntries(prev => prev.map(e => e._id === editing._id ? editing : e));
+                        setEntries(prev => prev.map(e => e._id === editing._id ? editing : e));
+                        setEditing(null);
+                        setToast({ 
+                          message: '✅ Entry updated successfully', 
+                          id: 'update-success',
+                          type: 'success'
+                        });
+                        setTimeout(() => setToast(null), 3000);
+                      } catch (error) {
+                        console.error('Update error:', error);
+                        setToast({ 
+                          message: '❌ Failed to update entry', 
+                          id: 'update-error',
+                          type: 'error'
+                        });
+                        setTimeout(() => setToast(null), 3000);
+                      }
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                  >
+                    Save Changes
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
       </div>
     </Layout>
-  );
-}
-
-function ViewEntryModal({ entry, onClose }: { entry: EntryRecord; onClose: () => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        onClick={(e) => e.stopPropagation()}
-        className="modern-card rounded-2xl p-6 max-w-4xl w-full flex flex-col"
-        style={{ maxHeight: '90vh' }}
-      >
-        <h3 className="heading-lg text-blue-900 mb-4 flex-shrink-0">👁 View Entry Details</h3>
-        <div className="space-y-4 overflow-y-auto flex-1 pr-2" style={{ maxHeight: 'calc(90vh - 120px)' }}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">📅 Date & Time</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                {dayjs(entry.createdAt).format('DD/MM/YYYY HH:mm:ss')}
-              </div>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">👤 Customer Name</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                {entry.name}
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">📱 Mobile</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                {entry.mobile}
-              </div>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">🎫 Ticket Type</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                {getTicketLabelSync(entry.ticketType as TicketType)}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">👥 Adults</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                {safeString(entry.adults)}
-              </div>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">👦 Kids</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                {safeString(entry.kids)}
-              </div>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">👥 Total</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                {entry.ticketType === '150' ? safeString(entry.adults) : safeString(entry.totalPeople)}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">💰 Base Amount</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                ₹{safeString(entry.baseAmount)}
-              </div>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">🎯 Kid Discount</label>
-              <div className="py-2 px-3 rounded bg-green-50 text-green-900 font-bold">
-                -₹{safeString(entry.kidDiscount)}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">💸 Final Amount</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold text-xl">
-                ₹{safeString(entry.finalAmount)}
-              </div>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">🎁 Additional Discount</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                -₹{safeString(entry.additionalDiscount)}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">💵 Cash</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                ₹{safeString(entry.cashAmount)}
-              </div>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">💳 UPI</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                ₹{safeString(entry.upiAmount)}
-              </div>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">🤝 Advance</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                ₹{safeString(entry.advanceAmount)}
-              </div>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">💳 Other</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                ₹{safeString(entry.otherAmount)}
-              </div>
-            </div>
-          </div>
-
-          {(entry as any).notes && (
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">📝 Notes</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                {safeString((entry as any).notes)}
-              </div>
-            </div>
-          )}
-
-          {entry.upgrades && entry.upgrades.length > 0 && (
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">🎟 Upgrade Tickets</label>
-              <div className="space-y-3">
-                {entry.upgrades.map((upgrade: any, index: number) => (
-                  <div key={index} className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-blue-900">
-                        Upgrade #{index + 1}: {getTicketLabelSync(upgrade.ticketType as any)}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-blue-700 font-bold text-xs mb-1">Adults</label>
-                        <div className="py-2 px-3 rounded bg-white text-blue-900 font-bold">
-                          {safeString(upgrade.adults)}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-blue-700 font-bold text-xs mb-1">Kids</label>
-                        <div className="py-2 px-3 rounded bg-white text-blue-900 font-bold">
-                          {safeString(upgrade.kids)}
-                        </div>
-                      </div>
-                    </div>
-                    {/* Upgrade Food Coupons */}
-                    {(upgrade.adultsFastFoodCoupon || upgrade.kidsFastFoodCoupon || upgrade.adultsMainFoodCoupon || upgrade.kidsMainFoodCoupon) && (
-                      <div className="mt-3 pt-3 border-t border-blue-200">
-                        <label className="block text-blue-700 font-bold text-xs mb-2">🍔 Food Coupons</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {upgrade.adultsFastFoodCoupon && (
-                            <div>
-                              <label className="block text-blue-600 text-xs mb-1">Adults Fast Food</label>
-                              <div className="py-1 px-2 rounded bg-orange-50 text-orange-900 font-bold text-sm">
-                                {safeString(upgrade.adultsFastFoodCoupon)}
-                              </div>
-                            </div>
-                          )}
-                          {upgrade.kidsFastFoodCoupon && (
-                            <div>
-                              <label className="block text-blue-600 text-xs mb-1">Kids Fast Food</label>
-                              <div className="py-1 px-2 rounded bg-orange-50 text-orange-900 font-bold text-sm">
-                                {safeString(upgrade.kidsFastFoodCoupon)}
-                              </div>
-                            </div>
-                          )}
-                          {upgrade.adultsMainFoodCoupon && (
-                            <div>
-                              <label className="block text-blue-600 text-xs mb-1">Adults Main Food</label>
-                              <div className="py-1 px-2 rounded bg-green-50 text-green-900 font-bold text-sm">
-                                {safeString(upgrade.adultsMainFoodCoupon)}
-                              </div>
-                            </div>
-                          )}
-                          {upgrade.kidsMainFoodCoupon && (
-                            <div>
-                              <label className="block text-blue-600 text-xs mb-1">Kids Main Food</label>
-                              <div className="py-1 px-2 rounded bg-green-50 text-green-900 font-bold text-sm">
-                                {safeString(upgrade.kidsMainFoodCoupon)}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Main Entry Food Coupons */}
-          {((entry as any).adultsFastFoodCoupon || (entry as any).kidsFastFoodCoupon || (entry as any).adultsMainFoodCoupon || (entry as any).kidsMainFoodCoupon) && (
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">🍔 Food Coupons</label>
-              <div className="grid grid-cols-2 gap-4">
-                {(entry as any).adultsFastFoodCoupon && (
-                  <div>
-                    <label className="block text-blue-700 font-bold text-xs mb-1">Adults Fast Food</label>
-                    <div className="py-2 px-3 rounded bg-orange-50 text-orange-900 font-bold">
-                      {safeString((entry as any).adultsFastFoodCoupon)}
-                    </div>
-                  </div>
-                )}
-                {(entry as any).kidsFastFoodCoupon && (
-                  <div>
-                    <label className="block text-blue-700 font-bold text-xs mb-1">Kids Fast Food</label>
-                    <div className="py-2 px-3 rounded bg-orange-50 text-orange-900 font-bold">
-                      {safeString((entry as any).kidsFastFoodCoupon)}
-                    </div>
-                  </div>
-                )}
-                {(entry as any).adultsMainFoodCoupon && (
-                  <div>
-                    <label className="block text-blue-700 font-bold text-xs mb-1">Adults Main Food</label>
-                    <div className="py-2 px-3 rounded bg-green-50 text-green-900 font-bold">
-                      {safeString((entry as any).adultsMainFoodCoupon)}
-                    </div>
-                  </div>
-                )}
-                {(entry as any).kidsMainFoodCoupon && (
-                  <div>
-                    <label className="block text-blue-700 font-bold text-xs mb-1">Kids Main Food</label>
-                    <div className="py-2 px-3 rounded bg-green-50 text-green-900 font-bold">
-                      {safeString((entry as any).kidsMainFoodCoupon)}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-3 mt-6 flex-shrink-0">
-            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-blue-900 font-bold">
-              Close
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-function EditEntryModal({ entry, onClose, onSaved, setToast }: { entry: EntryRecord; onClose: () => void; onSaved: (id: string) => void; setToast: (toast: { message: string; id: string } | null) => void }) {
-  const { user } = useAuthStore();
-  const [name, setName] = useState(entry.name);
-  const [mobile, setMobile] = useState(entry.mobile);
-  const [ticketType, setTicketType] = useState(entry.ticketType as unknown as string);
-  const [adults, setAdults] = useState<number>(entry.adults ?? 0);
-  const [kids, setKids] = useState<number>(entry.kids ?? 0);
-  const [upgrades, setUpgrades] = useState(entry.upgrades ?? [] as any[]);
-  const [adultsFastFoodCoupon, setAdultsFastFoodCoupon] = useState(safeString((entry as any).adultsFastFoodCoupon));
-  const [kidsFastFoodCoupon, setKidsFastFoodCoupon] = useState(safeString((entry as any).kidsFastFoodCoupon));
-  const [adultsMainFoodCoupon, setAdultsMainFoodCoupon] = useState(safeString((entry as any).adultsMainFoodCoupon));
-  const [kidsMainFoodCoupon, setKidsMainFoodCoupon] = useState(safeString((entry as any).kidsMainFoodCoupon));
-  const [additionalDiscount, setAdditionalDiscount] = useState<number>(entry.additionalDiscount ?? 0);
-  const [finalAmountOverride, setFinalAmountOverride] = useState<number | null>(entry.finalAmount ?? null);
-  const [cashAmount, setCashAmount] = useState<number>(entry.cashAmount ?? 0);
-  const [upiAmount, setUpiAmount] = useState<number>(entry.upiAmount ?? 0);
-  const [advanceAmount, setAdvanceAmount] = useState<number>(entry.advanceAmount ?? 0);
-  const [otherAmount, setOtherAmount] = useState<number>(entry.otherAmount ?? 0);
-  const [notes, setNotes] = useState(entry.notes ?? '');
-  const [entryDate, setEntryDate] = useState(entry.createdAt ? dayjs(entry.createdAt).format('YYYY-MM-DDTHH:mm') : '');
-  const [filledBy, setFilledBy] = useState((entry as any).filledBy || '');
-  const [filledByFullName, setFilledByFullName] = useState((entry as any).filledByFullName || '');
-  const [saving, setSaving] = useState(false);
-
-  // compute amounts using imported helper
-  const computed = computeAmountsSync(ticketType as any, adults, kids, upgrades, additionalDiscount);
-  const baseAmount = computed.baseAmount;
-  const kidDiscount = computed.kidDiscount;
-  const totalPeople = computed.totalPeople;
-  const computedFinal = computed.finalAmount;
-  const finalAmount = finalAmountOverride != null ? finalAmountOverride : computedFinal;
-
-  const addUpgrade = () => {
-    const prices = ['100','150','300','450','600'];
-    const idx = prices.indexOf(ticketType);
-    const next = prices[idx+1] ?? prices[prices.length-1];
-    setUpgrades([...upgrades, { 
-      ticketType: next, 
-      adults: 0, 
-      kids: 0,
-      adultsFastFoodCoupon: '',
-      kidsFastFoodCoupon: '',
-      adultsMainFoodCoupon: '',
-      kidsMainFoodCoupon: ''
-    }]);
-  };
-
-  // Ensure all upgrades have food coupon fields
-  const ensureUpgradeFoodCoupons = (upgradesList: any[]) => {
-    return upgradesList.map(upgrade => ({
-      ...upgrade,
-      adultsFastFoodCoupon: upgrade.adultsFastFoodCoupon || '',
-      kidsFastFoodCoupon: upgrade.kidsFastFoodCoupon || '',
-      adultsMainFoodCoupon: upgrade.adultsMainFoodCoupon || '',
-      kidsMainFoodCoupon: upgrade.kidsMainFoodCoupon || ''
-    }));
-  };
-
-  // Initialize upgrades with food coupon fields
-  useEffect(() => {
-    if (entry.upgrades && entry.upgrades.length > 0) {
-      setUpgrades(ensureUpgradeFoodCoupons(entry.upgrades));
-    }
-  }, [entry.upgrades]);
-
-  const handleSubmit = async () => {
-    try {
-      setSaving(true);
-      
-      // Debug: Check user authentication
-      const token = localStorage.getItem('token');
-      console.log('🔧 EditEntryModal: Token exists:', !!token);
-      console.log('🔧 EditEntryModal: User role:', user?.role);
-      
-      const payload = {
-        name: name.trim(),
-        mobile: mobile.trim(),
-        ticketType,
-        adults,
-        kids,
-        upgrades,
-        adultsFastFoodCoupon: adultsFastFoodCoupon.trim() || undefined,
-        kidsFastFoodCoupon: kidsFastFoodCoupon.trim() || undefined,
-        adultsMainFoodCoupon: adultsMainFoodCoupon.trim() || undefined,
-        kidsMainFoodCoupon: kidsMainFoodCoupon.trim() || undefined,
-        totalPeople,
-        baseAmount,
-        kidDiscount,
-        additionalDiscount,
-        finalAmount,
-        cashAmount,
-        upiAmount,
-        advanceAmount,
-        otherAmount,
-        notes: notes.trim() || undefined,
-        createdAt: entryDate ? new Date(entryDate).toISOString() : undefined,
-        filledBy: filledBy.trim() || undefined,
-        filledByFullName: filledByFullName.trim() || undefined,
-      };
-
-      console.log('🔧 EditEntryModal: Payload to send:', payload);
-      console.log('🔧 EditEntryModal: Upgrades with food coupons:', upgrades);
-      
-      const response = await entriesApi.update(entry._id, payload);
-      console.log('🔧 EditEntryModal: Update response:', response);
-      
-      // Show success feedback
-      setToast({ message: '✅ Entry updated successfully!', id: `update-${entry._id}` });
-      
-      setTimeout(() => {
-        const rowEl = document.getElementById(`entry-row-${entry._id}`);
-        if (rowEl) {
-          rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-      
-      onSaved(entry._id);
-      
-      window.dispatchEvent(new CustomEvent('entry-updated', { 
-        detail: { 
-          entryId: entry._id, 
-          action: 'update',
-          timestamp: new Date().toISOString()
-        } 
-      }));
-      
-    } catch (e) {
-      console.error('❌ EditEntryModal: Failed to update entry:', e);
-      console.error('❌ EditEntryModal: Error details:', {
-        message: (e as Error).message,
-        stack: (e as Error).stack
-      });
-      setToast({ message: `❌ Failed to update entry: ${(e as Error).message}`, id: `error-${entry._id}` });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        onClick={(e) => e.stopPropagation()}
-        className="modern-card rounded-2xl p-6 max-w-4xl w-full flex flex-col"
-        style={{ maxHeight: '90vh' }}
-      >
-        <h3 className="heading-lg text-blue-900 mb-4 flex-shrink-0">✏️ Edit Entry</h3>
-        <div className="space-y-4 overflow-y-auto flex-1 pr-2" style={{ maxHeight: 'calc(90vh - 120px)' }}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">Name</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} className="input-modern" />
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">Mobile</label>
-              <input value={mobile} onChange={(e) => setMobile(e.target.value)} className="input-modern" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-blue-900 font-bold text-sm mb-2">📅 Entry Date & Time</label>
-            <input 
-              type="datetime-local" 
-              value={entryDate} 
-              onChange={(e) => setEntryDate(e.target.value)} 
-              className="input-modern"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Original: {dayjs(entry.createdAt).format('DD/MM/YYYY hh:mm A')}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">👤 Filled By (Username)</label>
-              <input 
-                type="text" 
-                value={filledBy} 
-                onChange={(e) => setFilledBy(e.target.value)} 
-                className="input-modern"
-                placeholder="Enter username"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Original: {(entry as any).filledBy || 'Not set'}
-              </p>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">👤 Filled By (Full Name)</label>
-              <input 
-                type="text" 
-                value={filledByFullName} 
-                onChange={(e) => setFilledByFullName(e.target.value)} 
-                className="input-modern"
-                placeholder="Enter full name"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Original: {(entry as any).filledByFullName || 'Not set'}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-blue-900 font-bold text-sm mb-2">Ticket Type</label>
-            <select value={ticketType} onChange={(e) => setTicketType(e.target.value)} className="input-modern">
-              {TICKET_OPTIONS.map((t) => (
-                <option key={t.value} value={t.value}>₹{t.price} - {t.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">Adults</label>
-              <select value={String(adults)} onChange={(e) => setAdults(parseInt(e.target.value,10)||0)} className="input-modern">
-                {Array.from({length: 31}).map((_, i) => (
-                  <option key={i} value={i}>{i}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">Kids</label>
-              <select value={String(kids)} onChange={(e) => setKids(parseInt(e.target.value,10)||0)} className="input-modern">
-                {Array.from({length: 31}).map((_, i) => (
-                  <option key={i} value={i}>{i}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">Total</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                {ticketType === '150' ? safeString(adults) : safeString(totalPeople)}
-              </div>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">Base Amount</label>
-              <div className="py-2 px-3 rounded bg-blue-50 text-blue-900 font-bold">
-                ₹{safeString(baseAmount)}
-              </div>
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">🎯 Kid Discount</label>
-              <div className="py-2 px-3 rounded bg-green-50 text-green-900 font-bold">
-                -₹{safeString(kidDiscount)}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">💸 Final Amount</label>
-              <input 
-                type="number" 
-                value={finalAmount != null ? String(finalAmount) : ''} 
-                onChange={(e) => setFinalAmountOverride(e.target.value ? parseFloat(e.target.value) : null)} 
-                className="input-modern" 
-                placeholder={`Calculated: ₹${computedFinal}`}
-              />
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">🎁 Additional Discount</label>
-              <input 
-                type="number" 
-                value={String(additionalDiscount)} 
-                onChange={(e) => setAdditionalDiscount(parseFloat(e.target.value)||0)} 
-                className="input-modern" 
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">💵 Cash</label>
-              <input 
-                type="number" 
-                value={String(cashAmount)} 
-                onChange={(e) => setCashAmount(parseFloat(e.target.value)||0)} 
-                className="input-modern" 
-              />
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">💳 UPI</label>
-              <input 
-                type="number" 
-                value={String(upiAmount)} 
-                onChange={(e) => setUpiAmount(parseFloat(e.target.value)||0)} 
-                className="input-modern" 
-              />
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">🤝 Advance</label>
-              <input 
-                type="number" 
-                value={String(advanceAmount)} 
-                onChange={(e) => setAdvanceAmount(parseFloat(e.target.value)||0)} 
-                className="input-modern" 
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">💳 Other</label>
-              <input 
-                type="number" 
-                value={String(otherAmount)} 
-                onChange={(e) => setOtherAmount(parseFloat(e.target.value)||0)} 
-                className="input-modern" 
-              />
-            </div>
-            <div>
-              <label className="block text-blue-900 font-bold text-sm mb-2">📝 Notes</label>
-              <input 
-                value={notes} 
-                onChange={(e) => setNotes(e.target.value)} 
-                className="input-modern" 
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-blue-900 font-bold text-sm mb-2">🍔 Food Coupons</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-blue-700 font-bold text-xs mb-1">Adults Fast Food</label>
-                <input value={adultsFastFoodCoupon} onChange={(e)=>setAdultsFastFoodCoupon(e.target.value)} className="input-modern" placeholder="e.g., 2" />
-              </div>
-              <div>
-                <label className="block text-blue-700 font-bold text-xs mb-1">Kids Fast Food</label>
-                <input value={kidsFastFoodCoupon} onChange={(e)=>setKidsFastFoodCoupon(e.target.value)} className="input-modern" placeholder="e.g., 1" />
-              </div>
-              <div>
-                <label className="block text-blue-700 font-bold text-xs mb-1">Adults Main Food</label>
-                <input value={adultsMainFoodCoupon} onChange={(e)=>setAdultsMainFoodCoupon(e.target.value)} className="input-modern" placeholder="e.g., 2" />
-              </div>
-              <div>
-                <label className="block text-blue-700 font-bold text-xs mb-1">Kids Main Food</label>
-                <input value={kidsMainFoodCoupon} onChange={(e)=>setKidsMainFoodCoupon(e.target.value)} className="input-modern" placeholder="e.g., 1" />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-blue-900 font-bold text-sm mb-2">🎟 Upgrade Tickets</label>
-            <div className="space-y-3">
-              {upgrades.length > 0 ? (
-                upgrades.map((upgrade, index) => (
-                  <div key={index} className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-medium text-blue-900">
-                        Upgrade #{index + 1}: {getTicketLabelSync(upgrade.ticketType as any)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newUpgrades = upgrades.filter((_, i) => i !== index);
-                          setUpgrades(newUpgrades);
-                        }}
-                        className="px-3 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-900 font-bold text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-blue-700 font-bold text-xs mb-1">Adults</label>
-                        <input
-                          type="number"
-                          value={String(upgrade.adults)}
-                          onChange={(e) => {
-                            const newUpgrades = [...upgrades];
-                            newUpgrades[index].adults = parseInt(e.target.value, 10) || 0;
-                            setUpgrades(newUpgrades);
-                          }}
-                          className="input-modern"
-                          min="0"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-blue-700 font-bold text-xs mb-1">Kids</label>
-                        <input
-                          type="number"
-                          value={String(upgrade.kids)}
-                          onChange={(e) => {
-                            const newUpgrades = [...upgrades];
-                            newUpgrades[index].kids = parseInt(e.target.value, 10) || 0;
-                            setUpgrades(newUpgrades);
-                          }}
-                          className="input-modern"
-                          min="0"
-                        />
-                      </div>
-                    </div>
-                    {/* Food Coupons for Upgrade */}
-                    <div className="mt-3 pt-3 border-t border-blue-200">
-                      <label className="block text-blue-700 font-bold text-xs mb-2">🍔 Food Coupons for this Upgrade</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-blue-600 font-bold text-xs mb-1">Adults Fast Food</label>
-                          <input
-                            type="text"
-                            value={upgrade.adultsFastFoodCoupon || ''}
-                            onChange={(e) => {
-                              const newUpgrades = [...upgrades];
-                              newUpgrades[index].adultsFastFoodCoupon = e.target.value;
-                              setUpgrades(newUpgrades);
-                            }}
-                            className="input-modern text-xs"
-                            placeholder="e.g., 2"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-blue-600 font-bold text-xs mb-1">Kids Fast Food</label>
-                          <input
-                            type="text"
-                            value={upgrade.kidsFastFoodCoupon || ''}
-                            onChange={(e) => {
-                              const newUpgrades = [...upgrades];
-                              newUpgrades[index].kidsFastFoodCoupon = e.target.value;
-                              setUpgrades(newUpgrades);
-                            }}
-                            className="input-modern text-xs"
-                            placeholder="e.g., 1"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-blue-600 font-bold text-xs mb-1">Adults Main Food</label>
-                          <input
-                            type="text"
-                            value={upgrade.adultsMainFoodCoupon || ''}
-                            onChange={(e) => {
-                              const newUpgrades = [...upgrades];
-                              newUpgrades[index].adultsMainFoodCoupon = e.target.value;
-                              setUpgrades(newUpgrades);
-                            }}
-                            className="input-modern text-xs"
-                            placeholder="e.g., 2"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-blue-600 font-bold text-xs mb-1">Kids Main Food</label>
-                          <input
-                            type="text"
-                            value={upgrade.kidsMainFoodCoupon || ''}
-                            onChange={(e) => {
-                              const newUpgrades = [...upgrades];
-                              newUpgrades[index].kidsMainFoodCoupon = e.target.value;
-                              setUpgrades(newUpgrades);
-                            }}
-                            className="input-modern text-xs"
-                            placeholder="e.g., 1"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                  <p className="text-gray-500 mb-3">No upgrade tickets added</p>
-                  <button
-                    type="button"
-                    onClick={addUpgrade}
-                    className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                  >
-                    Add Upgrade Ticket
-                  </button>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={addUpgrade}
-                className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold"
-              >
-                ➕ Add Upgrade Ticket
-              </button>
-            </div>
-          </div>
-
-          <div className="flex gap-3 mt-6 flex-shrink-0">
-            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-blue-900 font-bold">
-              Cancel
-            </button>
-            <button type="button" onClick={handleSubmit} disabled={saving} className="flex-1 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-50">
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
   );
 }
