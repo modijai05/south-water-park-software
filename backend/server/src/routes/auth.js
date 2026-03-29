@@ -43,7 +43,7 @@ router.post('/login', async (req, res) => {
         const user = await User.findOne({ username });
         console.log('🔐 Database user found:', user ? 'YES' : 'NO');
         
-        if (user && user.password === password) {
+        if (user && await user.comparePassword(password)) {
           console.log('🔐 Database authentication successful');
           const token = jwt.sign(
             { userId: user._id, username: user.username, role: user.role },
