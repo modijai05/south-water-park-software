@@ -316,7 +316,7 @@ export function AdminEntries() {
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
                               <span className="px-2 py-1 rounded-lg bg-gradient-to-r from-blue-100 to-blue-200 text-blue-900 font-bold text-xs border border-blue-300">
-                                👤 {(entry as any).filledByFullName || (entry as any).createdBy?.fullName || (entry as any).createdBy?.username || 'Unknown'}
+                                👤 {(entry as any).filledByFullName || (entry as any).filledBy || user?.fullName || user?.username || 'Unknown'}
                               </span>
                               {(entry as any).createdBy?.username && (
                                 <span className="px-2 py-1 rounded-lg bg-purple-100 text-purple-900 font-bold text-xs border border-purple-300">
@@ -879,6 +879,7 @@ function EditEntryModal({ entry, onClose, onSaved, setToast }: { entry: EntryRec
   const [advanceAmount, setAdvanceAmount] = useState<number>(entry.advanceAmount ?? 0);
   const [otherAmount, setOtherAmount] = useState<number>(entry.otherAmount ?? 0);
   const [notes, setNotes] = useState(entry.notes ?? '');
+  const [entryDate, setEntryDate] = useState(entry.createdAt ? dayjs(entry.createdAt).format('YYYY-MM-DDTHH:mm') : '');
   const [saving, setSaving] = useState(false);
 
   // compute amounts using imported helper
@@ -952,6 +953,7 @@ function EditEntryModal({ entry, onClose, onSaved, setToast }: { entry: EntryRec
         advanceAmount,
         otherAmount,
         notes: notes.trim() || undefined,
+        createdAt: entryDate ? new Date(entryDate).toISOString() : undefined,
       };
 
       console.log('🔧 EditEntryModal: Payload to send:', payload);
@@ -1018,6 +1020,19 @@ function EditEntryModal({ entry, onClose, onSaved, setToast }: { entry: EntryRec
               <label className="block text-blue-900 font-bold text-sm mb-2">Mobile</label>
               <input value={mobile} onChange={(e) => setMobile(e.target.value)} className="input-modern" />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-blue-900 font-bold text-sm mb-2">📅 Entry Date & Time</label>
+            <input 
+              type="datetime-local" 
+              value={entryDate} 
+              onChange={(e) => setEntryDate(e.target.value)} 
+              className="input-modern"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Original: {dayjs(entry.createdAt).format('DD/MM/YYYY hh:mm A')}
+            </p>
           </div>
 
           <div>
