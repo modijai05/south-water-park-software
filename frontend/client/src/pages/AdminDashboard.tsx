@@ -606,10 +606,46 @@ export function AdminDashboard() {
       
       console.log('🔄 Dashboard: Fetched', entriesData.length, 'entries for intelligent sync');
       
+      // Debug: Check if discount fields are present in the data
+      if (entriesData.length > 0) {
+        const sampleEntry = entriesData[0];
+        console.log('🔍 Dashboard: Sample entry data:', {
+          id: sampleEntry?._id,
+          ticketType: sampleEntry?.ticketType,
+          additionalDiscount: sampleEntry?.additionalDiscount,
+          kidDiscount: sampleEntry?.kidDiscount,
+          hasAdditionalDiscount: sampleEntry?.additionalDiscount !== undefined,
+          hasKidDiscount: sampleEntry?.kidDiscount !== undefined,
+          finalAmount: sampleEntry?.finalAmount
+        });
+        
+        // Check for any entries with discounts
+        const entriesWithDiscounts = entriesData.filter(entry => 
+          (entry.additionalDiscount || 0) > 0 || (entry.kidDiscount || 0) > 0
+        );
+        console.log('🔍 Dashboard: Entries with discounts:', entriesWithDiscounts.length);
+        
+        if (entriesWithDiscounts.length > 0) {
+          console.log('🔍 Dashboard: First discounted entry:', {
+            id: entriesWithDiscounts[0]._id,
+            additionalDiscount: entriesWithDiscounts[0].additionalDiscount,
+            kidDiscount: entriesWithDiscounts[0].kidDiscount
+          });
+        }
+      }
+      
       // Only update if we have valid data to prevent flickering to zero
       if (entriesData.length >= 0) {
         // Calculate stats from entries data
         const calculatedStats = calculateStatsFromEntries(entriesData);
+        
+        // Debug: Log calculated discount stats
+        console.log('🔍 Dashboard: Calculated discount stats:', {
+          todayAdditionalDiscount: calculatedStats.todayAdditionalDiscount,
+          todayTotalDiscount: calculatedStats.todayTotalDiscount,
+          totalAdditionalDiscount: calculatedStats.totalAdditionalDiscount,
+          totalTotalDiscount: calculatedStats.totalTotalDiscount
+        });
         
         // Update performance metrics immediately
         const newPerformanceMetrics = {
