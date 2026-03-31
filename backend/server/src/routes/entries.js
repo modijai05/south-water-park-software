@@ -378,6 +378,18 @@ const getTodayRange = () => {
 
 // Helper function to calculate comprehensive stats from entries
 const calculateStatsFromEntries = (entries, allEntries = []) => {
+  console.log('🔍 calculateStatsFromEntries called with:', {
+    entriesCount: entries.length,
+    allEntriesCount: allEntries.length,
+    sampleEntry: entries[0] ? {
+      id: entries[0]._id,
+      additionalDiscount: entries[0].additionalDiscount,
+      kidDiscount: entries[0].kidDiscount,
+      hasAdditionalDiscount: entries[0].additionalDiscount !== undefined,
+      hasKidDiscount: entries[0].kidDiscount !== undefined
+    } : 'No entries'
+  });
+
   const stats = {
     todayEntries: entries.length,
     totalEntries: allEntries.length,
@@ -524,6 +536,17 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     const kidDiscount = entry.kidDiscount || 0;
     const totalDiscount = additionalDiscount + kidDiscount;
     
+    // Debug: Log discount values for first few entries
+    if (stats.todayAdditionalDiscount === 0 && additionalDiscount > 0) {
+      console.log('🔍 First discount found:', {
+        entryId: entry._id,
+        ticketType: entry.ticketType,
+        additionalDiscount,
+        kidDiscount,
+        totalDiscount
+      });
+    }
+    
     stats.todayAdditionalDiscount += additionalDiscount;
     stats.todayTotalDiscount += totalDiscount;
   });
@@ -593,12 +616,31 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     const kidDiscount = entry.kidDiscount || 0;
     const totalDiscount = additionalDiscount + kidDiscount;
     
+    // Debug: Log first few total discount discoveries
+    if (stats.totalAdditionalDiscount === 0 && additionalDiscount > 0) {
+      console.log('🔍 First total discount found:', {
+        entryId: entry._id,
+        ticketType: entry.ticketType,
+        additionalDiscount,
+        kidDiscount,
+        totalDiscount
+      });
+    }
+    
     stats.totalAdditionalDiscount += additionalDiscount;
     stats.totalTotalDiscount += totalDiscount;
   });
 
   // Calculate performance metrics
   stats.averageTicketValue = stats.totalEntries > 0 ? Math.round(stats.totalAmount / stats.totalEntries) : 0;
+  
+  // Debug: Log final discount stats
+  console.log('🔍 Final calculated stats:', {
+    todayAdditionalDiscount: stats.todayAdditionalDiscount,
+    todayTotalDiscount: stats.todayTotalDiscount,
+    totalAdditionalDiscount: stats.totalAdditionalDiscount,
+    totalTotalDiscount: stats.totalTotalDiscount
+  });
   
   return stats;
 };
@@ -1581,7 +1623,7 @@ router.get('/', async (req, res) => {
             .skip(skip)
             .limit(limitNum)
             .lean() // Use lean for faster queries
-            .select('name mobile ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon receiptNumber createdAt filledBy filledByFullName createdBy upgrades'), // Select only required fields
+            .select('name mobile ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon receiptNumber createdAt filledBy filledByFullName createdBy upgrades additionalDiscount kidDiscount'), // Select only required fields
           Entry.countDocuments(query)
         ]);
         
