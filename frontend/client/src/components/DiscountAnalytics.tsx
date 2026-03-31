@@ -214,22 +214,22 @@ export function DiscountAnalytics({ timeRange = '30d' }: { timeRange?: string })
   console.log('🔍 DiscountAnalytics: entriesWithDiscounts:', data?.summary?.entriesWithDiscounts);
   console.log('🔍 DiscountAnalytics: totalDiscountAmount:', data?.summary?.totalDiscountAmount);
 
-  // TEMPORARY: Test with sample data to verify rendering works
-  const testData = data && data.summary.totalEntries > 0 ? data : {
+  // Use real data with fallback to empty structure if no data
+  const displayData = data || {
     summary: {
-      totalEntries: 81,
-      entriesWithDiscounts: 3,
-      totalDiscountAmount: 850,
-      totalAdditionalDiscount: 550,
-      totalKidDiscount: 300,
-      averageDiscountPerEntry: 10.49,
-      discountRate: 3.7
+      totalEntries: 0,
+      entriesWithDiscounts: 0,
+      totalDiscountAmount: 0,
+      totalAdditionalDiscount: 0,
+      totalKidDiscount: 0,
+      averageDiscountPerEntry: 0,
+      discountRate: 0
     },
     trends: {
       dailyDiscounts: [],
       discountTypes: {
-        additional: { count: 2, amount: 550, avgAmount: 275 },
-        kid: { count: 1, amount: 300, avgAmount: 300 }
+        additional: { count: 0, amount: 0, avgAmount: 0 },
+        kid: { count: 0, amount: 0, avgAmount: 0 }
       },
       ticketTypeDiscounts: {}
     },
@@ -237,11 +237,10 @@ export function DiscountAnalytics({ timeRange = '30d' }: { timeRange?: string })
       highestDiscountDay: null,
       mostDiscountedTicketType: null,
       discountFrequency: 'low',
-      totalSavings: 850
+      totalSavings: 0
     }
   };
-
-  const displayData = testData || data;
+  
   console.log('🎯 DiscountAnalytics: Using displayData:', displayData);
 
   const pieData = [

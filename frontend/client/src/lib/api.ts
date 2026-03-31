@@ -675,6 +675,79 @@ export const analyticsApi = {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}`
       }
+    })
+    .then(response => {
+      if (!response) {
+        console.warn('⚠️ Date-wise analytics: No response received');
+        return {
+          todayAnalytics: [],
+          historicalAnalytics: [],
+          summary: {
+            today: {
+              totalRevenue: 0,
+              totalEntries: 0,
+              totalPeople: 0,
+              totalAdults: 0,
+              totalKids: 0,
+              date: new Date().toISOString().split('T')[0],
+              lastUpdated: new Date().toISOString(),
+              totalDiscountAmount: 0,
+              entriesWithDiscounts: 0,
+              discountRate: 0
+            },
+            historical: {
+              totalRevenue: 0,
+              totalEntries: 0,
+              totalPeople: 0,
+              totalAdults: 0,
+              totalKids: 0,
+              dateRange: 'Last 30 days',
+              totalDiscountAmount: 0,
+              entriesWithDiscounts: 0,
+              discountRate: 0
+            }
+          }
+        };
+      }
+      console.log('✅ Date-wise analytics loaded successfully');
+      return response;
+    })
+    .catch(error => {
+      console.error('❌ Date-wise analytics failed:', error);
+      // Return comprehensive fallback data
+      return {
+        todayAnalytics: [],
+        historicalAnalytics: [],
+        summary: {
+          today: {
+            totalRevenue: 0,
+            totalEntries: 0,
+            totalPeople: 0,
+            totalAdults: 0,
+            totalKids: 0,
+            date: new Date().toISOString().split('T')[0],
+            lastUpdated: new Date().toISOString(),
+            totalDiscountAmount: 0,
+            entriesWithDiscounts: 0,
+            discountRate: 0,
+            avgTicketValue: 0,
+            growthRate: 0,
+            peakHour: 0
+          },
+          historical: {
+            totalRevenue: 0,
+            totalEntries: 0,
+            totalPeople: 0,
+            totalAdults: 0,
+            totalKids: 0,
+            dateRange: 'Last 30 days',
+            totalDiscountAmount: 0,
+            entriesWithDiscounts: 0,
+            discountRate: 0,
+            avgTicketValue: 0
+          }
+        }
+      };
     });
   },
 };

@@ -114,13 +114,23 @@ export function TodayAnalytics() {
       const response = await analyticsApi.dateWise();
       console.log('✅ Date-wise analytics data loaded:', response);
       
-      // Use today's analytics from the new endpoint
-      setTodayData(response.todayAnalytics || []);
-      setSummary(response.summary?.today || null);
+      // Validate response structure before setting state
+      if (response && typeof response === 'object') {
+        // Use today's analytics from the new endpoint with safe fallbacks
+        setTodayData(Array.isArray(response.todayAnalytics) ? response.todayAnalytics : []);
+        setSummary(response.summary?.today || null);
+      } else {
+        console.warn('⚠️ Invalid response structure received:', response);
+        setTodayData([]);
+        setSummary(null);
+      }
       
     } catch (error) {
       console.error('Failed to fetch date-wise analytics:', error);
       setError('Failed to load today\'s analytics data');
+      // Set safe fallbacks
+      setTodayData([]);
+      setSummary(null);
     } finally {
       setLoading(false);
     }
