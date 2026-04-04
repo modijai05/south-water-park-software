@@ -1005,6 +1005,9 @@ export function AdminDashboard() {
     // Add immediate sync listener for entry edits
     window.addEventListener('immediate-sync', immediateHandleEntryUpdate);
     
+    // Add force refresh listener for complete data recalculation
+    window.addEventListener('force-refresh-all-data', handleComprehensiveSync);
+    
     // Add specific ticket config refresh listener
     const handleTicketConfigRefresh = async () => {
       console.log('🔄 AdminDashboard: Refreshing ticket configs after update');
@@ -1046,6 +1049,7 @@ export function AdminDashboard() {
       window.removeEventListener('discount-updated', handleDiscountUpdate);
       window.removeEventListener('additional-discount-updated', handleDiscountUpdate);
       window.removeEventListener('immediate-sync', immediateHandleEntryUpdate);
+      window.removeEventListener('force-refresh-all-data', handleComprehensiveSync);
     };
   }, []);
 

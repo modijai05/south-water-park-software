@@ -727,13 +727,21 @@ export function AdminEntries() {
                 {/* Ticket Information */}
                 <div className="bg-blue-50 rounded-lg p-4 mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">🎫 Ticket Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Adults *</label>
                       <input
                         type="number"
                         value={editing ? editing.adults : (viewing?.adults?.toString() || '')}
-                        onChange={(e) => editing && setEditing({...editing, adults: parseInt(e.target.value) || 0})}
+                        onChange={(e) => {
+                      if (editing) {
+                        const newAdults = parseInt(e.target.value) || 0;
+                        const newTotalPeople = editing.ticketType === '150' 
+                          ? newAdults 
+                          : newAdults + (editing.kids || 0);
+                        setEditing({...editing, adults: newAdults, totalPeople: newTotalPeople});
+                      }
+                    }}
                         disabled={!editing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       />
@@ -743,16 +751,43 @@ export function AdminEntries() {
                       <input
                         type="number"
                         value={editing ? editing.kids : (viewing?.kids?.toString() || '')}
-                        onChange={(e) => editing && setEditing({...editing, kids: parseInt(e.target.value) || 0})}
+                        onChange={(e) => {
+                      if (editing) {
+                        const newKids = parseInt(e.target.value) || 0;
+                        const newTotalPeople = editing.ticketType === '150' 
+                          ? editing.adults || 0
+                          : (editing.adults || 0) + newKids;
+                        setEditing({...editing, kids: newKids, totalPeople: newTotalPeople});
+                      }
+                    }}
                         disabled={!editing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Total People *</label>
+                      <input
+                        type="number"
+                        value={editing ? editing.totalPeople : (viewing?.totalPeople?.toString() || '')}
+                        onChange={(e) => editing && setEditing({...editing, totalPeople: parseInt(e.target.value) || 0})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        placeholder="Total number of people"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Ticket Type *</label>
                       <select
                         value={editing ? editing.ticketType : (viewing?.ticketType || '150')}
-                        onChange={(e) => editing && setEditing({...editing, ticketType: e.target.value as TicketType})}
+                        onChange={(e) => {
+                      if (editing) {
+                        const newTicketType = e.target.value as TicketType;
+                        const newTotalPeople = newTicketType === '150' 
+                          ? (editing.adults || 0)
+                          : (editing.adults || 0) + (editing.kids || 0);
+                        setEditing({...editing, ticketType: newTicketType, totalPeople: newTotalPeople});
+                      }
+                    }}
                         disabled={!editing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       >
@@ -1136,7 +1171,8 @@ export function AdminEntries() {
                             entryId: editing._id, 
                             entry: editing,
                             timestamp: new Date().toISOString(),
-                            action: 'update'
+                            action: 'update',
+                            forceRefresh: true
                           }
                         }));
                         
@@ -1145,7 +1181,8 @@ export function AdminEntries() {
                             action: 'update', 
                             entryId: editing._id,
                             entry: editing,
-                            timestamp: new Date().toISOString() 
+                            timestamp: new Date().toISOString(),
+                            forceRefresh: true
                           }
                         }));
                         
@@ -1153,6 +1190,16 @@ export function AdminEntries() {
                           detail: { 
                             source: 'entry-edit',
                             action: 'entry-updated',
+                            entryId: editing._id,
+                            timestamp: new Date().toISOString(),
+                            forceRefresh: true
+                          }
+                        }));
+                        
+                        // Force dashboard to recalculate from scratch
+                        window.dispatchEvent(new CustomEvent('force-refresh-all-data', {
+                          detail: { 
+                            source: 'entry-edit',
                             entryId: editing._id,
                             timestamp: new Date().toISOString()
                           }
