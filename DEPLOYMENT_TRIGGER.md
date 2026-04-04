@@ -1,7 +1,8 @@
-# Deployment trigger - 03/30/2026 11:30:00 - Additional Discount Fix Complete
+# Deployment trigger - 04/04/2026 4:06:00 - Entry Edit Dashboard Sync Fix Complete
 
-? Additional discount data sync with MongoDB completed
-? Today's performance dashboard updated with additional discount numbers  
-? All-time performance dashboard updated with additional discount numbers
-? Frontend built successfully
-? Ready for deployment
+✅ Entry edit dashboard sync issue fixed
+✅ Added comprehensive event dispatching after entry updates in AdminEntries
+✅ Added event listeners for entry-updated, entries-changed, and immediate-sync events
+✅ Dashboard now properly refreshes total people count when entries are edited
+✅ Frontend built successfully
+✅ Ready for deployment

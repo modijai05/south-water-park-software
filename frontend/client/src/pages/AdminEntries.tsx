@@ -1129,6 +1129,35 @@ export function AdminEntries() {
                         await entriesApi.update(editing._id, editing);
                         setAllEntries(prev => prev.map(e => e._id === editing._id ? editing : e));
                         setEntries(prev => prev.map(e => e._id === editing._id ? editing : e));
+                        
+                        // Dispatch comprehensive events for dashboard sync
+                        window.dispatchEvent(new CustomEvent('entry-updated', {
+                          detail: { 
+                            entryId: editing._id, 
+                            entry: editing,
+                            timestamp: new Date().toISOString(),
+                            action: 'update'
+                          }
+                        }));
+                        
+                        window.dispatchEvent(new CustomEvent('entries-changed', {
+                          detail: { 
+                            action: 'update', 
+                            entryId: editing._id,
+                            entry: editing,
+                            timestamp: new Date().toISOString() 
+                          }
+                        }));
+                        
+                        window.dispatchEvent(new CustomEvent('immediate-sync', {
+                          detail: { 
+                            source: 'entry-edit',
+                            action: 'entry-updated',
+                            entryId: editing._id,
+                            timestamp: new Date().toISOString()
+                          }
+                        }));
+                        
                         setEditing(null);
                         setToast({ 
                           message: '✅ Entry updated successfully', 

@@ -1002,6 +1002,9 @@ export function AdminDashboard() {
     window.addEventListener('discount-updated', handleDiscountUpdate);
     window.addEventListener('additional-discount-updated', handleDiscountUpdate);
     
+    // Add immediate sync listener for entry edits
+    window.addEventListener('immediate-sync', immediateHandleEntryUpdate);
+    
     // Add specific ticket config refresh listener
     const handleTicketConfigRefresh = async () => {
       console.log('🔄 AdminDashboard: Refreshing ticket configs after update');
@@ -1042,6 +1045,7 @@ export function AdminDashboard() {
       window.removeEventListener('receipt-printed', handleReceiptEvent);
       window.removeEventListener('discount-updated', handleDiscountUpdate);
       window.removeEventListener('additional-discount-updated', handleDiscountUpdate);
+      window.removeEventListener('immediate-sync', immediateHandleEntryUpdate);
     };
   }, []);
 
