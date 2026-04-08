@@ -390,7 +390,7 @@ export function AdminDashboard() {
   const calculateStatsFromEntries = (entriesData: any[]): Stats => {
     const today = dayjs().format('YYYY-MM-DD');
     const todayEntries = entriesData.filter(entry => 
-      dayjs(entry.createdAt).format('YYYY-MM-DD') === today
+      dayjs(entry.entryDate || entry.createdAt).format('YYYY-MM-DD') === today
     );
     
     // Calculate all-time totals

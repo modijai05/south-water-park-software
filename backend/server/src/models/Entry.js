@@ -39,9 +39,12 @@ const entrySchema = new mongoose.Schema({
   filledByFullName: { type: String, default: 'Unknown' },
   receiptNumber: { type: String, unique: true, sparse: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  // Custom entry date field that can be manually updated
+  entryDate: { type: Date, default: Date.now },
 }, { timestamps: true });
 
 entrySchema.index({ createdAt: -1 });
+entrySchema.index({ entryDate: -1 });
 entrySchema.index({ name: 'text', mobile: 'text' });
 entrySchema.index({ ticketType: 1 });
 entrySchema.index({ filledBy: 1 });
@@ -49,6 +52,7 @@ entrySchema.index({ finalAmount: 1 });
 entrySchema.index({ createdBy: 1 });
 // Compound index for date-wise queries
 entrySchema.index({ createdAt: -1, ticketType: 1 });
+entrySchema.index({ entryDate: -1, ticketType: 1 });
 // Compound index for search optimization
 entrySchema.index({ name: 1, mobile: 1, receiptNumber: 1 });
 

@@ -544,8 +544,12 @@ export function AdminEntries() {
                       <tr key={entry._id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
                           <div>
-                            <div className="font-medium">{dayjs(entry.createdAt).format('DD/MM/YY')}</div>
-                            <div className="text-xs text-gray-500">{dayjs(entry.createdAt).format('hh:mm A')}</div>
+                            <div className="font-medium">
+                              {dayjs(entry.entryDate || entry.createdAt).format('DD/MM/YY')}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {dayjs(entry.entryDate || entry.createdAt).format('hh:mm A')}
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
@@ -1095,20 +1099,20 @@ export function AdminEntries() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Created Date</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Entry Date</label>
                       <input
                         type="datetime-local"
                         value={editing ? 
-                          (editing.createdAt && typeof editing.createdAt === 'string' 
-                            ? editing.createdAt.slice(0, 16) 
-                            : editing.createdAt 
-                          ) : (viewing?.createdAt || '')}
+                          (editing.entryDate && typeof editing.entryDate === 'string' 
+                            ? editing.entryDate.slice(0, 16) 
+                            : editing.entryDate 
+                          ) : (viewing?.entryDate || '')}
                         onChange={(e) => {
                           if (editing) {
                             const newDate = e.target.value;
-                            // Convert to ISO string for backend compatibility
-                            const isoDate = newDate ? new Date(newDate).toISOString() : new Date().toISOString();
-                            setEditing({...editing, createdAt: isoDate});
+                            // Convert to Date object for backend compatibility
+                            const dateObj = newDate ? new Date(newDate) : new Date();
+                            setEditing({...editing, entryDate: dateObj.toISOString()});
                           }
                         }}
                         disabled={!editing}
@@ -1174,6 +1178,7 @@ export function AdminEntries() {
                       try {
                         console.log('🔧 AdminEntries: Starting entry update with current data:', {
                           id: editing._id,
+                          currentEntryDate: editing.entryDate,
                           currentCreatedAt: editing.createdAt,
                           currentAdults: editing.adults,
                           currentKids: editing.kids,
@@ -1233,8 +1238,8 @@ export function AdminEntries() {
                         window.dispatchEvent(new CustomEvent('entry-datetime-updated', {
                           detail: { 
                             entryId: editing._id,
-                            oldDateTime: viewing?.createdAt,
-                            newDateTime: editing.createdAt,
+                            oldDateTime: viewing?.entryDate || viewing?.createdAt,
+                            newDateTime: editing.entryDate,
                             timestamp: new Date().toISOString()
                           }
                         }));
