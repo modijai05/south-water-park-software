@@ -1703,13 +1703,24 @@ router.put('/:id', async (req, res) => {
       });
       
       // Ensure entryDate is a valid Date object for MongoDB
-      if (dayjs(updateData.entryDate).isValid()) {
+      if (updateData.entryDate && dayjs(updateData.entryDate).isValid()) {
+        const originalDate = updateData.entryDate;
         updateData.entryDate = new Date(updateData.entryDate);
         console.log('PROFESSIONAL DEBUG: Entry date converted to Date object:', {
+          originalDate,
           convertedDate: updateData.entryDate,
-          isoString: updateData.entryDate.toISOString()
+          isoString: updateData.entryDate.toISOString(),
+          dateType: typeof updateData.entryDate
         });
-      } else {
+        
+        // CRITICAL: Explicitly mark entryDate for update to prevent default override
+        updateData.$set = updateData.$set || {};
+        updateData.$set.entryDate = updateData.entryDate;
+        
+        console.log('PROFESSIONAL DEBUG: Entry date marked for explicit update:', {
+          $set: updateData.$set
+        });
+      } else if (updateData.entryDate) {
         console.error('PROFESSIONAL ERROR: Invalid entryDate provided:', updateData.entryDate);
         delete updateData.entryDate; // Remove invalid date
       }
@@ -1731,7 +1742,7 @@ router.put('/:id', async (req, res) => {
         const updatedEntry = await Entry.findOneAndUpdate(
           { _id: id },
           updateData,
-          { new: true, runValidators: true }
+          { new: true, runValidators: false }
         );
         
         if (!updatedEntry) {

@@ -1217,22 +1217,66 @@ export function AdminEntries() {
                         // Don't update local state immediately - let the complete refresh handle it
                         // This prevents conflicts between local state and fresh data
                         
-                        // Force complete data refresh to ensure perfect synchronization
+                        // CRITICAL FIX: Apply immediate filter re-application after successful update
                         setTimeout(async () => {
-                          console.log('AdminEntries: Forcing complete data refresh after date update...');
-                          await fetchEntries(true); // Force refresh to get fresh data from backend
+                          console.log('AdminEntries: Applying immediate filter re-application...');
                           
-                          // Also trigger a specific event for date filter updates
-                          window.dispatchEvent(new CustomEvent('date-filter-needs-refresh', {
-                            detail: {
-                              entryId: editing._id,
-                              oldDate: viewing?.entryDate || viewing?.createdAt,
-                              newDate: editing.entryDate,
+                          // First, get the fresh data to confirm the update
+                          try {
+                            const freshRes = await entriesApi.list({ page: 1, limit: 50000 });
+                            const freshEntries = (freshRes.data?.entries as EntryRecord[]) ?? [];
+                            
+                            console.log('Fresh data received, applying filters:', {
+                              totalEntries: freshEntries.length,
                               currentFilter: dateFilter,
-                              timestamp: new Date().toISOString()
+                              updatedEntryId: editing._id
+                            });
+                            
+                            // Update the master data
+                            setAllEntries(freshEntries);
+                            
+                            // IMMEDIATELY apply the current filter to move the entry
+                            let filtered = freshEntries;
+                            if (dateFilter === 'today') {
+                              filtered = filtered.filter(entry => 
+                                dayjs(getEffectiveEntryDate(entry)).isSame(dayjs(), 'day')
+                              );
+                            } else if (dateFilter === 'yesterday') {
+                              filtered = filtered.filter(entry => 
+                                dayjs(getEffectiveEntryDate(entry)).isSame(dayjs().subtract(1, 'day'), 'day')
+                              );
+                            } else if (dateFilter === 'all') {
+                              filtered = freshEntries;
                             }
-                          }));
-                        }, 300); // Slightly longer delay to ensure backend is updated
+                            
+                            // Apply search filter if exists
+                            if (search.trim()) {
+                              const searchTerm = search.toLowerCase().trim();
+                              filtered = filtered.filter(entry => 
+                                entry.name?.toLowerCase().includes(searchTerm) ||
+                                entry.mobile?.toLowerCase().includes(searchTerm) ||
+                                entry.filledByFullName?.toLowerCase().includes(searchTerm) ||
+                                entry.ticketType?.toLowerCase().includes(searchTerm) ||
+                                entry.additionalDiscount?.toString().includes(searchTerm)
+                              );
+                            }
+                            
+                            // Update the displayed entries
+                            setEntries(filtered);
+                            
+                            console.log('Filter re-application completed:', {
+                              totalEntries: freshEntries.length,
+                              filteredEntries: filtered.length,
+                              dateFilter,
+                              updatedEntryVisible: filtered.some(e => e._id === editing._id)
+                            });
+                            
+                          } catch (error) {
+                            console.error('Failed to apply immediate filter re-application:', error);
+                            // Fallback to full refresh
+                            await fetchEntries(true);
+                          }
+                        }, 500); // Longer delay to ensure backend update is complete
                         
                                                 
                         console.log('AdminEntries: Local state updated with new entry data:', editing);
