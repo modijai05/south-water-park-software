@@ -108,6 +108,9 @@ export function AdminEntries() {
     }
   }, [isClient]);
 
+  // Add a manual trigger for filter recalculation
+  const [, setFilterTrigger] = useState(0);
+  
   // Filter entries based on search and date
   const filteredEntries = useMemo(() => {
     let filtered = allEntries;
@@ -136,7 +139,7 @@ export function AdminEntries() {
     }
     
     return filtered;
-  }, [allEntries, search, dateFilter]);
+  }, [allEntries, search, dateFilter, setFilterTrigger]);
 
   // Initial load
   useEffect(() => {
@@ -1270,8 +1273,12 @@ export function AdminEntries() {
                               );
                             }
                             
-                            // Update the displayed entries
+                            // Update both master data and displayed entries
+                            setAllEntries(freshEntries);
                             setEntries(filtered);
+                            
+                            // Force the filter useMemo to recalculate
+                            setFilterTrigger(prev => prev + 1);
                             
                             console.log('Filter re-application completed:', {
                               totalEntries: freshEntries.length,
