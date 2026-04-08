@@ -177,6 +177,12 @@ export function AdminEntries() {
       fetchEntries();
     };
     
+    // NEW: Handle date filter refresh events
+    const handleDateFilterNeedsRefresh = (event: any) => {
+      console.log('AdminEntries: Date filter refresh event received:', event.detail);
+      fetchEntries(); // Force complete refresh to re-apply all filters
+    };
+    
     // Add window event listeners
     window.addEventListener('discount-updated', handleDiscountUpdated as EventListener);
     window.addEventListener('additional-discount-updated', handleAdditionalDiscountUpdated as EventListener);
@@ -184,6 +190,7 @@ export function AdminEntries() {
     window.addEventListener('immediate-sync', handleImmediateSync as EventListener);
     window.addEventListener('discounts-sync', handleDiscountsSync as EventListener);
     window.addEventListener('entry-created', handleEntryCreated as EventListener);
+    window.addEventListener('date-filter-needs-refresh', handleDateFilterNeedsRefresh as EventListener);
     
     // Add global sync service listeners
     globalSyncService.addEventListener('discount-updated', handleDiscountUpdated);
@@ -192,6 +199,7 @@ export function AdminEntries() {
     globalSyncService.addEventListener('immediate-sync', handleImmediateSync);
     globalSyncService.addEventListener('discounts-sync', handleDiscountsSync);
     globalSyncService.addEventListener('entry-created', handleEntryCreated);
+    globalSyncService.addEventListener('date-filter-needs-refresh', handleDateFilterNeedsRefresh);
     
     return () => {
       console.log('🧹 AdminEntries: Cleaning up comprehensive sync event listeners');
@@ -203,6 +211,7 @@ export function AdminEntries() {
       window.removeEventListener('immediate-sync', handleImmediateSync as EventListener);
       window.removeEventListener('discounts-sync', handleDiscountsSync as EventListener);
       window.removeEventListener('entry-created', handleEntryCreated as EventListener);
+      window.removeEventListener('date-filter-needs-refresh', handleDateFilterNeedsRefresh as EventListener);
       
       // Remove global sync service listeners
       globalSyncService.removeEventListener('discount-updated', handleDiscountUpdated);
@@ -211,6 +220,7 @@ export function AdminEntries() {
       globalSyncService.removeEventListener('immediate-sync', handleImmediateSync);
       globalSyncService.removeEventListener('discounts-sync', handleDiscountsSync);
       globalSyncService.removeEventListener('entry-created', handleEntryCreated);
+      globalSyncService.removeEventListener('date-filter-needs-refresh', handleDateFilterNeedsRefresh);
     };
   }, [fetchEntries]);
 
@@ -1190,9 +1200,26 @@ export function AdminEntries() {
                         console.log('🔧 AdminEntries: Update API result:', updateResult);
                         
                         setAllEntries(prev => prev.map(e => e._id === editing._id ? editing : e));
-                        setEntries(prev => prev.map(e => e._id === editing._id ? editing : e));
                         
-                        console.log('🔧 AdminEntries: Local state updated with new entry data:', editing);
+                        // Force complete data refresh to ensure perfect synchronization
+                        setTimeout(async () => {
+                          console.log('AdminEntries: Forcing complete data refresh after date update...');
+                          await fetchEntries(); // This will re-fetch all data and re-apply filters
+                          
+                          // Also trigger a specific event for date filter updates
+                          window.dispatchEvent(new CustomEvent('date-filter-needs-refresh', {
+                            detail: {
+                              entryId: editing._id,
+                              oldDate: viewing?.entryDate || viewing?.createdAt,
+                              newDate: editing.entryDate,
+                              currentFilter: dateFilter,
+                              timestamp: new Date().toISOString()
+                            }
+                          }));
+                        }, 200);
+                        
+                                                
+                        console.log('AdminEntries: Local state updated with new entry data:', editing);
                         
                         // Dispatch comprehensive events for dashboard sync
                         window.dispatchEvent(new CustomEvent('entry-updated', {
