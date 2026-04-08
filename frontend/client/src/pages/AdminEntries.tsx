@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { globalSyncService } from '@/services/globalSyncService';
 import { getEffectiveEntryDate, getFormattedEntryDate, getFormattedEntryTime, prepareEntryForAPI, formatDateTimeForInput, convertDateTimeLocalToISO } from '@/utils/dateUtils';
+import { setPreventForceReset } from '@/utils/forceDailyReset';
 import type { EntryRecord, TicketType } from '@/types';
 
 // Helper function to safely convert values to strings
@@ -1209,10 +1210,18 @@ export function AdminEntries() {
                           currentTotalPeople: editing.totalPeople
                         });
                         
+                        // Prevent force resets during manual date updates
+                        setPreventForceReset(true, 'Manual date update in progress');
+                        
                         const preparedEntry = prepareEntryForAPI(editing);
-                        console.log('🔧 AdminEntries: Prepared entry for API:', preparedEntry);
+                        console.log('AdminEntries: Prepared entry for API:', preparedEntry);
                         const updateResult = await entriesApi.update(editing._id, preparedEntry);
-                        console.log('🔧 AdminEntries: Update API result:', updateResult);
+                        console.log('AdminEntries: Update API result:', updateResult);
+                        
+                        // Re-enable force resets after update
+                        setTimeout(() => {
+                          setPreventForceReset(false, 'Manual date update completed');
+                        }, 2000);
                         
                         // Don't update local state immediately - let the complete refresh handle it
                         // This prevents conflicts between local state and fresh data

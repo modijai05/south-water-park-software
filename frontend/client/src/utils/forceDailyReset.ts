@@ -3,11 +3,30 @@ import { performDailyReset, clearTodayCache, markDailyReset } from './dailyReset
 import { entriesApi } from '@/lib/api';
 import dayjs from 'dayjs';
 
+// Global flag to prevent force resets during manual operations
+let preventForceReset = false;
+let preventForceResetReason = '';
+
+export const setPreventForceReset = (prevent: boolean, reason: string = '') => {
+  preventForceReset = prevent;
+  preventForceResetReason = reason;
+  console.log('Force reset prevention:', { prevent, reason });
+};
+
+export const getPreventForceReset = () => ({ prevent: preventForceReset, reason: preventForceResetReason });
+
 /**
  * Force a complete daily reset regardless of current state
  * This is used when the automatic reset fails or data is incorrect
  */
 export const forceDailyResetComplete = async () => {
+  // Check if force reset is prevented
+  const prevention = getPreventForceReset();
+  if (prevention.prevent) {
+    console.log('Force reset prevented:', prevention.reason);
+    return { success: false, reason: prevention.reason, prevented: true };
+  }
+  
   console.log('🚨 FORCING COMPLETE DAILY RESET - Manual Intervention');
   
   try {
@@ -90,6 +109,13 @@ export const forceDailyResetComplete = async () => {
  * Check if data is from previous day and needs force reset
  */
 export const needsForceReset = (statsData: any): boolean => {
+  // Check if force reset is prevented
+  const prevention = getPreventForceReset();
+  if (prevention.prevent) {
+    console.log('Force reset check prevented:', prevention.reason);
+    return false;
+  }
+  
   if (!statsData) return false;
   
   const today = dayjs().format('YYYY-MM-DD');
