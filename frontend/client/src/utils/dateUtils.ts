@@ -132,3 +132,24 @@ export const compareEntriesByDate = (entryA: any, entryB: any): number => {
   
   return dayjs(dateB).valueOf() - dayjs(dateA).valueOf(); // Descending order
 };
+
+/**
+ * Formats a date for datetime-local input field (YYYY-MM-DDTHH:mm)
+ * @param entry - The entry object
+ * @returns The formatted date string for datetime-local input
+ */
+export const formatDateTimeForInput = (entry: any): string => {
+  const effectiveDate = getEffectiveEntryDate(entry);
+  if (!effectiveDate) return '';
+  return dayjs(effectiveDate).format('YYYY-MM-DDTHH:mm');
+};
+
+/**
+ * Converts datetime-local input string to ISO string for API
+ * @param dateTimeLocalString - The datetime-local string (YYYY-MM-DDTHH:mm)
+ * @returns The ISO string for API
+ */
+export const convertDateTimeLocalToISO = (dateTimeLocalString: string): string => {
+  if (!dateTimeLocalString) return new Date().toISOString();
+  return dayjs(dateTimeLocalString).toISOString();
+};

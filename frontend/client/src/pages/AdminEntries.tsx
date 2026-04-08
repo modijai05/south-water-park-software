@@ -9,7 +9,7 @@ import { useEntryStore } from '@/store/entryStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { globalSyncService } from '@/services/globalSyncService';
-import { getEffectiveEntryDate, getFormattedEntryDate, getFormattedEntryTime, prepareEntryForAPI } from '@/utils/dateUtils';
+import { getEffectiveEntryDate, getFormattedEntryDate, getFormattedEntryTime, prepareEntryForAPI, formatDateTimeForInput, convertDateTimeLocalToISO } from '@/utils/dateUtils';
 import type { EntryRecord, TicketType } from '@/types';
 
 // Helper function to safely convert values to strings
@@ -1103,17 +1103,15 @@ export function AdminEntries() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Entry Date</label>
                       <input
                         type="datetime-local"
-                        value={editing ? 
-                          (editing.entryDate && typeof editing.entryDate === 'string' 
-                            ? editing.entryDate.slice(0, 16) 
-                            : editing.entryDate 
-                          ) : (viewing?.entryDate || '')}
+                        value={editing ? formatDateTimeForInput(editing) : formatDateTimeForInput(viewing)}
                         onChange={(e) => {
                           if (editing) {
                             const newDate = e.target.value;
-                            // Convert to Date object for backend compatibility
-                            const dateObj = newDate ? new Date(newDate) : new Date();
-                            setEditing({...editing, entryDate: dateObj.toISOString()});
+                            console.log('Date input changed:', newDate);
+                            // Convert datetime-local string to ISO string for backend
+                            const isoDate = convertDateTimeLocalToISO(newDate);
+                            console.log('Converted to ISO:', isoDate);
+                            setEditing({...editing, entryDate: isoDate});
                           }
                         }}
                         disabled={!editing}

@@ -1693,12 +1693,26 @@ router.put('/:id', async (req, res) => {
     
     // Special logging for date/time updates
     if (updateData.entryDate) {
-      console.log('📅 Updating entry date/time:', {
+      console.log('PROFESSIONAL DEBUG: Entry date update detected:', {
         id,
         newEntryDate: updateData.entryDate,
         entryDateType: typeof updateData.entryDate,
-        formattedDate: new Date(updateData.entryDate).toISOString()
+        isValidDate: dayjs(updateData.entryDate).isValid(),
+        formattedDate: new Date(updateData.entryDate).toISOString(),
+        dayjsFormatted: dayjs(updateData.entryDate).format('YYYY-MM-DD HH:mm:ss')
       });
+      
+      // Ensure entryDate is a valid Date object for MongoDB
+      if (dayjs(updateData.entryDate).isValid()) {
+        updateData.entryDate = new Date(updateData.entryDate);
+        console.log('PROFESSIONAL DEBUG: Entry date converted to Date object:', {
+          convertedDate: updateData.entryDate,
+          isoString: updateData.entryDate.toISOString()
+        });
+      } else {
+        console.error('PROFESSIONAL ERROR: Invalid entryDate provided:', updateData.entryDate);
+        delete updateData.entryDate; // Remove invalid date
+      }
     }
     
     console.log('📝 Updating entry:', id, updateData);
