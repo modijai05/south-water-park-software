@@ -115,20 +115,40 @@ export function AdminEntries() {
   const filteredEntries = useMemo(() => {
     let filtered = allEntries;
     
+    console.log('DEBUG: filteredEntries useMemo running:', {
+      allEntriesCount: allEntries.length,
+      dateFilter,
+      search,
+      filterTrigger: setFilterTrigger
+    });
+    
     // Apply date filter
     if (dateFilter === 'today') {
-      filtered = filtered.filter(entry => 
-        dayjs(getEffectiveEntryDate(entry)).isSame(dayjs(), 'day')
-      );
+      filtered = filtered.filter(entry => {
+        const isToday = dayjs(getEffectiveEntryDate(entry)).isSame(dayjs(), 'day');
+        return isToday;
+      });
+      console.log('DEBUG: Today filter applied:', {
+        beforeCount: allEntries.length,
+        afterCount: filtered.length,
+        today: dayjs().format('YYYY-MM-DD')
+      });
     } else if (dateFilter === 'yesterday') {
-      filtered = filtered.filter(entry => 
-        dayjs(getEffectiveEntryDate(entry)).isSame(dayjs().subtract(1, 'day'), 'day')
-      );
+      filtered = filtered.filter(entry => {
+        const isYesterday = dayjs(getEffectiveEntryDate(entry)).isSame(dayjs().subtract(1, 'day'), 'day');
+        return isYesterday;
+      });
+      console.log('DEBUG: Yesterday filter applied:', {
+        beforeCount: allEntries.length,
+        afterCount: filtered.length,
+        yesterday: dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+      });
     }
     
     // Apply search filter
     if (search.trim()) {
       const searchTerm = search.toLowerCase().trim();
+      const beforeSearchCount = filtered.length;
       filtered = filtered.filter(entry => 
         entry.name?.toLowerCase().includes(searchTerm) ||
         entry.mobile?.toLowerCase().includes(searchTerm) ||
@@ -136,7 +156,18 @@ export function AdminEntries() {
         entry.ticketType?.toLowerCase().includes(searchTerm) ||
         entry.additionalDiscount?.toString().includes(searchTerm)
       );
+      console.log('DEBUG: Search filter applied:', {
+        searchTerm,
+        beforeCount: beforeSearchCount,
+        afterCount: filtered.length
+      });
     }
+    
+    console.log('DEBUG: Final filteredEntries result:', {
+      finalCount: filtered.length,
+      dateFilter,
+      search
+    });
     
     return filtered;
   }, [allEntries, search, dateFilter, setFilterTrigger]);
@@ -1249,14 +1280,50 @@ export function AdminEntries() {
                             
                             // IMMEDIATELY apply the current filter to move the entry
                             let filtered = freshEntries;
+                            
+                            // CRITICAL DEBUG: Log the updated entry details
+                            const updatedEntry = freshEntries.find(e => e._id === editing._id);
+                            if (updatedEntry) {
+                              console.log('CRITICAL DEBUG: Updated entry details:', {
+                                entryId: updatedEntry._id,
+                                entryDate: updatedEntry.entryDate,
+                                createdAt: updatedEntry.createdAt,
+                                effectiveDate: getEffectiveEntryDate(updatedEntry),
+                                effectiveDateFormatted: dayjs(getEffectiveEntryDate(updatedEntry)).format('YYYY-MM-DD'),
+                                todayFormatted: dayjs().format('YYYY-MM-DD'),
+                                yesterdayFormatted: dayjs().subtract(1, 'day').format('YYYY-MM-DD'),
+                                currentFilter: dateFilter,
+                                isToday: dayjs(getEffectiveEntryDate(updatedEntry)).isSame(dayjs(), 'day'),
+                                isYesterday: dayjs(getEffectiveEntryDate(updatedEntry)).isSame(dayjs().subtract(1, 'day'), 'day')
+                              });
+                            }
+                            
                             if (dateFilter === 'today') {
-                              filtered = filtered.filter(entry => 
-                                dayjs(getEffectiveEntryDate(entry)).isSame(dayjs(), 'day')
-                              );
+                              filtered = filtered.filter(entry => {
+                                const isToday = dayjs(getEffectiveEntryDate(entry)).isSame(dayjs(), 'day');
+                                if (entry._id === editing._id) {
+                                  console.log('DEBUG: Today filter check for updated entry:', {
+                                    entryId: entry._id,
+                                    effectiveDate: getEffectiveEntryDate(entry),
+                                    isToday,
+                                    today: dayjs().format('YYYY-MM-DD')
+                                  });
+                                }
+                                return isToday;
+                              });
                             } else if (dateFilter === 'yesterday') {
-                              filtered = filtered.filter(entry => 
-                                dayjs(getEffectiveEntryDate(entry)).isSame(dayjs().subtract(1, 'day'), 'day')
-                              );
+                              filtered = filtered.filter(entry => {
+                                const isYesterday = dayjs(getEffectiveEntryDate(entry)).isSame(dayjs().subtract(1, 'day'), 'day');
+                                if (entry._id === editing._id) {
+                                  console.log('DEBUG: Yesterday filter check for updated entry:', {
+                                    entryId: entry._id,
+                                    effectiveDate: getEffectiveEntryDate(entry),
+                                    isYesterday,
+                                    yesterday: dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+                                  });
+                                }
+                                return isYesterday;
+                              });
                             } else if (dateFilter === 'all') {
                               filtered = freshEntries;
                             }
