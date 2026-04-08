@@ -1224,7 +1224,7 @@ export function AdminEntries() {
                         // Re-enable force resets after update
                         setTimeout(() => {
                           setPreventForceReset(false, 'Manual date update completed');
-                        }, 2000);
+                        }, 5000); // Extended to 5 seconds to ensure daily reset system doesn't interfere
                         
                         // Don't update local state immediately - let the complete refresh handle it
                         // This prevents conflicts between local state and fresh data

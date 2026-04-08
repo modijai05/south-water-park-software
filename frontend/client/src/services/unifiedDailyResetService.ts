@@ -2,7 +2,7 @@
 // Professional daily reset management across all dashboards
 import dayjs from 'dayjs';
 import { performDailyReset, needsDailyReset, clearTodayCache } from '@/utils/dailyReset';
-import { forceDailyResetComplete, needsForceReset } from '@/utils/forceDailyReset';
+import { forceDailyResetComplete, needsForceReset, getPreventForceReset } from '@/utils/forceDailyReset';
 import { entriesApi } from '@/lib/api';
 import { globalSyncService } from './globalSyncService';
 
@@ -133,6 +133,13 @@ class UnifiedDailyResetService {
     console.log('🔍 UnifiedDailyReset: Performing comprehensive reset check...', { now });
 
     try {
+      // Check if force reset is prevented
+      const prevention = getPreventForceReset();
+      if (prevention.prevent) {
+        console.log('UnifiedDailyReset: Reset prevented:', prevention.reason);
+        return;
+      }
+      
       // Check if daily reset is needed
       if (needsDailyReset()) {
         console.log('🔄 UnifiedDailyReset: Daily reset needed, performing...');
@@ -147,13 +154,20 @@ class UnifiedDailyResetService {
   }
 
   private async performProfessionalDailyReset() {
+    // Check if force reset is prevented
+    const prevention = getPreventForceReset();
+    if (prevention.prevent) {
+      console.log('UnifiedDailyReset: Professional reset prevented:', prevention.reason);
+      return;
+    }
+    
     if (this.isResetting) {
-      console.log('🔄 UnifiedDailyReset: Reset already in progress');
+      console.log('UnifiedDailyReset: Reset already in progress');
       return;
     }
 
     this.isResetting = true;
-    console.log('🌅 UnifiedDailyReset: Starting professional daily reset...');
+    console.log('UnifiedDailyReset: Starting professional daily reset...');
 
     try {
       // Step 1: Clear all caches aggressively
