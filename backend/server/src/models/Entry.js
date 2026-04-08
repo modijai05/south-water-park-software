@@ -43,6 +43,14 @@ const entrySchema = new mongoose.Schema({
   entryDate: { type: Date, default: Date.now },
 }, { timestamps: true });
 
+// Pre-save hook to ensure entryDate is properly set
+entrySchema.pre('save', function(next) {
+  if (this.isModified('entryDate') && this.entryDate) {
+    console.log('🔧 Entry Model: entryDate being set to:', this.entryDate);
+  }
+  next();
+});
+
 entrySchema.index({ createdAt: -1 });
 entrySchema.index({ entryDate: -1 });
 entrySchema.index({ name: 'text', mobile: 'text' });

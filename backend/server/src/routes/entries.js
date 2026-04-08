@@ -1691,6 +1691,8 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     console.log('📝 Updating entry:', id, updateData);
+    console.log('📝 EntryDate field received:', updateData.entryDate);
+    console.log('📝 CreatedAt field received:', updateData.createdAt);
     
     // Validate ObjectId format - exclude known specific routes
     if (id === 'stats' || id === 'health' || id === 'sync-all' || id === 'charts' || id === 'export' || id === 'clear-all') {
@@ -1717,6 +1719,9 @@ router.put('/:id', async (req, res) => {
         }
         
         console.log('✅ Entry updated in database:', updatedEntry.receiptNumber);
+        console.log('✅ Updated entryDate:', updatedEntry.entryDate);
+        console.log('✅ Updated createdAt:', updatedEntry.createdAt);
+        console.log('✅ Full updated entry:', JSON.stringify(updatedEntry, null, 2));
         
         // Broadcast real-time update to all connected clients
         broadcastToClients('entry-updated', {
