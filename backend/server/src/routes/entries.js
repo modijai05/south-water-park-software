@@ -1705,27 +1705,28 @@ router.put('/:id', async (req, res) => {
       // Ensure entryDate is a valid Date object for MongoDB
       if (updateData.entryDate && dayjs(updateData.entryDate).isValid()) {
         const originalDate = updateData.entryDate;
-        updateData.entryDate = new Date(updateData.entryDate);
-        console.log('PROFESSIONAL DEBUG: Entry date converted to Date object:', {
+        const dateObj = new Date(updateData.entryDate);
+        
+        console.log('PROFESSIONAL DEBUG: Entry date conversion:', {
           originalDate,
-          convertedDate: updateData.entryDate,
-          isoString: updateData.entryDate.toISOString(),
-          dateType: typeof updateData.entryDate
+          dateObj,
+          isoString: dateObj.toISOString(),
+          dateType: typeof dateObj
         });
         
-        // CRITICAL: Explicitly mark entryDate for update to prevent default override
-        updateData.$set = updateData.$set || {};
-        updateData.$set.entryDate = updateData.entryDate;
+        // CRITICAL FIX: Use direct update instead of $set to avoid conflicts
+        // Remove any existing $set to prevent conflicts
+        delete updateData.$set;
         
-        console.log('PROFESSIONAL DEBUG: Entry date marked for explicit update:', {
-          $set: updateData.$set
-        });
+        // Set the entryDate directly in updateData
+        updateData.entryDate = dateObj;
         
         console.log('PROFESSIONAL DEBUG: Final updateData being sent to MongoDB:', {
           updateData,
           hasEntryDate: !!updateData.entryDate,
-          hasSet: !!updateData.$set,
-          setEntryDate: updateData.$set?.entryDate
+          entryDateValue: updateData.entryDate,
+          entryDateType: typeof updateData.entryDate,
+          allKeys: Object.keys(updateData)
         });
       } else if (updateData.entryDate) {
         console.error('PROFESSIONAL ERROR: Invalid entryDate provided:', updateData.entryDate);
@@ -1749,7 +1750,12 @@ router.put('/:id', async (req, res) => {
         const updatedEntry = await Entry.findOneAndUpdate(
           { _id: id },
           updateData,
-          { new: true, runValidators: false }
+          { 
+            new: true, 
+            runValidators: false,
+            upsert: false,
+            strict: true
+          }
         );
         
         if (!updatedEntry) {
@@ -1772,11 +1778,27 @@ router.put('/:id', async (req, res) => {
           name: updatedEntry.name,
           entryDate: updatedEntry.entryDate,
           entryDateType: typeof updatedEntry.entryDate,
+          entryDateValid: updatedEntry.entryDate instanceof Date,
           createdAt: updatedEntry.createdAt,
           createdAtType: typeof updatedEntry.createdAt,
           effectiveDate: updatedEntry.entryDate || updatedEntry.createdAt,
           allFields: Object.keys(updatedEntry)
         });
+        
+        // CRITICAL VERIFICATION: Ensure entryDate was saved correctly
+        if (updateData.entryDate && !updatedEntry.entryDate) {
+          console.error('CRITICAL ERROR: entryDate was not saved to MongoDB!', {
+            attemptedValue: updateData.entryDate,
+            returnedValue: updatedEntry.entryDate,
+            updateDataKeys: Object.keys(updateData)
+          });
+        } else if (updateData.entryDate && updatedEntry.entryDate) {
+          console.log('SUCCESS: entryDate was saved correctly to MongoDB:', {
+            attemptedValue: updateData.entryDate,
+            returnedValue: updatedEntry.entryDate,
+            valuesMatch: updateData.entryDate.getTime() === updatedEntry.entryDate.getTime()
+          });
+        }
         
         // Broadcast real-time update to all connected clients
         broadcastToClients('entry-updated', {
