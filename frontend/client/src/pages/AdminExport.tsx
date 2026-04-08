@@ -7,6 +7,7 @@ import { Layout } from '@/components/Layout';
 import { entriesApi } from '@/lib/api';
 import { getTicketLabel, getTicketLabelSync } from '@/lib/ticketUtils';
 import Receipt from '@/components/Receipt';
+import { getEffectiveEntryDate } from '@/utils/dateUtils';
 import type { EntryRecord, TicketType } from '@/types';
 
 type Range = 'today' | 'yesterday' | 'week' | 'month' | 'custom' | 'particular_day' | 'all_time';
@@ -595,7 +596,7 @@ export function AdminExport() {
       for (const e of entries) {
         // Main entry row
         const row = sheet.getRow(currentRow);
-        row.getCell(1).value = dayjs(e.createdAt).format('DD/MM/YYYY HH:mm:ss');
+        row.getCell(1).value = dayjs(getEffectiveEntryDate(e)).format('DD/MM/YYYY HH:mm:ss');
         row.getCell(2).value = e.name ?? '';
         row.getCell(3).value = e.mobile ?? '';
         row.getCell(4).value = getTicketLabelSync(e.ticketType as TicketType);
@@ -1108,7 +1109,7 @@ export function AdminExport() {
           filledBy: (entry as any).createdBy?.username || (entry as any).filledByFullName || 'Unknown',
           filledByFullName: (entry as any).filledByFullName || (entry as any).createdBy?.fullName || (entry as any).createdBy?.username || 'Unknown',
           createdBy: (entry as any).createdBy,
-          createdAt: entry.createdAt,
+          createdAt: getEffectiveEntryDate(entry),
           adultsFastFoodCoupon: (entry as any).adultsFastFoodCoupon || '',
           kidsFastFoodCoupon: (entry as any).kidsFastFoodCoupon || '',
           adultsMainFoodCoupon: (entry as any).adultsMainFoodCoupon || '',
@@ -1187,7 +1188,7 @@ export function AdminExport() {
             filledBy: (entry as any).createdBy?.username || (entry as any).filledByFullName || 'Unknown',
             filledByFullName: (entry as any).filledByFullName || (entry as any).createdBy?.fullName || (entry as any).createdBy?.username || 'Unknown',
             createdBy: (entry as any).createdBy,
-            createdAt: entry.createdAt,
+            createdAt: getEffectiveEntryDate(entry),
             adultsFastFoodCoupon: (entry as any).adultsFastFoodCoupon || '',
             kidsFastFoodCoupon: (entry as any).kidsFastFoodCoupon || '',
             adultsMainFoodCoupon: (entry as any).adultsMainFoodCoupon || '',

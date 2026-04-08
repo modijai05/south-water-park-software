@@ -9,6 +9,7 @@ import { useEntryStore } from '@/store/entryStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { globalSyncService } from '@/services/globalSyncService';
+import { getEffectiveEntryDate, getFormattedEntryDate, getFormattedEntryTime, prepareEntryForAPI } from '@/utils/dateUtils';
 import type { EntryRecord, TicketType } from '@/types';
 
 // Helper function to safely convert values to strings
@@ -98,11 +99,11 @@ export function AdminEntries() {
     // Apply date filter
     if (dateFilter === 'today') {
       filtered = filtered.filter(entry => 
-        dayjs(entry.createdAt).isSame(dayjs(), 'day')
+        dayjs(getEffectiveEntryDate(entry)).isSame(dayjs(), 'day')
       );
     } else if (dateFilter === 'yesterday') {
       filtered = filtered.filter(entry => 
-        dayjs(entry.createdAt).isSame(dayjs().subtract(1, 'day'), 'day')
+        dayjs(getEffectiveEntryDate(entry)).isSame(dayjs().subtract(1, 'day'), 'day')
       );
     }
     
@@ -545,10 +546,10 @@ export function AdminEntries() {
                         <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
                           <div>
                             <div className="font-medium">
-                              {dayjs(entry.entryDate || entry.createdAt).format('DD/MM/YY')}
+                              {getFormattedEntryDate(entry)}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {dayjs(entry.entryDate || entry.createdAt).format('hh:mm A')}
+                              {getFormattedEntryTime(entry)}
                             </div>
                           </div>
                         </td>
@@ -1185,7 +1186,9 @@ export function AdminEntries() {
                           currentTotalPeople: editing.totalPeople
                         });
                         
-                        const updateResult = await entriesApi.update(editing._id, editing);
+                        const preparedEntry = prepareEntryForAPI(editing);
+                        console.log('🔧 AdminEntries: Prepared entry for API:', preparedEntry);
+                        const updateResult = await entriesApi.update(editing._id, preparedEntry);
                         console.log('🔧 AdminEntries: Update API result:', updateResult);
                         
                         setAllEntries(prev => prev.map(e => e._id === editing._id ? editing : e));

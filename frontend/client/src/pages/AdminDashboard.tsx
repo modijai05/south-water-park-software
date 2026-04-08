@@ -19,6 +19,7 @@ import { checkAndTriggerReset } from '@/utils/systemReset';
 import { checkAndForceRefresh } from '@/utils/forceRefresh';
 import { verifyTodayData, autoVerify } from '@/utils/verifyTodayData';
 import { forceDailyResetComplete, needsForceReset } from '@/utils/forceDailyReset';
+import { getEffectiveEntryDate } from '@/utils/dateUtils';
 import utc from 'dayjs/plugin/utc';
 
 // Enable UTC plugin
@@ -390,7 +391,7 @@ export function AdminDashboard() {
   const calculateStatsFromEntries = (entriesData: any[]): Stats => {
     const today = dayjs().format('YYYY-MM-DD');
     const todayEntries = entriesData.filter(entry => 
-      dayjs(entry.entryDate || entry.createdAt).format('YYYY-MM-DD') === today
+      dayjs(getEffectiveEntryDate(entry)).format('YYYY-MM-DD') === today
     );
     
     // Calculate all-time totals
@@ -859,10 +860,18 @@ export function AdminDashboard() {
       await intelligentBackgroundSync(true); // Force sync on date events
     };
     
+    // Specific handler for entry date/time updates
+    const handleEntryDateTimeUpdated = async (event: any) => {
+      console.log('📅 Dashboard: Entry date/time updated:', event.detail);
+      await intelligentBackgroundSync(true); // Force refresh when date/time is updated
+    };
+    
     window.addEventListener('date-sync-complete', handleDateSync);
+    window.addEventListener('entry-datetime-updated', handleEntryDateTimeUpdated);
     
     return () => {
       window.removeEventListener('date-sync-complete', handleDateSync);
+      window.removeEventListener('entry-datetime-updated', handleEntryDateTimeUpdated);
     };
   }, []);
 

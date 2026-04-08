@@ -1690,9 +1690,18 @@ router.put('/:id', async (req, res) => {
     
     const { id } = req.params;
     const updateData = req.body;
+    
+    // Special logging for date/time updates
+    if (updateData.entryDate) {
+      console.log('📅 Updating entry date/time:', {
+        id,
+        newEntryDate: updateData.entryDate,
+        entryDateType: typeof updateData.entryDate,
+        formattedDate: new Date(updateData.entryDate).toISOString()
+      });
+    }
+    
     console.log('📝 Updating entry:', id, updateData);
-    console.log('📝 EntryDate field received:', updateData.entryDate);
-    console.log('📝 CreatedAt field received:', updateData.createdAt);
     
     // Validate ObjectId format - exclude known specific routes
     if (id === 'stats' || id === 'health' || id === 'sync-all' || id === 'charts' || id === 'export' || id === 'clear-all') {
@@ -1718,10 +1727,13 @@ router.put('/:id', async (req, res) => {
           });
         }
         
-        console.log('✅ Entry updated in database:', updatedEntry.receiptNumber);
-        console.log('✅ Updated entryDate:', updatedEntry.entryDate);
-        console.log('✅ Updated createdAt:', updatedEntry.createdAt);
-        console.log('✅ Full updated entry:', JSON.stringify(updatedEntry, null, 2));
+        console.log('✅ Entry updated in database:', {
+      receiptNumber: updatedEntry.receiptNumber,
+      entryDate: updatedEntry.entryDate,
+      createdAt: updatedEntry.createdAt,
+      entryDateFormatted: updatedEntry.entryDate ? new Date(updatedEntry.entryDate).toISOString() : 'Not set',
+      createdAtFormatted: updatedEntry.createdAt ? new Date(updatedEntry.createdAt).toISOString() : 'Not set'
+    });
         
         // Broadcast real-time update to all connected clients
         broadcastToClients('entry-updated', {
