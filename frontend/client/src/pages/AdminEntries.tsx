@@ -1098,8 +1098,19 @@ export function AdminEntries() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Created Date</label>
                       <input
                         type="datetime-local"
-                        value={editing ? editing.createdAt : (viewing?.createdAt || '')}
-                        onChange={(e) => editing && setEditing({...editing, createdAt: e.target.value})}
+                        value={editing ? 
+                          (editing.createdAt && typeof editing.createdAt === 'string' 
+                            ? editing.createdAt.slice(0, 16) 
+                            : editing.createdAt 
+                          ) : (viewing?.createdAt || '')}
+                        onChange={(e) => {
+                          if (editing) {
+                            const newDate = e.target.value;
+                            // Convert to ISO string for backend compatibility
+                            const isoDate = newDate ? new Date(newDate).toISOString() : new Date().toISOString();
+                            setEditing({...editing, createdAt: isoDate});
+                          }
+                        }}
                         disabled={!editing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       />
@@ -1161,9 +1172,21 @@ export function AdminEntries() {
                   <button
                     onClick={async () => {
                       try {
-                        await entriesApi.update(editing._id, editing);
+                        console.log('🔧 AdminEntries: Starting entry update with current data:', {
+                          id: editing._id,
+                          currentCreatedAt: editing.createdAt,
+                          currentAdults: editing.adults,
+                          currentKids: editing.kids,
+                          currentTotalPeople: editing.totalPeople
+                        });
+                        
+                        const updateResult = await entriesApi.update(editing._id, editing);
+                        console.log('🔧 AdminEntries: Update API result:', updateResult);
+                        
                         setAllEntries(prev => prev.map(e => e._id === editing._id ? editing : e));
                         setEntries(prev => prev.map(e => e._id === editing._id ? editing : e));
+                        
+                        console.log('🔧 AdminEntries: Local state updated with new entry data:', editing);
                         
                         // Dispatch comprehensive events for dashboard sync
                         window.dispatchEvent(new CustomEvent('entry-updated', {
@@ -1201,6 +1224,17 @@ export function AdminEntries() {
                           detail: { 
                             source: 'entry-edit',
                             entryId: editing._id,
+                            timestamp: new Date().toISOString(),
+                            updatedFields: ['date', 'totalPeople', 'basicInfo']
+                          }
+                        }));
+                        
+                        // Specific event for date/time updates
+                        window.dispatchEvent(new CustomEvent('entry-datetime-updated', {
+                          detail: { 
+                            entryId: editing._id,
+                            oldDateTime: viewing?.createdAt,
+                            newDateTime: editing.createdAt,
                             timestamp: new Date().toISOString()
                           }
                         }));

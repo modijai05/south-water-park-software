@@ -1008,6 +1008,9 @@ export function AdminDashboard() {
     // Add force refresh listener for complete data recalculation
     window.addEventListener('force-refresh-all-data', handleComprehensiveSync);
     
+    // Add specific listener for date/time updates
+    window.addEventListener('entry-datetime-updated', handleComprehensiveSync);
+    
     // Add specific ticket config refresh listener
     const handleTicketConfigRefresh = async () => {
       console.log('🔄 AdminDashboard: Refreshing ticket configs after update');
@@ -1050,6 +1053,7 @@ export function AdminDashboard() {
       window.removeEventListener('additional-discount-updated', handleDiscountUpdate);
       window.removeEventListener('immediate-sync', immediateHandleEntryUpdate);
       window.removeEventListener('force-refresh-all-data', handleComprehensiveSync);
+      window.removeEventListener('entry-datetime-updated', handleComprehensiveSync);
     };
   }, []);
 
