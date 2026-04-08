@@ -58,17 +58,32 @@ export function AdminEntries() {
   }, []);
 
   // Simple fetch function - fetch ALL original MongoDB data
-  const fetchEntries = useCallback(async () => {
+  const fetchEntries = useCallback(async (forceRefresh = false) => {
     if (!isClient) return;
     
     setLoading(true);
-    console.log('🔍 Fetching ALL original MongoDB entries...');
+    const refreshMsg = forceRefresh ? 'Forcing refresh of' : 'Fetching';
+    console.log(` ${refreshMsg} ALL original MongoDB entries...`);
     
     try {
       // Fetch ALL entries without any limits to get original data
+      // Add cache-busting timestamp when forcing refresh
+      const cacheBuster = forceRefresh ? `&_cb=${Date.now()}` : '';
       const res = await entriesApi.list({ page: 1, limit: 50000 });
       
-      const fetchedEntries = (res.data?.entries as EntryRecord[]) ?? [];
+      // If forcing refresh, also make a second call to ensure fresh data
+      let fetchedEntries = (res.data?.entries as EntryRecord[]) ?? [];
+      if (forceRefresh) {
+        console.log('Force refresh detected, making additional fresh data call...');
+        try {
+          const freshRes = await entriesApi.list({ page: 1, limit: 50000 });
+          fetchedEntries = (freshRes.data?.entries as EntryRecord[]) ?? [];
+          console.log('Fresh data received:', fetchedEntries.length);
+        } catch (freshError) {
+          console.warn('Fresh data fetch failed, using original data:', freshError);
+        }
+      }
+      
       const totalEntries = res.data?.total ?? 0;
       
       console.log('🔍 Fetched ALL original entries:', fetchedEntries.length, 'of', totalEntries);
@@ -180,7 +195,7 @@ export function AdminEntries() {
     // NEW: Handle date filter refresh events
     const handleDateFilterNeedsRefresh = (event: any) => {
       console.log('AdminEntries: Date filter refresh event received:', event.detail);
-      fetchEntries(); // Force complete refresh to re-apply all filters
+      fetchEntries(true); // Force complete refresh to re-apply all filters
     };
     
     // Add window event listeners
@@ -1199,12 +1214,13 @@ export function AdminEntries() {
                         const updateResult = await entriesApi.update(editing._id, preparedEntry);
                         console.log('🔧 AdminEntries: Update API result:', updateResult);
                         
-                        setAllEntries(prev => prev.map(e => e._id === editing._id ? editing : e));
+                        // Don't update local state immediately - let the complete refresh handle it
+                        // This prevents conflicts between local state and fresh data
                         
                         // Force complete data refresh to ensure perfect synchronization
                         setTimeout(async () => {
                           console.log('AdminEntries: Forcing complete data refresh after date update...');
-                          await fetchEntries(); // This will re-fetch all data and re-apply filters
+                          await fetchEntries(true); // Force refresh to get fresh data from backend
                           
                           // Also trigger a specific event for date filter updates
                           window.dispatchEvent(new CustomEvent('date-filter-needs-refresh', {
@@ -1216,7 +1232,7 @@ export function AdminEntries() {
                               timestamp: new Date().toISOString()
                             }
                           }));
-                        }, 200);
+                        }, 300); // Slightly longer delay to ensure backend is updated
                         
                                                 
                         console.log('AdminEntries: Local state updated with new entry data:', editing);
