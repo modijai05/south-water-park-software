@@ -1720,6 +1720,13 @@ router.put('/:id', async (req, res) => {
         console.log('PROFESSIONAL DEBUG: Entry date marked for explicit update:', {
           $set: updateData.$set
         });
+        
+        console.log('PROFESSIONAL DEBUG: Final updateData being sent to MongoDB:', {
+          updateData,
+          hasEntryDate: !!updateData.entryDate,
+          hasSet: !!updateData.$set,
+          setEntryDate: updateData.$set?.entryDate
+        });
       } else if (updateData.entryDate) {
         console.error('PROFESSIONAL ERROR: Invalid entryDate provided:', updateData.entryDate);
         delete updateData.entryDate; // Remove invalid date
@@ -1752,13 +1759,24 @@ router.put('/:id', async (req, res) => {
           });
         }
         
-        console.log('✅ Entry updated in database:', {
-      receiptNumber: updatedEntry.receiptNumber,
-      entryDate: updatedEntry.entryDate,
-      createdAt: updatedEntry.createdAt,
-      entryDateFormatted: updatedEntry.entryDate ? new Date(updatedEntry.entryDate).toISOString() : 'Not set',
-      createdAtFormatted: updatedEntry.createdAt ? new Date(updatedEntry.createdAt).toISOString() : 'Not set'
-    });
+        console.log('PROFESSIONAL DEBUG: Entry date converted to Date object:', {
+          receiptNumber: updatedEntry.receiptNumber,
+          entryDate: updatedEntry.entryDate,
+          createdAt: updatedEntry.createdAt,
+          entryDateFormatted: updatedEntry.entryDate ? new Date(updatedEntry.entryDate).toISOString() : 'Not set',
+          createdAtFormatted: updatedEntry.createdAt ? new Date(updatedEntry.createdAt).toISOString() : 'Not set'
+        });
+        
+        console.log('PROFESSIONAL DEBUG: Complete updated entry being returned:', {
+          _id: updatedEntry._id,
+          name: updatedEntry.name,
+          entryDate: updatedEntry.entryDate,
+          entryDateType: typeof updatedEntry.entryDate,
+          createdAt: updatedEntry.createdAt,
+          createdAtType: typeof updatedEntry.createdAt,
+          effectiveDate: updatedEntry.entryDate || updatedEntry.createdAt,
+          allFields: Object.keys(updatedEntry)
+        });
         
         // Broadcast real-time update to all connected clients
         broadcastToClients('entry-updated', {

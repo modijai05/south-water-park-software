@@ -1249,6 +1249,12 @@ export function AdminEntries() {
                         
                         const preparedEntry = prepareEntryForAPI(editing);
                         console.log('AdminEntries: Prepared entry for API:', preparedEntry);
+                        console.log('CRITICAL DEBUG: Data being sent to backend:', {
+                          id: editing._id,
+                          originalEntryDate: editing.entryDate,
+                          preparedEntryDate: preparedEntry.entryDate,
+                          allPreparedData: preparedEntry
+                        });
                         const updateResult = await entriesApi.update(editing._id, preparedEntry);
                         console.log('AdminEntries: Update API result:', updateResult);
                         
