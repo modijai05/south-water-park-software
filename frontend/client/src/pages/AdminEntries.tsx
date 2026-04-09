@@ -1306,7 +1306,7 @@ export function AdminEntries() {
                         setTimeout(() => {
                           setPreventForceReset(false, 'Manual date update completed');
                           setIsUpdating(false);
-                        }, 5000); // Extended to 5 seconds to ensure daily reset system doesn't interfere
+                        }, 3000); // Reduced to 3 seconds for better UX
                         
                         // Don't update local state immediately - let the complete refresh handle it
                         // This prevents conflicts between local state and fresh data
@@ -1432,56 +1432,34 @@ export function AdminEntries() {
                                                 
                         console.log('AdminEntries: Local state updated with new entry data:', editing);
                         
-                        // Dispatch comprehensive events for dashboard sync
-                        window.dispatchEvent(new CustomEvent('entry-updated', {
-                          detail: { 
-                            entryId: editing._id, 
+                        // PROFESSIONAL FIX: Consolidated event dispatching with error boundary
+                        try {
+                          const eventData = {
+                            entryId: editing._id,
                             entry: editing,
                             timestamp: new Date().toISOString(),
                             action: 'update',
-                            forceRefresh: true
-                          }
-                        }));
-                        
-                        window.dispatchEvent(new CustomEvent('entries-changed', {
-                          detail: { 
-                            action: 'update', 
-                            entryId: editing._id,
-                            entry: editing,
-                            timestamp: new Date().toISOString(),
-                            forceRefresh: true
-                          }
-                        }));
-                        
-                        window.dispatchEvent(new CustomEvent('immediate-sync', {
-                          detail: { 
+                            forceRefresh: true,
                             source: 'entry-edit',
-                            action: 'entry-updated',
-                            entryId: editing._id,
-                            timestamp: new Date().toISOString(),
-                            forceRefresh: true
-                          }
-                        }));
-                        
-                        // Force dashboard to recalculate from scratch
-                        window.dispatchEvent(new CustomEvent('force-refresh-all-data', {
-                          detail: { 
-                            source: 'entry-edit',
-                            entryId: editing._id,
-                            timestamp: new Date().toISOString(),
-                            updatedFields: ['date', 'totalPeople', 'basicInfo']
-                          }
-                        }));
-                        
-                        // Specific event for date/time updates
-                        window.dispatchEvent(new CustomEvent('entry-datetime-updated', {
-                          detail: { 
-                            entryId: editing._id,
+                            updatedFields: ['date', 'totalPeople', 'basicInfo'],
                             oldDateTime: viewing?.entryDate || viewing?.createdAt,
-                            newDateTime: editing.entryDate,
-                            timestamp: new Date().toISOString()
-                          }
-                        }));
+                            newDateTime: editing.entryDate
+                          };
+                          
+                          // Dispatch consolidated event to reduce race conditions
+                          window.dispatchEvent(new CustomEvent('entry-updated-consolidated', {
+                            detail: eventData
+                          }));
+                          
+                          // Keep essential individual events for compatibility
+                          window.dispatchEvent(new CustomEvent('entry-updated', { detail: eventData }));
+                          window.dispatchEvent(new CustomEvent('entries-changed', { detail: eventData }));
+                          
+                          console.log('✅ Events dispatched successfully for entry:', editing._id);
+                        } catch (eventError) {
+                          console.error('🚨 Error dispatching events:', eventError);
+                          // Continue with the flow even if events fail
+                        }
                         
                         setEditing(null);
                         setToast({ 
@@ -1491,14 +1469,28 @@ export function AdminEntries() {
                         });
                         setTimeout(() => setToast(null), 3000);
                       } catch (error) {
-                        console.error('Update error:', error);
+                        console.error('🚨 Update error:', error);
                         setIsUpdating(false);
+                        
+                        // Handle different types of errors appropriately
+                        let errorMessage = '❌ Failed to update entry';
+                        
+                        if (error.message.includes('Session expired')) {
+                          errorMessage = '🔐 Session expired, please login again';
+                        } else if (error.message.includes('Network')) {
+                          errorMessage = '🌐 Network error, please check your connection';
+                        } else if (error.message.includes('Authentication failed')) {
+                          errorMessage = '🔒 Authentication error, please try again';
+                        } else {
+                          errorMessage = `❌ Update failed: ${error.message}`;
+                        }
+                        
                         setToast({ 
-                          message: '❌ Failed to update entry', 
+                          message: errorMessage, 
                           id: 'update-error',
                           type: 'error'
                         });
-                        setTimeout(() => setToast(null), 3000);
+                        setTimeout(() => setToast(null), 5000);
                       }
                     }}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"

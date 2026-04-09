@@ -71,17 +71,24 @@ export async function api<T>(
         const errorData = await response.json().catch(() => ({}));
         
         // Handle token expiration specifically
-        if (response.status === 401 && (errorData.code === 'TOKEN_EXPIRED' || errorData.message === 'Token expired')) {
-          console.log('🔐 Token expired, clearing local storage');
-          localStorage.removeItem('token');
-          sessionStorage.removeItem('token');
-          
-          // Trigger a global auth event
-          window.dispatchEvent(new CustomEvent('auth-expired', {
-            detail: { message: 'Session expired, please login again' }
-          }));
-          
-          throw new Error('Session expired, please login again');
+        if (response.status === 401) {
+          // Only trigger auth-expired for actual token expiration, not for other 401 errors
+          if (errorData.code === 'TOKEN_EXPIRED' || errorData.message === 'Token expired' || errorData.error === 'Token expired') {
+            console.log('🔐 Token expired, clearing local storage');
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
+            
+            // Trigger a global auth event
+            window.dispatchEvent(new CustomEvent('auth-expired', {
+              detail: { message: 'Session expired, please login again' }
+            }));
+            
+            throw new Error('Session expired, please login again');
+          } else {
+            // For other 401 errors, don't trigger auth-expired
+            console.warn('⚠️ 401 error but not token expiration:', errorData);
+            throw new Error(errorData.message || 'Authentication failed');
+          }
         }
         
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
