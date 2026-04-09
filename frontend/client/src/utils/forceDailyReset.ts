@@ -123,14 +123,20 @@ export const needsForceReset = (statsData: any): boolean => {
   const hasTodayAmount = (statsData.todayAmount || 0) > 0;
   const hasTodayPeople = (statsData.todayPeople || 0) > 0;
   
+  // CRITICAL FIX: Don't trigger force reset if there's exactly 1 today entry
+  // This prevents infinite loops when updating dates
+  const hasExactlyOneTodayEntry = (statsData.todayEntries || 0) === 1;
+  
   // If there's data but it should be 0 (new day), we need force reset
-  const needsReset = hasTodayEntries || hasTodayAmount || hasTodayPeople;
+  // But if there's exactly 1 entry, it might be a legitimate single entry
+  const needsReset = (hasTodayEntries || hasTodayAmount || hasTodayPeople) && !hasExactlyOneTodayEntry;
   
   console.log('🔍 Force reset check:', {
     today,
     hasTodayEntries,
     hasTodayAmount,
     hasTodayPeople,
+    hasExactlyOneTodayEntry,
     needsReset,
     statsData
   });
