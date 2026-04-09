@@ -200,18 +200,20 @@ export const entriesApi = {
       return response.data;
     })
     .catch(error => {
-      console.error('🚨 API: Get error:', error);
+      console.error(' API: Get error:', error);
       return { entry: null };
     }),
   update: (id: string, body: unknown) => {
     // DEBUG: Log the exact data being sent
-    console.log('🚀 API CLIENT DEBUG: Making update request:', {
+    console.log('API CLIENT DEBUG: Making update request:', {
       id,
       body,
       bodyType: typeof body,
       bodyString: JSON.stringify(body, null, 2),
       entryDate: (body as any).entryDate,
-      entryDateType: typeof (body as any).entryDate
+      entryDateType: typeof (body as any).entryDate,
+      apiBase: API_BASE,
+      fullUrl: `${API_BASE}/entries/${id}`
     });
     
     return api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`, { 
@@ -225,17 +227,17 @@ export const entriesApi = {
     })
     .then(response => {
       if (!response || !response.success) {
-        console.error('🚨 API: Update failed:', response);
+        console.error('API: Update failed:', response);
         throw new Error('Failed to update entry');
       }
       return response.data;
     })
     .catch(error => {
-      console.error('🚨 API: Update error:', error);
+      console.error('API: Update error:', error);
       // Return safe fallback
       return { entry: body, fallback: true };
     });
-  }
+  },
   delete: (id: string) => api<{ success: boolean; message: string }>(`/entries/${id}`, { method: 'DELETE' })
     .then(response => {
       if (!response || !response.success) {
