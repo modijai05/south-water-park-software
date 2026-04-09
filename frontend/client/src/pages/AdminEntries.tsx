@@ -1325,6 +1325,19 @@ export function AdminEntries() {
                                 isToday: dayjs(getEffectiveEntryDate(updatedEntry)).isSame(dayjs(), 'day'),
                                 isYesterday: dayjs(getEffectiveEntryDate(updatedEntry)).isSame(dayjs().subtract(1, 'day'), 'day')
                               });
+                              
+                              // CRITICAL FIX: Automatically switch filter to show updated entry
+                              const effectiveDate = getEffectiveEntryDate(updatedEntry);
+                              const isToday = dayjs(effectiveDate).isSame(dayjs(), 'day');
+                              const isYesterday = dayjs(effectiveDate).isSame(dayjs().subtract(1, 'day'), 'day');
+                              
+                              if (isToday && dateFilter !== 'today') {
+                                console.log('🔄 Auto-switching filter to Today to show updated entry');
+                                setTimeout(() => setDateFilter('today'), 100);
+                              } else if (isYesterday && dateFilter !== 'yesterday') {
+                                console.log('🔄 Auto-switching filter to Yesterday to show updated entry');
+                                setTimeout(() => setDateFilter('yesterday'), 100);
+                              }
                             }
                             
                             if (dateFilter === 'today') {
