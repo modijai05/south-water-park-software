@@ -47,6 +47,7 @@ export function AdminEntries() {
   const [initialLoading, setInitialLoading] = useState(false);
   const [editing, setEditing] = useState<EntryRecord | null>(null);
   const [viewing, setViewing] = useState<EntryRecord | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [toast, setToast] = useState<{ message: string; id: string; type?: 'success' | 'info' | 'warning' | 'error' } | null>(null);
   
   // Performance optimizations
@@ -1257,7 +1258,13 @@ export function AdminEntries() {
                 {editing && (
                   <button
                     onClick={async () => {
+                      if (isUpdating) {
+                        console.log('Update already in progress, skipping...');
+                        return;
+                      }
+                      
                       try {
+                        setIsUpdating(true);
                         console.log('🔧 AdminEntries: Starting entry update with current data:', {
                           id: editing._id,
                           currentEntryDate: editing.entryDate,
@@ -1284,6 +1291,7 @@ export function AdminEntries() {
                         // Re-enable force resets after update
                         setTimeout(() => {
                           setPreventForceReset(false, 'Manual date update completed');
+                          setIsUpdating(false);
                         }, 5000); // Extended to 5 seconds to ensure daily reset system doesn't interfere
                         
                         // Don't update local state immediately - let the complete refresh handle it
@@ -1338,6 +1346,10 @@ export function AdminEntries() {
                                 console.log('🔄 Auto-switching filter to Yesterday to show updated entry');
                                 setTimeout(() => setDateFilter('yesterday'), 100);
                               }
+                              
+                              // CRITICAL FIX: Skip manual filter re-application since we're auto-switching
+                              // This prevents race conditions with other useEffect hooks
+                              return;
                             }
                             
                             if (dateFilter === 'today') {
@@ -1466,6 +1478,7 @@ export function AdminEntries() {
                         setTimeout(() => setToast(null), 3000);
                       } catch (error) {
                         console.error('Update error:', error);
+                        setIsUpdating(false);
                         setToast({ 
                           message: '❌ Failed to update entry', 
                           id: 'update-error',
