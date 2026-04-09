@@ -1191,11 +1191,25 @@ export function AdminEntries() {
                         onChange={(e) => {
                           if (editing) {
                             const newDate = e.target.value;
-                            console.log('Date input changed:', newDate);
-                            // Convert datetime-local string to ISO string for backend
-                            const isoDate = convertDateTimeLocalToISO(newDate);
-                            console.log('Converted to ISO:', isoDate);
-                            setEditing({...editing, entryDate: isoDate});
+                            console.log('Date changed:', newDate);
+                            
+                            // CRITICAL FIX: Convert datetime-local string to Date object
+                            // This ensures proper serialization by the custom JSON replacer
+                            const dateObject = new Date(newDate);
+                            console.log('PROFESSIONAL DEBUG: Created Date object:', {
+                                datetimeLocal: newDate,
+                                dateObject: dateObject,
+                                isValid: !isNaN(dateObject.getTime()),
+                                isoString: dateObject.toISOString()
+                            });
+                            
+                            // Validate the date before setting
+                            if (!isNaN(dateObject.getTime())) {
+                                setEditing({...editing, entryDate: dateObject});
+                            } else {
+                                console.error('Invalid date created from input:', newDate);
+                                // Don't update if date is invalid
+                            }
                           }
                         }}
                         disabled={!editing}

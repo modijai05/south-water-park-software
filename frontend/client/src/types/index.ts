@@ -100,7 +100,7 @@ export interface EntryRecord {
   kidsMainFoodCoupon?: string;
   receiptNumber?: string;
   createdAt: string;
-  entryDate?: string; // Custom entry date that can be manually updated
+  entryDate?: string | Date; // Custom entry date that can be manually updated
   createdBy?: User | { username: string; fullName?: string };
   filledByFullName?: string;
   _updated?: boolean; // For tracking updated entries in real-time

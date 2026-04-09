@@ -11,7 +11,14 @@ import dayjs from 'dayjs';
  * @returns The effective date string
  */
 export const getEffectiveEntryDate = (entry: any): string => {
-  return entry?.entryDate || entry?.createdAt || '';
+  // Handle both Date objects and strings for entryDate
+  if (entry?.entryDate) {
+    if (entry.entryDate instanceof Date) {
+      return entry.entryDate.toISOString();
+    }
+    return entry.entryDate; // Already a string
+  }
+  return entry?.createdAt || '';
 };
 
 /**
@@ -83,11 +90,32 @@ export const getEffectiveDateForDB = (entry: any): Date => {
  * @returns The prepared entry data for API
  */
 export const prepareEntryForAPI = (entry: any): any => {
-  return {
+  // CRITICAL FIX: Ensure entryDate is a Date object for proper serialization
+  let processedEntryDate = entry.entryDate;
+  
+  if (entry.entryDate) {
+    // Convert to Date object if it's not already one
+    if (!(entry.entryDate instanceof Date)) {
+      processedEntryDate = new Date(entry.entryDate);
+    }
+  }
+  
+  const prepared = {
     ...entry,
-    // Ensure entryDate is sent as Date object for backend
-    entryDate: entry.entryDate ? new Date(entry.entryDate) : undefined
+    // Ensure entryDate is a Date object for the custom JSON replacer
+    entryDate: processedEntryDate
   };
+  
+  // Log for debugging
+  console.log('PROFESSIONAL DEBUG: prepareEntryForAPI result:', {
+    originalEntryDate: entry.entryDate,
+    processedEntryDate,
+    preparedEntryDate: prepared.entryDate,
+    entryDateType: typeof prepared.entryDate,
+    isDateObject: prepared.entryDate instanceof Date
+  });
+  
+  return prepared;
 };
 
 /**
@@ -139,8 +167,17 @@ export const compareEntriesByDate = (entryA: any, entryB: any): number => {
  * @returns The formatted date string for datetime-local input
  */
 export const formatDateTimeForInput = (entry: any): string => {
-  const effectiveDate = getEffectiveEntryDate(entry);
+  // Handle both Date objects and strings for entryDate
+  let effectiveDate = entry?.entryDate || entry?.createdAt;
+  
   if (!effectiveDate) return '';
+  
+  // If it's a Date object, use it directly
+  if (effectiveDate instanceof Date) {
+    return dayjs(effectiveDate).format('YYYY-MM-DDTHH:mm');
+  }
+  
+  // If it's a string, parse it
   return dayjs(effectiveDate).format('YYYY-MM-DDTHH:mm');
 };
 
