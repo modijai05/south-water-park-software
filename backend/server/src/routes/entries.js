@@ -1755,26 +1755,27 @@ router.put('/:id', async (req, res) => {
     // Try database update, fallback to success response
     try {
       if (mongoose.connection.readyState === 1) {
-        // Try standard update first, then find the document
-        const updateResult = await Entry.updateOne(
-          { _id: id },
+        // PROFESSIONAL FIX: Use findByIdAndUpdate for better control
+        const updateResult = await Entry.findByIdAndUpdate(
+          id,
           updateData,
           { 
+            new: true, // Return the updated document
             runValidators: false,
             upsert: false,
-            strict: true
+            strict: false
           }
         );
         
         console.log('PROFESSIONAL DEBUG: Update result:', {
-          matchedCount: updateResult.matchedCount,
-          modifiedCount: updateResult.modifiedCount,
-          upsertedCount: updateResult.upsertedCount,
-          upsertedId: updateResult.upsertedId
+          updateResult: updateResult,
+          hasResult: !!updateResult,
+          entryDate: updateResult?.entryDate,
+          entryDateType: typeof updateResult?.entryDate
         });
         
-        // Then fetch the updated document
-        const updatedEntry = await Entry.findOne({ _id: id });
+        // findByIdAndUpdate with new: true returns the updated document directly
+        const updatedEntry = updateResult;
         
         if (!updatedEntry) {
           return res.status(404).json({
@@ -1804,40 +1805,19 @@ router.put('/:id', async (req, res) => {
         });
         
         // CRITICAL VERIFICATION: Ensure entryDate was saved correctly
-        if (updateData.entryDate && !updatedEntry.entryDate) {
+        if (updateData.entryDate && updatedEntry.entryDate) {
+          console.log('SUCCESS: entryDate was saved correctly to MongoDB:', {
+            attemptedValue: updateData.entryDate,
+            returnedValue: updatedEntry.entryDate,
+            attemptedType: typeof updateData.entryDate,
+            returnedType: typeof updatedEntry.entryDate,
+            valuesMatch: updateData.entryDate.getTime() === updatedEntry.entryDate.getTime()
+          });
+        } else if (updateData.entryDate && !updatedEntry.entryDate) {
           console.error('CRITICAL ERROR: entryDate was not saved to MongoDB!', {
             attemptedValue: updateData.entryDate,
             returnedValue: updatedEntry.entryDate,
             updateDataKeys: Object.keys(updateData)
-          });
-          
-          // FALLBACK: Try to save entryDate separately
-          console.log('ATTEMPTING FALLBACK: Saving entryDate separately...');
-          try {
-            const fallbackResult = await Entry.updateOne(
-              { _id: id },
-              { $set: { entryDate: updateData.entryDate } },
-              { runValidators: false }
-            );
-            
-            console.log('FALLBACK RESULT:', fallbackResult);
-            
-            // Fetch again to verify
-            const recheckedEntry = await Entry.findOne({ _id: id });
-            if (recheckedEntry && recheckedEntry.entryDate) {
-              console.log('FALLBACK SUCCESS: entryDate saved with separate operation');
-              updatedEntry = recheckedEntry; // Use the updated entry
-            } else {
-              console.error('FALLBACK FAILED: entryDate still not saved');
-            }
-          } catch (fallbackError) {
-            console.error('FALLBACK ERROR:', fallbackError);
-          }
-        } else if (updateData.entryDate && updatedEntry.entryDate) {
-          console.log('SUCCESS: entryDate was saved correctly to MongoDB:', {
-            attemptedValue: updateData.entryDate,
-            returnedValue: updatedEntry.entryDate,
-            valuesMatch: updateData.entryDate.getTime() === updatedEntry.entryDate.getTime()
           });
         }
         
