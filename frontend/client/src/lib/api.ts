@@ -196,7 +196,13 @@ export const entriesApi = {
       console.error('🚨 API: Get error:', error);
       return { entry: null };
     }),
-  update: (id: string, body: unknown) => api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+  update: (id: string, body: unknown) => api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`, { 
+    method: 'PUT', 
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body)
+  })
     .then(response => {
       if (!response || !response.success) {
         console.error('🚨 API: Update failed:', response);
