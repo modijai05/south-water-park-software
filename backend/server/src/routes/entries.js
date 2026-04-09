@@ -1710,33 +1710,24 @@ router.put('/:id', async (req, res) => {
         console.log('PROFESSIONAL DEBUG: Entry date conversion:', {
           originalDate,
           dateObj,
-          isoString: dateObj.toISOString(),
           dateType: typeof dateObj
         });
         
-        // CRITICAL FIX: Use multiple approaches to ensure entryDate is saved
-        // Remove any existing $set to prevent conflicts
+        // CRITICAL FIX: Clean and simple approach to ensure entryDate is saved
+        // Remove any existing MongoDB operators to prevent conflicts
         delete updateData.$set;
+        delete updateData.$inc;
+        delete updateData.$setOnInsert;
         
-        // Method 1: Direct assignment
+        // Direct assignment - this is the most reliable approach
         updateData.entryDate = dateObj;
-        
-        // Method 2: Also try with $inc to force field update
-        updateData.$inc = updateData.$inc || {};
-        updateData.$inc.__entryDateUpdate = 1;
-        
-        // Method 3: Use $setOnInsert as backup
-        updateData.$setOnInsert = updateData.$setOnInsert || {};
-        updateData.$setOnInsert.entryDate = dateObj;
         
         console.log('PROFESSIONAL DEBUG: Final updateData being sent to MongoDB:', {
           updateData,
           hasEntryDate: !!updateData.entryDate,
           entryDateValue: updateData.entryDate,
           entryDateType: typeof updateData.entryDate,
-          allKeys: Object.keys(updateData),
-          hasInc: !!updateData.$inc,
-          hasSetOnInsert: !!updateData.$setOnInsert
+          allKeys: Object.keys(updateData)
         });
       } else if (updateData.entryDate) {
         console.error('PROFESSIONAL ERROR: Invalid entryDate provided:', updateData.entryDate);

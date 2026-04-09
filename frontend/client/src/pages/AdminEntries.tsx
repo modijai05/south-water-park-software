@@ -118,8 +118,26 @@ export function AdminEntries() {
     console.log('DEBUG: filteredEntries useMemo running:', {
       allEntriesCount: allEntries.length,
       dateFilter,
-      search,
-      filterTrigger: setFilterTrigger
+      search
+    });
+    
+    // CRITICAL FIX: Sort entries by effective date first (newest first)
+    filtered = [...filtered].sort((a, b) => {
+      const dateA = getEffectiveEntryDate(a);
+      const dateB = getEffectiveEntryDate(b);
+      
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      
+      // Sort by date descending (newest first), then by receipt number as tiebreaker
+      const dateComparison = dayjs(dateB).valueOf() - dayjs(dateA).valueOf();
+      if (dateComparison !== 0) return dateComparison;
+      
+      // Tiebreaker: sort by receipt number if available
+      const receiptA = a.receiptNumber || '';
+      const receiptB = b.receiptNumber || '';
+      return receiptB.localeCompare(receiptA);
     });
     
     // Apply date filter
@@ -166,11 +184,16 @@ export function AdminEntries() {
     console.log('DEBUG: Final filteredEntries result:', {
       finalCount: filtered.length,
       dateFilter,
-      search
+      search,
+      firstEntry: filtered[0] ? {
+        id: filtered[0]._id,
+        effectiveDate: getEffectiveEntryDate(filtered[0]),
+        formattedDate: getFormattedEntryDate(filtered[0])
+      } : null
     });
     
     return filtered;
-  }, [allEntries, search, dateFilter, setFilterTrigger]);
+  }, [allEntries, search, dateFilter]);
 
   // Initial load
   useEffect(() => {

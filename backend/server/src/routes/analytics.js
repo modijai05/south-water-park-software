@@ -352,13 +352,13 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
 
     // Separate today's entries and historical entries
     const todayEntries = allEntries.filter(entry => {
-      const entryDate = dayjs(entry.createdAt);
-      return entryDate.isAfter(todayStart) && entryDate.isBefore(todayEnd);
+      const effectiveDate = dayjs(entry.entryDate || entry.createdAt);
+      return effectiveDate.isAfter(todayStart) && effectiveDate.isBefore(todayEnd);
     });
     
     const historicalEntries = allEntries.filter(entry => {
-      const entryDate = dayjs(entry.createdAt);
-      return !entryDate.isAfter(todayStart) || !entryDate.isBefore(todayEnd);
+      const effectiveDate = dayjs(entry.entryDate || entry.createdAt);
+      return !effectiveDate.isAfter(todayStart) || !effectiveDate.isBefore(todayEnd);
     });
 
     console.log('📊 Today entries:', todayEntries.length);
@@ -414,9 +414,10 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
 
     // Process historical data (last 30 days for example)
     const thirtyDaysAgo = now.subtract(30, 'day').startOf('day').toDate();
-    const recentHistoricalEntries = historicalEntries.filter(entry => 
-      dayjs(entry.createdAt).isAfter(thirtyDaysAgo)
-    );
+    const recentHistoricalEntries = historicalEntries.filter(entry => {
+      const effectiveDate = dayjs(entry.entryDate || entry.createdAt);
+      return effectiveDate.isAfter(thirtyDaysAgo);
+    });
 
     const historicalAnalytics = ticketTypes.map(type => {
       const typeEntries = recentHistoricalEntries.filter(e => e.ticketType === type);
@@ -652,20 +653,20 @@ router.get('/timeseries', authenticate, async (req, res) => {
     
     entries.forEach(entry => {
       let key;
-      const entryDate = dayjs(entry.createdAt);
+      const effectiveDate = dayjs(entry.entryDate || entry.createdAt);
       
       switch (groupBy) {
         case 'day':
-          key = entryDate.format('YYYY-MM-DD');
+          key = effectiveDate.format('YYYY-MM-DD');
           break;
         case 'week':
-          key = entryDate.startOf('week').format('YYYY-MM-DD');
+          key = effectiveDate.startOf('week').format('YYYY-MM-DD');
           break;
         case 'month':
-          key = entryDate.format('YYYY-MM');
+          key = effectiveDate.format('YYYY-MM');
           break;
         default:
-          key = entryDate.format('YYYY-MM-DD');
+          key = effectiveDate.format('YYYY-MM-DD');
       }
       
       if (!timeSeriesData[key]) {
@@ -710,9 +711,12 @@ router.get('/peak-hours', authenticate, async (req, res) => {
       default: startDate = now.subtract(30, 'day');
     }
     
-    // Get entries within the time range
+    // Get entries within time range
     const entries = await Entry.find({
-      createdAt: { $gte: startDate.toDate() }
+      $or: [
+        { entryDate: { $gte: startDate.toDate() } },
+        { createdAt: { $gte: startDate.toDate() } }
+      ]
     }).lean();
     
     // Calculate peak hours (0-23)
@@ -724,7 +728,7 @@ router.get('/peak-hours', authenticate, async (req, res) => {
     }));
     
     entries.forEach(entry => {
-      const hour = dayjs(entry.createdAt).hour();
+      const hour = dayjs(entry.entryDate || entry.createdAt).hour();
       hourlyData[hour].entries += 1;
       hourlyData[hour].revenue += entry.finalAmount || 0;
       hourlyData[hour].people += entry.totalPeople || 0;
@@ -1016,8 +1020,8 @@ router.get('/debug-discounts', authenticate, requireAdmin, async (req, res) => {
     const todayEnd = now.endOf('day').toDate();
     
     const todayEntriesWithDiscounts = entriesWithDiscounts.filter(entry => {
-      const entryDate = dayjs(entry.createdAt);
-      return entryDate.isAfter(todayStart) && entryDate.isBefore(todayEnd);
+      const effectiveDate = dayjs(entry.entryDate || entry.createdAt);
+      return effectiveDate.isAfter(todayStart) && effectiveDate.isBefore(todayEnd);
     });
     
     console.log(`🔍 Found ${todayEntriesWithDiscounts.length} today's entries with discounts`);
