@@ -85,8 +85,8 @@ export const getEffectiveDateForDB = (entry: any): Date => {
 export const prepareEntryForAPI = (entry: any): any => {
   return {
     ...entry,
-    // Ensure entryDate is properly formatted for the backend
-    entryDate: entry.entryDate ? new Date(entry.entryDate).toISOString() : undefined
+    // Ensure entryDate is sent as Date object for backend
+    entryDate: entry.entryDate ? new Date(entry.entryDate) : undefined
   };
 };
 

@@ -1702,30 +1702,16 @@ router.put('/:id', async (req, res) => {
         dayjsFormatted: dayjs(updateData.entryDate).format('YYYY-MM-DD HH:mm:ss')
       });
       
-      // Ensure entryDate is a valid Date object for MongoDB
-      if (updateData.entryDate && dayjs(updateData.entryDate).isValid()) {
-        const originalDate = updateData.entryDate;
-        const dateObj = new Date(updateData.entryDate);
-        
-        console.log('PROFESSIONAL DEBUG: Entry date conversion:', {
-          originalDate,
-          dateObj,
-          dateType: typeof dateObj
-        });
-        
-        // CRITICAL FIX: Clean and simple approach to ensure entryDate is saved
-        // Remove any existing MongoDB operators to prevent conflicts
-        delete updateData.$set;
-        delete updateData.$inc;
-        delete updateData.$setOnInsert;
-        
-        // Direct assignment - this is the most reliable approach
-        updateData.entryDate = dateObj;
-        
-        console.log('PROFESSIONAL DEBUG: Final updateData being sent to MongoDB:', {
-          updateData,
-          hasEntryDate: !!updateData.entryDate,
-          entryDateValue: updateData.entryDate,
+      // CRITICAL FIX: Direct Date object assignment - most reliable approach
+      updateData.entryDate = new Date(updateData.entryDate);
+      
+      console.log('PROFESSIONAL DEBUG: Final updateData being sent to MongoDB:', {
+        updateData,
+        hasEntryDate: !!updateData.entryDate,
+        entryDateValue: updateData.entryDate,
+        entryDateType: typeof updateData.entryDate,
+        allKeys: Object.keys(updateData)
+      });
           entryDateType: typeof updateData.entryDate,
           allKeys: Object.keys(updateData)
         });
