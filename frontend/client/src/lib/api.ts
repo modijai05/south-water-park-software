@@ -221,9 +221,19 @@ export const entriesApi = {
       headers: {
         'Content-Type': 'application/json',
       },
-      // SIMPLIFIED FIX: Let JSON.stringify handle Date objects naturally
-      // Date objects will be converted to ISO strings automatically
-      body: JSON.stringify(body)
+      // CRITICAL FIX: Custom JSON replacer to preserve Date objects properly
+      body: JSON.stringify(body, (key, value) => {
+        // Convert Date objects to ISO strings consistently
+        if (value instanceof Date) {
+          console.log('JSON REPLACER: Converting Date to ISO:', {
+            key,
+            date: value,
+            isoString: value.toISOString()
+          });
+          return value.toISOString();
+        }
+        return value;
+      })
     })
     .then(response => {
       if (!response || !response.success) {
