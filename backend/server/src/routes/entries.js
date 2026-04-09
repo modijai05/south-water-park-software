@@ -1683,6 +1683,17 @@ router.get('/', async (req, res) => {
 
 // PUT /api/entries/:id - Update single entry
 router.put('/:id', async (req, res) => {
+  // CRITICAL DEBUG: Log ALL incoming requests to this endpoint
+  console.log('🚨🚨 BACKEND UPDATE ENDPOINT HIT:', {
+    method: req.method,
+    url: req.url,
+    params: req.params,
+    headers: req.headers,
+    contentType: req.headers['content-type'],
+    body: req.body,
+    rawBody: JSON.stringify(req.body)
+  });
+  
   try {
     // Set CORS headers for all origins
     res.header('Access-Control-Allow-Origin', '*');
