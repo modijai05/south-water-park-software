@@ -1691,26 +1691,39 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    // SIMPLIFIED FIX: Direct Date object assignment - most reliable approach
-    if (updateData.entryDate) {
+    // PROFESSIONAL FIX: Robust Date handling for MongoDB
+    if (updateData.entryDate !== undefined && updateData.entryDate !== null) {
       console.log('DATE UPDATE DEBUG: entryDate received:', {
         entryDate: updateData.entryDate,
-        entryDateType: typeof updateData.entryDate
+        entryDateType: typeof updateData.entryDate,
+        isEmpty: updateData.entryDate === ''
       });
       
-      // Direct conversion to Date object - handles both strings and Date objects
-      updateData.entryDate = new Date(updateData.entryDate);
-      
-      // Simple validation
-      if (isNaN(updateData.entryDate.getTime())) {
-        console.error('DATE UPDATE ERROR: Invalid date, removing entryDate');
+      // Handle empty string case
+      if (updateData.entryDate === '') {
+        console.log('DATE UPDATE: Removing empty entryDate');
         delete updateData.entryDate;
       } else {
-        console.log('DATE UPDATE SUCCESS: Valid Date assigned:', {
-          entryDate: updateData.entryDate,
-          isoString: updateData.entryDate.toISOString()
-        });
+        // Convert to Date object - handles both strings and Date objects
+        const dateObject = new Date(updateData.entryDate);
+        
+        // Validate the date
+        if (isNaN(dateObject.getTime())) {
+          console.error('DATE UPDATE ERROR: Invalid date, removing entryDate:', updateData.entryDate);
+          delete updateData.entryDate;
+        } else {
+          // Assign valid Date object
+          updateData.entryDate = dateObject;
+          console.log('DATE UPDATE SUCCESS: Valid Date assigned:', {
+            entryDate: updateData.entryDate,
+            isoString: updateData.entryDate.toISOString(),
+            timeValue: updateData.entryDate.getTime()
+          });
+        }
       }
+    } else if (updateData.entryDate === null || updateData.entryDate === undefined) {
+      console.log('DATE UPDATE: entryDate is null/undefined, removing from update data');
+      delete updateData.entryDate;
     }
     
     console.log('📝 Updating entry:', id, updateData);
@@ -1776,20 +1789,46 @@ router.put('/:id', async (req, res) => {
         });
         
         // CRITICAL VERIFICATION: Ensure entryDate was saved correctly
-        if (updateData.entryDate && updatedEntry.entryDate) {
-          console.log('SUCCESS: entryDate was saved correctly to MongoDB:', {
-            attemptedValue: updateData.entryDate,
-            returnedValue: updatedEntry.entryDate,
-            attemptedType: typeof updateData.entryDate,
-            returnedType: typeof updatedEntry.entryDate,
-            valuesMatch: updateData.entryDate.getTime() === updatedEntry.entryDate.getTime()
-          });
-        } else if (updateData.entryDate && !updatedEntry.entryDate) {
-          console.error('CRITICAL ERROR: entryDate was not saved to MongoDB!', {
-            attemptedValue: updateData.entryDate,
-            returnedValue: updatedEntry.entryDate,
-            updateDataKeys: Object.keys(updateData)
-          });
+        if (updateData.hasOwnProperty('entryDate') && updateData.entryDate !== undefined) {
+          if (updatedEntry.entryDate) {
+            const attemptedTime = updateData.entryDate.getTime();
+            const returnedTime = updatedEntry.entryDate.getTime();
+            const valuesMatch = Math.abs(attemptedTime - returnedTime) < 1000; // Within 1 second
+            
+            if (valuesMatch) {
+              console.log('✅ SUCCESS: entryDate was saved correctly to MongoDB:', {
+                attemptedValue: updateData.entryDate,
+                attemptedISO: updateData.entryDate.toISOString(),
+                returnedValue: updatedEntry.entryDate,
+                returnedISO: updatedEntry.entryDate.toISOString(),
+                attemptedType: typeof updateData.entryDate,
+                returnedType: typeof updatedEntry.entryDate,
+                valuesMatch: valuesMatch,
+                timeDifference: attemptedTime - returnedTime
+              });
+            } else {
+              console.error('❌ ERROR: entryDate saved but values don\'t match:', {
+                attemptedValue: updateData.entryDate,
+                attemptedISO: updateData.entryDate.toISOString(),
+                returnedValue: updatedEntry.entryDate,
+                returnedISO: updatedEntry.entryDate.toISOString(),
+                attemptedType: typeof updateData.entryDate,
+                returnedType: typeof updatedEntry.entryDate,
+                valuesMatch: valuesMatch,
+                timeDifference: attemptedTime - returnedTime
+              });
+            }
+          } else {
+            console.error('❌ CRITICAL ERROR: entryDate was not saved to MongoDB!', {
+              attemptedValue: updateData.entryDate,
+              attemptedISO: updateData.entryDate.toISOString(),
+              returnedValue: updatedEntry.entryDate,
+              updateDataKeys: Object.keys(updateData),
+              updatedEntryKeys: Object.keys(updatedEntry)
+            });
+          }
+        } else {
+          console.log('ℹ️ INFO: No entryDate in update data, skipping verification');
         }
         
         // Broadcast real-time update to all connected clients

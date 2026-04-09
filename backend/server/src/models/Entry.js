@@ -40,7 +40,7 @@ const entrySchema = new mongoose.Schema({
   receiptNumber: { type: String, unique: true, sparse: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   // Custom entry date field that can be manually updated
-  entryDate: { type: Date, default: Date.now, required: false },
+  entryDate: { type: Date, required: false },
 }, { timestamps: true });
 
 entrySchema.index({ createdAt: -1 });

@@ -90,19 +90,39 @@ export const getEffectiveDateForDB = (entry: any): Date => {
  * @returns The prepared entry data for API
  */
 export const prepareEntryForAPI = (entry: any): any => {
-  // CRITICAL FIX: Ensure entryDate is a Date object for proper serialization
+  // PROFESSIONAL FIX: Comprehensive date handling for API
   let processedEntryDate = entry.entryDate;
   
-  if (entry.entryDate) {
+  if (entry.entryDate !== undefined && entry.entryDate !== null && entry.entryDate !== '') {
+    console.log('PREPARE ENTRY: Processing entryDate:', {
+      entryDate: entry.entryDate,
+      entryDateType: typeof entry.entryDate,
+      isDateObject: entry.entryDate instanceof Date
+    });
+    
     // Convert to Date object if it's not already one
     if (!(entry.entryDate instanceof Date)) {
       processedEntryDate = new Date(entry.entryDate);
+      console.log('PREPARE ENTRY: Converted to Date object:', {
+        originalValue: entry.entryDate,
+        convertedDate: processedEntryDate,
+        isValid: !isNaN(processedEntryDate.getTime())
+      });
     }
+    
+    // Validate the date
+    if (processedEntryDate && isNaN(processedEntryDate.getTime())) {
+      console.error('PREPARE ENTRY: Invalid date detected, removing entryDate');
+      processedEntryDate = undefined;
+    }
+  } else {
+    console.log('PREPARE ENTRY: entryDate is empty/null/undefined, removing from API call');
+    processedEntryDate = undefined;
   }
   
   const prepared = {
     ...entry,
-    // Ensure entryDate is a Date object for the custom JSON replacer
+    // Only include entryDate if it's valid
     entryDate: processedEntryDate
   };
   
@@ -112,7 +132,8 @@ export const prepareEntryForAPI = (entry: any): any => {
     processedEntryDate,
     preparedEntryDate: prepared.entryDate,
     entryDateType: typeof prepared.entryDate,
-    isDateObject: prepared.entryDate instanceof Date
+    isDateObject: prepared.entryDate instanceof Date,
+    isValidDate: prepared.entryDate && !isNaN(prepared.entryDate.getTime())
   });
   
   return prepared;
