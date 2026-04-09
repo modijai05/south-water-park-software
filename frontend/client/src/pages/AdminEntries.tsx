@@ -1194,13 +1194,15 @@ export function AdminEntries() {
                             console.log('Date changed:', newDate);
                             
                             // CRITICAL FIX: Convert datetime-local string to Date object
-                            // This ensures proper serialization by the custom JSON replacer
+                            // datetime-local format: 'YYYY-MM-DDTHH:mm' represents local time
                             const dateObject = new Date(newDate);
-                            console.log('PROFESSIONAL DEBUG: Created Date object:', {
+                            console.log('CRITICAL DEBUG: Date conversion:', {
                                 datetimeLocal: newDate,
                                 dateObject: dateObject,
                                 isValid: !isNaN(dateObject.getTime()),
-                                isoString: dateObject.toISOString()
+                                isoString: dateObject.toISOString(),
+                                localString: dateObject.toString(),
+                                utcString: dateObject.toUTCString()
                             });
                             
                             // Validate the date before setting
