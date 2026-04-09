@@ -1294,14 +1294,27 @@ export function AdminEntries() {
                         setPreventForceReset(true, 'Manual date update in progress');
                         
                         const preparedEntry = prepareEntryForAPI(editing);
-                        console.log('AdminEntries: Prepared entry for API:', preparedEntry);
-                        console.log('CRITICAL DEBUG: Data being sent to backend:', {
+                        
+                        // COMPREHENSIVE DEBUGGING: Track every step
+                        console.log('🔍 FRONTEND DEBUG: Entry before preparation:', {
+                          id: editing._id,
+                          entryDate: editing.entryDate,
+                          entryDateType: typeof editing.entryDate,
+                          entryDateValid: editing.entryDate instanceof Date
+                        });
+                        
+                        console.log('🔍 FRONTEND DEBUG: Prepared entry for API:', preparedEntry);
+                        console.log('🔍 FRONTEND DEBUG: Data being sent to backend:', {
                           id: editing._id,
                           originalEntryDate: editing.entryDate,
                           preparedEntryDate: preparedEntry.entryDate,
-                          allPreparedData: preparedEntry
+                          preparedEntryDateType: typeof preparedEntry.entryDate,
+                          allPreparedData: JSON.stringify(preparedEntry, null, 2)
                         });
+                        
+                        console.log('🚀 FRONTEND DEBUG: Making API call to update entry...');
                         const updateResult = await entriesApi.update(editing._id, preparedEntry);
+                        console.log('🔍 FRONTEND DEBUG: API response received:', updateResult);
                         console.log('AdminEntries: Update API result:', updateResult);
                         
                         // Re-enable force resets after update

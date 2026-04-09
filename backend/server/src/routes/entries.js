@@ -1691,6 +1691,24 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
+    // COMPREHENSIVE DEBUGGING: Log incoming request
+    console.log('🚀 BACKEND DEBUG: Update request received:', {
+      id,
+      updateData,
+      updateDataType: typeof updateData,
+      rawBody: req.body,
+      headers: req.headers,
+      contentType: req.headers['content-type']
+    });
+    
+    console.log('🔍 BACKEND DEBUG: entryDate in request:', {
+      hasEntryDate: updateData.hasOwnProperty('entryDate'),
+      entryDateValue: updateData.entryDate,
+      entryDateType: typeof updateData.entryDate,
+      entryDateUndefined: updateData.entryDate === undefined,
+      entryDateNull: updateData.entryDate === null
+    });
+    
     // PROFESSIONAL FIX: Robust Date handling for MongoDB
     if (updateData.entryDate !== undefined && updateData.entryDate !== null) {
       console.log('DATE UPDATE DEBUG: entryDate received:', {

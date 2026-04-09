@@ -203,15 +203,26 @@ export const entriesApi = {
       console.error('🚨 API: Get error:', error);
       return { entry: null };
     }),
-  update: (id: string, body: unknown) => api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`, { 
-    method: 'PUT', 
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    // SIMPLIFIED FIX: Let JSON.stringify handle Date objects naturally
-    // Date objects will be converted to ISO strings automatically
-    body: JSON.stringify(body)
-  })
+  update: (id: string, body: unknown) => {
+    // DEBUG: Log the exact data being sent
+    console.log('🚀 API CLIENT DEBUG: Making update request:', {
+      id,
+      body,
+      bodyType: typeof body,
+      bodyString: JSON.stringify(body, null, 2),
+      entryDate: (body as any).entryDate,
+      entryDateType: typeof (body as any).entryDate
+    });
+    
+    return api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`, { 
+      method: 'PUT', 
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // SIMPLIFIED FIX: Let JSON.stringify handle Date objects naturally
+      // Date objects will be converted to ISO strings automatically
+      body: JSON.stringify(body)
+    })
     .then(response => {
       if (!response || !response.success) {
         console.error('🚨 API: Update failed:', response);
@@ -223,7 +234,8 @@ export const entriesApi = {
       console.error('🚨 API: Update error:', error);
       // Return safe fallback
       return { entry: body, fallback: true };
-    }),
+    });
+  }
   delete: (id: string) => api<{ success: boolean; message: string }>(`/entries/${id}`, { method: 'DELETE' })
     .then(response => {
       if (!response || !response.success) {
