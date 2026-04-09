@@ -1313,155 +1313,65 @@ export function AdminEntries() {
                         // Don't update local state immediately - let the complete refresh handle it
                         // This prevents conflicts between local state and fresh data
                         
-                        // CRITICAL FIX: Apply immediate filter re-application after successful update
+                        // SIMPLIFIED FIX: Refresh data and handle filter switching in one go
                         setTimeout(async () => {
-                          console.log('AdminEntries: Applying immediate filter re-application...');
+                          console.log('DATE UPDATE: Refreshing data after update...');
                           
-                          // First, get the fresh data to confirm the update
                           try {
+                            // Get fresh data
                             const freshRes = await entriesApi.list({ page: 1, limit: 50000 });
                             const freshEntries = (freshRes.data?.entries as EntryRecord[]) ?? [];
                             
-                            console.log('Fresh data received, applying filters:', {
-                              totalEntries: freshEntries.length,
-                              currentFilter: dateFilter,
-                              updatedEntryId: editing._id
-                            });
-                            
-                            // Update the master data
-                            setAllEntries(freshEntries);
-                            
-                            // IMMEDIATELY apply the current filter to move the entry
-                            let filtered = freshEntries;
-                            
-                            // CRITICAL DEBUG: Log the updated entry details
+                            // Find the updated entry
                             const updatedEntry = freshEntries.find(e => e._id === editing._id);
+                            
                             if (updatedEntry) {
-                              console.log('CRITICAL DEBUG: Updated entry details:', {
+                              console.log('DATE UPDATE: Updated entry found:', {
                                 entryId: updatedEntry._id,
                                 entryDate: updatedEntry.entryDate,
-                                createdAt: updatedEntry.createdAt,
-                                effectiveDate: getEffectiveEntryDate(updatedEntry),
-                                effectiveDateFormatted: dayjs(getEffectiveEntryDate(updatedEntry)).format('YYYY-MM-DD'),
-                                todayFormatted: dayjs().format('YYYY-MM-DD'),
-                                yesterdayFormatted: dayjs().subtract(1, 'day').format('YYYY-MM-DD'),
-                                currentFilter: dateFilter,
-                                isToday: dayjs(getEffectiveEntryDate(updatedEntry)).isSame(dayjs(), 'day'),
-                                isYesterday: dayjs(getEffectiveEntryDate(updatedEntry)).isSame(dayjs().subtract(1, 'day'), 'day')
+                                effectiveDate: getEffectiveEntryDate(updatedEntry)
                               });
                               
-                              // CRITICAL FIX: Automatically switch filter to show updated entry
+                              // Determine if filter needs to switch
                               const effectiveDate = getEffectiveEntryDate(updatedEntry);
                               const isToday = dayjs(effectiveDate).isSame(dayjs(), 'day');
                               const isYesterday = dayjs(effectiveDate).isSame(dayjs().subtract(1, 'day'), 'day');
                               
-                              if (isToday && dateFilter !== 'today') {
-                                console.log('🔄 Auto-switching filter to Today to show updated entry');
-                                setTimeout(() => setDateFilter('today'), 100);
-                              } else if (isYesterday && dateFilter !== 'yesterday') {
-                                console.log('🔄 Auto-switching filter to Yesterday to show updated entry');
-                                setTimeout(() => setDateFilter('yesterday'), 100);
-                              }
+                              // Update master data first
+                              setAllEntries(freshEntries);
                               
-                              // CRITICAL FIX: Skip manual filter re-application since we're auto-switching
-                              // This prevents race conditions with other useEffect hooks
-                              return;
+                              // Switch filter if needed
+                              if (isToday && dateFilter !== 'today') {
+                                console.log('🔄 Auto-switching to Today filter');
+                                setDateFilter('today');
+                              } else if (isYesterday && dateFilter !== 'yesterday') {
+                                console.log('🔄 Auto-switching to Yesterday filter');
+                                setDateFilter('yesterday');
+                              } else {
+                                console.log('📊 Staying on current filter:', dateFilter);
+                                // Trigger filter re-application if staying on same filter
+                                setEntries(prev => {
+                                  // Re-apply current filter to fresh data
+                                  if (dateFilter === 'today') {
+                                    return freshEntries.filter(entry => 
+                                      dayjs(getEffectiveEntryDate(entry)).isSame(dayjs(), 'day')
+                                    );
+                                  } else if (dateFilter === 'yesterday') {
+                                    return freshEntries.filter(entry => 
+                                      dayjs(getEffectiveEntryDate(entry)).isSame(dayjs().subtract(1, 'day'), 'day')
+                                    );
+                                  }
+                                  return freshEntries;
+                                });
+                              }
+                            } else {
+                              console.warn('DATE UPDATE: Updated entry not found in fresh data');
+                              setAllEntries(freshEntries);
                             }
-                            
-                            if (dateFilter === 'today') {
-                              filtered = filtered.filter(entry => {
-                                const isToday = dayjs(getEffectiveEntryDate(entry)).isSame(dayjs(), 'day');
-                                if (entry._id === editing._id) {
-                                  console.log('DEBUG: Today filter check for updated entry:', {
-                                    entryId: entry._id,
-                                    effectiveDate: getEffectiveEntryDate(entry),
-                                    isToday,
-                                    today: dayjs().format('YYYY-MM-DD')
-                                  });
-                                }
-                                return isToday;
-                              });
-                            } else if (dateFilter === 'yesterday') {
-                              filtered = filtered.filter(entry => {
-                                const isYesterday = dayjs(getEffectiveEntryDate(entry)).isSame(dayjs().subtract(1, 'day'), 'day');
-                                if (entry._id === editing._id) {
-                                  console.log('DEBUG: Yesterday filter check for updated entry:', {
-                                    entryId: entry._id,
-                                    effectiveDate: getEffectiveEntryDate(entry),
-                                    isYesterday,
-                                    yesterday: dayjs().subtract(1, 'day').format('YYYY-MM-DD')
-                                  });
-                                }
-                                return isYesterday;
-                              });
-                            } else if (dateFilter === 'all') {
-                              filtered = freshEntries;
-                            }
-                            
-                            // Apply search filter if exists
-                            if (search.trim()) {
-                              const searchTerm = search.toLowerCase().trim();
-                              filtered = filtered.filter(entry => 
-                                entry.name?.toLowerCase().includes(searchTerm) ||
-                                entry.mobile?.toLowerCase().includes(searchTerm) ||
-                                entry.filledByFullName?.toLowerCase().includes(searchTerm) ||
-                                entry.ticketType?.toLowerCase().includes(searchTerm) ||
-                                entry.additionalDiscount?.toString().includes(searchTerm)
-                              );
-                            }
-                            
-                            // Update both master data and displayed entries
-                            setAllEntries(freshEntries);
-                            setEntries(filtered);
-                            
-                            // Force the filter useMemo to recalculate
-                            setFilterTrigger(prev => prev + 1);
-                            
-                            console.log('Filter re-application completed:', {
-                              totalEntries: freshEntries.length,
-                              filteredEntries: filtered.length,
-                              dateFilter,
-                              updatedEntryVisible: filtered.some(e => e._id === editing._id)
-                            });
-                            
                           } catch (error) {
-                            console.error('Failed to apply immediate filter re-application:', error);
-                            // Fallback to full refresh
-                            await fetchEntries(true);
+                            console.error('DATE UPDATE: Failed to refresh data:', error);
                           }
-                        }, 500); // Longer delay to ensure backend update is complete
-                        
-                                                
-                        console.log('AdminEntries: Local state updated with new entry data:', editing);
-                        
-                        // PROFESSIONAL FIX: Consolidated event dispatching with error boundary
-                        try {
-                          const eventData = {
-                            entryId: editing._id,
-                            entry: editing,
-                            timestamp: new Date().toISOString(),
-                            action: 'update',
-                            forceRefresh: true,
-                            source: 'entry-edit',
-                            updatedFields: ['date', 'totalPeople', 'basicInfo'],
-                            oldDateTime: viewing?.entryDate || viewing?.createdAt,
-                            newDateTime: editing.entryDate
-                          };
-                          
-                          // Dispatch consolidated event to reduce race conditions
-                          window.dispatchEvent(new CustomEvent('entry-updated-consolidated', {
-                            detail: eventData
-                          }));
-                          
-                          // Keep essential individual events for compatibility
-                          window.dispatchEvent(new CustomEvent('entry-updated', { detail: eventData }));
-                          window.dispatchEvent(new CustomEvent('entries-changed', { detail: eventData }));
-                          
-                          console.log('✅ Events dispatched successfully for entry:', editing._id);
-                        } catch (eventError) {
-                          console.error('🚨 Error dispatching events:', eventError);
-                          // Continue with the flow even if events fail
-                        }
+                        }, 500); // Shorter delay for better UX
                         
                         setEditing(null);
                         setToast({ 
@@ -1474,7 +1384,6 @@ export function AdminEntries() {
                         console.error('🚨 Update error:', error);
                         setIsUpdating(false);
                         
-                        // Handle different types of errors appropriately
                         let errorMessage = '❌ Failed to update entry';
                         
                         if (error.message.includes('Session expired')) {

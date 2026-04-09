@@ -1691,27 +1691,24 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    // PROFESSIONAL FIX: Simplified entryDate handling - most reliable approach
+    // SIMPLIFIED FIX: Direct Date object assignment - most reliable approach
     if (updateData.entryDate) {
-      console.log('PROFESSIONAL DEBUG: entryDate received:', {
+      console.log('DATE UPDATE DEBUG: entryDate received:', {
         entryDate: updateData.entryDate,
         entryDateType: typeof updateData.entryDate
       });
       
-      // Convert to Date object - this handles both Date objects and ISO strings
-      const dateObject = new Date(updateData.entryDate);
+      // Direct conversion to Date object - handles both strings and Date objects
+      updateData.entryDate = new Date(updateData.entryDate);
       
-      // Validate the date
-      if (isNaN(dateObject.getTime())) {
-        console.error('PROFESSIONAL ERROR: Invalid date, removing entryDate:', updateData.entryDate);
+      // Simple validation
+      if (isNaN(updateData.entryDate.getTime())) {
+        console.error('DATE UPDATE ERROR: Invalid date, removing entryDate');
         delete updateData.entryDate;
       } else {
-        // Assign the valid Date object
-        updateData.entryDate = dateObject;
-        console.log('PROFESSIONAL DEBUG: Valid Date object assigned:', {
+        console.log('DATE UPDATE SUCCESS: Valid Date assigned:', {
           entryDate: updateData.entryDate,
-          entryDateType: typeof updateData.entryDate,
-          entryDateISO: updateData.entryDate.toISOString()
+          isoString: updateData.entryDate.toISOString()
         });
       }
     }
