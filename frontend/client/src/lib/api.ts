@@ -203,18 +203,22 @@ export const entriesApi = {
       console.error('🚨 API: Get error:', error);
       return { entry: null };
     }),
-  update: (id: string, body: unknown) => api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`, { 
-    method: 'PUT', 
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    // CRITICAL FIX: Custom JSON replacer to handle Date objects properly
-    // This ensures Date objects are serialized correctly for the backend
-    body: JSON.stringify(body, (key, value) => {
+  update: (id: string, body: any) => {
+    // PROFESSIONAL DEBUG: Log the body being sent
+    console.log('API DEBUG: Body being sent to update API:', {
+      id,
+      body: JSON.stringify(body, null, 2),
+      bodyType: typeof body,
+      entryDate: (body as any)?.entryDate,
+      entryDateType: typeof (body as any)?.entryDate,
+      isDateObject: (body as any)?.entryDate instanceof Date
+    });
+    
+    // CRITICAL FIX: Ensure Date objects are properly serialized
+    const serializedBody = JSON.stringify(body, (key, value) => {
       // If the value is a Date object, convert it to ISO string
-      // The backend will then convert it back to a Date object
       if (value instanceof Date) {
-        console.log('PROFESSIONAL DEBUG: Converting Date object to ISO string:', {
+        console.log('API DEBUG: Converting Date object to ISO string:', {
           key,
           dateValue: value,
           isoString: value.toISOString()
@@ -222,8 +226,18 @@ export const entriesApi = {
         return value.toISOString();
       }
       return value;
-    })
-  })
+    });
+    
+    console.log('API DEBUG: Serialized body:', serializedBody);
+    
+    return api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`, { 
+      method: 'PUT', 
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: serializedBody
+    });
+  }
     .then(response => {
       if (!response || !response.success) {
         console.error('🚨 API: Update failed:', response);
@@ -233,8 +247,8 @@ export const entriesApi = {
     })
     .catch(error => {
       console.error('🚨 API: Update error:', error);
-      // Return safe fallback
-      return { entry: body, fallback: true };
+      // Return safe fallback with original body for recovery
+      return { entry: body, fallback: true, error: error.message };
     }),
   delete: (id: string) => api<{ success: boolean; message: string }>(`/entries/${id}`, { method: 'DELETE' })
     .then(response => {
