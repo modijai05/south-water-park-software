@@ -9,7 +9,7 @@ import { useEntryStore } from '@/store/entryStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { globalSyncService } from '@/services/globalSyncService';
-import { getEffectiveEntryDate, getFormattedEntryDate, getFormattedEntryTime, prepareEntryForAPI, formatDateTimeForInput, convertDateTimeLocalToISO } from '@/utils/dateUtils';
+import { getEffectiveEntryDate, getFormattedEntryDate, getFormattedEntryTime, prepareEntryForAPI, formatDateTimeForInput, convertDateTimeLocalToISO, isEntryToday, isEntryYesterday } from '@/utils/dateUtils';
 import { setPreventForceReset } from '@/utils/forceDailyReset';
 import type { EntryRecord, TicketType } from '@/types';
 
@@ -495,7 +495,7 @@ export function AdminEntries() {
             >
               📅 Today
               <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                {allEntries.filter(e => dayjs(e.createdAt).isSame(dayjs(), 'day')).length}
+                {allEntries.filter(e => isEntryToday(e)).length}
               </span>
             </button>
             <button
@@ -508,7 +508,7 @@ export function AdminEntries() {
             >
               📅 Yesterday
               <span className="ml-2 bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs">
-                {allEntries.filter(e => dayjs(e.createdAt).isSame(dayjs().subtract(1, 'day'), 'day')).length}
+                {allEntries.filter(e => isEntryYesterday(e)).length}
               </span>
             </button>
             <button

@@ -1691,53 +1691,27 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    // CRITICAL FIX: Handle entryDate properly for MongoDB
+    // PROFESSIONAL FIX: Simplified entryDate handling - most reliable approach
     if (updateData.entryDate) {
-      console.log('PROFESSIONAL DEBUG: Processing entryDate:', {
-        receivedValue: updateData.entryDate,
-        valueType: typeof updateData.entryDate,
-        isDateObject: updateData.entryDate instanceof Date,
-        isValidDate: dayjs(updateData.entryDate).isValid(),
-        formattedDate: new Date(updateData.entryDate).toISOString(),
-        dayjsFormatted: dayjs(updateData.entryDate).format('YYYY-MM-DD HH:mm:ss')
+      console.log('PROFESSIONAL DEBUG: entryDate received:', {
+        entryDate: updateData.entryDate,
+        entryDateType: typeof updateData.entryDate
       });
       
-      // CRITICAL FIX: Handle both Date objects and ISO strings
-      let finalDate;
-      if (updateData.entryDate instanceof Date) {
-        // Already a Date object - use directly
-        finalDate = updateData.entryDate;
-        console.log('PROFESSIONAL DEBUG: Using existing Date object:', finalDate);
-      } else if (typeof updateData.entryDate === 'string') {
-        // ISO string from frontend - convert to Date
-        finalDate = new Date(updateData.entryDate);
-        console.log('PROFESSIONAL DEBUG: Converting ISO string to Date:', {
-          isoString: updateData.entryDate,
-          dateObject: finalDate,
-          isValid: !isNaN(finalDate.getTime())
-        });
-      } else {
-        // Try to convert whatever we received
-        finalDate = new Date(updateData.entryDate);
-        console.log('PROFESSIONAL DEBUG: Converting unknown type to Date:', {
-          originalValue: updateData.entryDate,
-          convertedDate: finalDate,
-          isValid: !isNaN(finalDate.getTime())
-        });
-      }
+      // Convert to Date object - this handles both Date objects and ISO strings
+      const dateObject = new Date(updateData.entryDate);
       
-      // Validate the final date
-      if (isNaN(finalDate.getTime())) {
-        console.error('PROFESSIONAL ERROR: Invalid date after conversion:', finalDate);
-        delete updateData.entryDate; // Remove invalid date
+      // Validate the date
+      if (isNaN(dateObject.getTime())) {
+        console.error('PROFESSIONAL ERROR: Invalid date, removing entryDate:', updateData.entryDate);
+        delete updateData.entryDate;
       } else {
-        // Assign the validated Date object
-        updateData.entryDate = finalDate;
-        console.log('PROFESSIONAL DEBUG: Final Date object assigned:', {
+        // Assign the valid Date object
+        updateData.entryDate = dateObject;
+        console.log('PROFESSIONAL DEBUG: Valid Date object assigned:', {
           entryDate: updateData.entryDate,
           entryDateType: typeof updateData.entryDate,
-          entryDateISO: updateData.entryDate.toISOString(),
-          entryDateValid: updateData.entryDate instanceof Date
+          entryDateISO: updateData.entryDate.toISOString()
         });
       }
     }
