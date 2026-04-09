@@ -23,7 +23,10 @@
     "concurrently": "^8.2.2"
   },
   "workspaces": {
-    "packages": ["frontend/client", "backend/server"]
+    "packages": [
+      "frontend/client",
+      "backend/server"
+    ]
   },
   "keywords": [
     "water-park",
@@ -35,5 +38,8 @@
     "typescript"
   ],
   "author": "South Water Park Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
 }
