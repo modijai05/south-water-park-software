@@ -1121,10 +1121,30 @@ export function AdminEntries() {
                       />
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Cash Amount</label>
+                      <input
+                        type="number"
+                        value={editing ? editing.cashAmount?.toString() : (viewing?.cashAmount?.toString() || '0')}
+                        onChange={(e) => editing && setEditing({...editing, cashAmount: parseInt(e.target.value) || 0})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">UPI Amount</label>
+                      <input
+                        type="number"
+                        value={editing ? editing.upiAmount?.toString() : (viewing?.upiAmount?.toString() || '0')}
+                        onChange={(e) => editing && setEditing({...editing, upiAmount: parseInt(e.target.value) || 0})}
+                        disabled={!editing}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Advance Amount</label>
                       <input
                         type="number"
-                        value={editing ? editing.advanceAmount?.toString() : (viewing?.advanceAmount?.toString() || '')}
+                        value={editing ? editing.advanceAmount?.toString() : (viewing?.advanceAmount?.toString() || '0')}
                         onChange={(e) => editing && setEditing({...editing, advanceAmount: parseInt(e.target.value) || 0})}
                         disabled={!editing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
@@ -1134,7 +1154,7 @@ export function AdminEntries() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Other Amount</label>
                       <input
                         type="number"
-                        value={editing ? editing.otherAmount?.toString() : (viewing?.otherAmount?.toString() || '')}
+                        value={editing ? editing.otherAmount?.toString() : (viewing?.otherAmount?.toString() || '0')}
                         onChange={(e) => editing && setEditing({...editing, otherAmount: parseInt(e.target.value) || 0})}
                         disabled={!editing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
@@ -1385,6 +1405,15 @@ export function AdminEntries() {
                             console.error('DATE UPDATE: Failed to refresh data:', error);
                           }
                         }, 500); // Shorter delay for better UX
+                        
+                        // Dispatch event for dashboard sync
+                        window.dispatchEvent(new CustomEvent('entry-updated', {
+                          detail: { 
+                            entryId: editing._id, 
+                            action: 'update',
+                            timestamp: new Date().toISOString()
+                          }
+                        }));
                         
                         setEditing(null);
                         setToast({ 
