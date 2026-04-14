@@ -617,7 +617,7 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     stats.totalKidsMainFoodCoupons += kidsMainFoodCoupon;
     stats.totalFastFoodCoupons += adultsFastFoodCoupon + kidsFastFoodCoupon;
     stats.totalMainFoodCoupons += adultsMainFoodCoupon + kidsMainFoodCoupon;
-    stats.totalFoodCoupons += stats.totalAdultsFastFoodCoupons + stats.totalKidsFastFoodCoupons + stats.totalAdultsMainFoodCoupons + stats.totalKidsMainFoodCoupons;
+    stats.totalFoodCoupons += adultsFastFoodCoupon + kidsFastFoodCoupon + adultsMainFoodCoupon + kidsMainFoodCoupon;
 
     // Discount calculations
     const additionalDiscount = entry.additionalDiscount || 0;
@@ -656,7 +656,20 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     todayTotalFastFoodCoupons: stats.todayTotalFastFoodCoupons,
     todayTotalMainFoodCoupons: stats.todayTotalMainFoodCoupons,
     todayTotalFoodCoupons: stats.todayTotalFoodCoupons,
+    totalAdultsFastFoodCoupons: stats.totalAdultsFastFoodCoupons,
+    totalKidsFastFoodCoupons: stats.totalKidsFastFoodCoupons,
+    totalAdultsMainFoodCoupons: stats.totalAdultsMainFoodCoupons,
+    totalKidsMainFoodCoupons: stats.totalKidsMainFoodCoupons,
+    totalFastFoodCoupons: stats.totalFastFoodCoupons,
+    totalMainFoodCoupons: stats.totalMainFoodCoupons,
     totalFoodCoupons: stats.totalFoodCoupons
+  });
+  
+  // CRITICAL FIX: Verify total food coupons calculation
+  console.log('🍔 Food Coupons Verification:', {
+    todayTotalFoodCoupons: stats.todayTotalFoodCoupons,
+    totalFoodCoupons: stats.totalFoodCoupons,
+    calculation: 'FIXED - Now using current entry coupons instead of cumulative totals'
   });
   
   return stats;
