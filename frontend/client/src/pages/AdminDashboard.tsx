@@ -11,7 +11,7 @@ import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { invalidateTicketConfigCache } from '@/lib/ticketUtils';
 import { useAuthStore } from '@/store/authStore';
-import type { TicketConfig } from '@/types';
+import type { TicketConfig, Stats } from '@/types';
 import { globalSyncService } from '@/services/globalSyncService';
 import { unifiedDailyResetService } from '@/services/unifiedDailyResetService';
 import { useDailyReset, performDailyReset, needsDailyReset } from '@/utils/dailyReset';
@@ -95,91 +95,7 @@ const generateYearlyData = (monthlyData: any[]) => {
   }));
 };
 
-interface Stats {
-  todayEntries: number;
-  totalEntries: number;
-  todayPeople: number;
-  totalPeople: number;
-  todayAdults: number;
-  totalAdults: number;
-  todayKids: number;
-  totalKids: number;
-  todayCash: number;
-  todayUpi: number;
-  todayAdvance: number;
-  todayAmount: number;
-  totalAmount: number;
-  totalCash: number;
-  totalUpi: number;
-  totalAdvance: number;
-  // Upgrade statistics
-  totalUpgrades: number;
-  todayUpgrades: number;
-  // Discount statistics
-  todayAdditionalDiscount: number;
-  todayTotalDiscount: number;
-  totalAdditionalDiscount: number;
-  totalTotalDiscount: number;
-  averageTicketValue: number;
-  peakHour: string;
-  busiestDay: string;
-  uniqueCustomers: number;
-  returningCustomers: number;
-  conversionRate: number;
-  // Ticket type statistics
-  today150: number;
-  today300: number;
-  today450: number;
-  today600: number;
-  today100: number;
-  total150: number;
-  total300: number;
-  total450: number;
-  total600: number;
-  total100: number;
-  // Per-ticket-type adult and kid counts
-  today150Adults: number;
-  today150Kids: number;
-  today300Adults: number;
-  today300Kids: number;
-  today450Adults: number;
-  today450Kids: number;
-  today600Adults: number;
-  today600Kids: number;
-  today100Adults: number;
-  today100Kids: number;
-  total150Adults: number;
-  total150Kids: number;
-  total300Adults: number;
-  total300Kids: number;
-  total450Adults: number;
-  total450Kids: number;
-  total600Adults: number;
-  total600Kids: number;
-  total100Adults: number;
-  total100Kids: number;
-  // Food coupon statistics
-  todayAdultsFastFoodCoupons: number;
-  todayKidsFastFoodCoupons: number;
-  todayAdultsMainFoodCoupons: number;
-  todayKidsMainFoodCoupons: number;
-  todayTotalFastFoodCoupons: number;
-  todayTotalMainFoodCoupons: number;
-  todayTotalFoodCoupons: number;
-  totalAdultsFastFoodCoupons: number;
-  totalKidsFastFoodCoupons: number;
-  totalAdultsMainFoodCoupons: number;
-  totalKidsMainFoodCoupons: number;
-  totalFastFoodCoupons: number;
-  totalMainFoodCoupons: number;
-  totalFoodCoupons: number;
-  // Performance metrics
-  lastUpdated: string;
-  dataFreshness: string;
-  source: string;
-  syncStatus: string;
-}
-
+  
 interface Charts {
   hourlyChart: { _id: string; count: number; amount: number }[];
   ticketDistribution: { _id: string; count: number; amount: number }[];
@@ -771,8 +687,8 @@ export function AdminDashboard() {
           detail: {
             timestamp: new Date().toISOString(),
             source: 'intelligent-background-sync',
-            stats: calculatedStats,
-            performanceMetrics: newPerformanceMetrics,
+            stats: stats,
+            performanceMetrics: performanceMetrics,
             entriesCount: entriesData.length
           }
         }));

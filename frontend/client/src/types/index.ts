@@ -130,30 +130,18 @@ export interface Stats {
   totalEntries: number;
   todayPeople: number;
   totalPeople: number;
-  adults: {
-    today: number;
-    total: number;
-  };
-  kids: {
-    today: number;
-    total: number;
-  };
-  cash: {
-    today: number;
-    total: number;
-  };
-  upi: {
-    today: number;
-    total: number;
-  };
-  advance: {
-    today: number;
-    total: number;
-  };
-  amount: {
-    today: number;
-    total: number;
-  };
+  todayAdults: number;
+  totalAdults: number;
+  todayKids: number;
+  totalKids: number;
+  todayCash: number;
+  totalCash: number;
+  todayUpi: number;
+  totalUpi: number;
+  todayAdvance: number;
+  totalAdvance: number;
+  todayAmount: number;
+  totalAmount: number;
   today150: number;
   total150: number;
   today150Adults: number;
@@ -182,6 +170,8 @@ export interface Stats {
   total100: number;
   today100Adults: number;
   today100Kids: number;
+  total100Adults: number;
+  total100Kids: number;
   // Food coupon statistics
   todayAdultsFastFoodCoupons: number;
   todayKidsFastFoodCoupons: number;
@@ -201,11 +191,22 @@ export interface Stats {
   averageTicketValue: number;
   peakHour: string;
   conversionRate: number;
+  busiestDay: string;
+  uniqueCustomers: number;
+  returningCustomers: number;
   // Discount statistics
   todayAdditionalDiscount: number;
   todayTotalDiscount: number;
   totalAdditionalDiscount: number;
   totalTotalDiscount: number;
+  // Upgrade statistics
+  totalUpgrades: number;
+  todayUpgrades: number;
+  // Performance metadata
+  lastUpdated: string;
+  dataFreshness: string;
+  source: string;
+  syncStatus: string;
 }
 
 export interface ChartData {

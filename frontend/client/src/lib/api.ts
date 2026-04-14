@@ -1,3 +1,5 @@
+import type { Stats } from '@/types';
+
 const API_BASE = import.meta.env.VITE_API_URL || 'https://south-water-park-backend.onrender.com/api';
 
 // Enhanced API configuration with retry logic and error handling
@@ -266,7 +268,7 @@ export const entriesApi = {
   stats: (forceRefresh: boolean = false) => {
     const timestamp = Date.now();
     const forceParam = forceRefresh ? '&force=true' : '';
-    return api<{ success: boolean; data: Record<string, number> }>(`/entries/stats?t=${timestamp}${forceParam}`)
+    return api<{ success: boolean; data: Stats }>(`/entries/stats?t=${timestamp}${forceParam}`)
       .then(response => {
         if (!response || !response.success || !response.data) {
           console.error('🚨 API: Stats failed:', response);
@@ -275,7 +277,29 @@ export const entriesApi = {
             todayEntries: 0, totalEntries: 0, todayPeople: 0, totalPeople: 0,
             todayAdults: 0, totalAdults: 0, todayKids: 0, totalKids: 0,
             todayAmount: 0, totalAmount: 0, todayCash: 0, totalCash: 0,
-            todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0
+            todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0,
+            // Ticket type stats
+            today150: 0, today300: 0, today450: 0, today600: 0, today100: 0,
+            total150: 0, total300: 0, total450: 0, total600: 0, total100: 0,
+            // Per-ticket-type adult and kid counts
+            today150Adults: 0, today150Kids: 0, today300Adults: 0, today300Kids: 0,
+            today450Adults: 0, today450Kids: 0, today600Adults: 0, today600Kids: 0,
+            today100Adults: 0, today100Kids: 0,
+            total150Adults: 0, total150Kids: 0, total300Adults: 0, total300Kids: 0,
+            total450Adults: 0, total450Kids: 0, total600Adults: 0, total600Kids: 0,
+            total100Adults: 0, total100Kids: 0,
+            // Food coupon stats
+            todayAdultsFastFoodCoupons: 0, todayKidsFastFoodCoupons: 0,
+            todayAdultsMainFoodCoupons: 0, todayKidsMainFoodCoupons: 0,
+            todayTotalFastFoodCoupons: 0, todayTotalMainFoodCoupons: 0, todayTotalFoodCoupons: 0,
+            totalAdultsFastFoodCoupons: 0, totalKidsFastFoodCoupons: 0,
+            totalAdultsMainFoodCoupons: 0, totalKidsMainFoodCoupons: 0,
+            totalFastFoodCoupons: 0, totalMainFoodCoupons: 0, totalFoodCoupons: 0,
+            // Performance metrics
+            averageTicketValue: 0, peakHour: 'N/A', conversionRate: 0,
+            // Discount statistics
+            todayAdditionalDiscount: 0, todayTotalDiscount: 0,
+            totalAdditionalDiscount: 0, totalTotalDiscount: 0
           };
         }
         return response.data;
@@ -287,7 +311,29 @@ export const entriesApi = {
           todayEntries: 0, totalEntries: 0, todayPeople: 0, totalPeople: 0,
           todayAdults: 0, totalAdults: 0, todayKids: 0, totalKids: 0,
           todayAmount: 0, totalAmount: 0, todayCash: 0, totalCash: 0,
-          todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0
+          todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0,
+          // Ticket type stats
+          today150: 0, today300: 0, today450: 0, today600: 0, today100: 0,
+          total150: 0, total300: 0, total450: 0, total600: 0, total100: 0,
+          // Per-ticket-type adult and kid counts
+          today150Adults: 0, today150Kids: 0, today300Adults: 0, today300Kids: 0,
+          today450Adults: 0, today450Kids: 0, today600Adults: 0, today600Kids: 0,
+          today100Adults: 0, today100Kids: 0,
+          total150Adults: 0, total150Kids: 0, total300Adults: 0, total300Kids: 0,
+          total450Adults: 0, total450Kids: 0, total600Adults: 0, total600Kids: 0,
+          total100Adults: 0, total100Kids: 0,
+          // Food coupon stats
+          todayAdultsFastFoodCoupons: 0, todayKidsFastFoodCoupons: 0,
+          todayAdultsMainFoodCoupons: 0, todayKidsMainFoodCoupons: 0,
+          todayTotalFastFoodCoupons: 0, todayTotalMainFoodCoupons: 0, todayTotalFoodCoupons: 0,
+          totalAdultsFastFoodCoupons: 0, totalKidsFastFoodCoupons: 0,
+          totalAdultsMainFoodCoupons: 0, totalKidsMainFoodCoupons: 0,
+          totalFastFoodCoupons: 0, totalMainFoodCoupons: 0, totalFoodCoupons: 0,
+          // Performance metrics
+          averageTicketValue: 0, peakHour: 'N/A', conversionRate: 0,
+          // Discount statistics
+          todayAdditionalDiscount: 0, todayTotalDiscount: 0,
+          totalAdditionalDiscount: 0, totalTotalDiscount: 0
         };
       });
   },
