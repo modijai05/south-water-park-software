@@ -518,11 +518,11 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     }
 
     // Food coupons (using direct fields as stored in database)
-    // Convert strings to numbers and handle empty strings
-    const adultsFastFoodCoupon = parseInt(entry.adultsFastFoodCoupon) || 0;
-    const kidsFastFoodCoupon = parseInt(entry.kidsFastFoodCoupon) || 0;
-    const adultsMainFoodCoupon = parseInt(entry.adultsMainFoodCoupon) || 0;
-    const kidsMainFoodCoupon = parseInt(entry.kidsMainFoodCoupon) || 0;
+    // Handle both numeric values and range strings (e.g., "1231-1233" = 3 coupons)
+    const adultsFastFoodCoupon = countCouponsFromRange(entry.adultsFastFoodCoupon) || parseInt(entry.adultsFastFoodCoupon) || 0;
+    const kidsFastFoodCoupon = countCouponsFromRange(entry.kidsFastFoodCoupon) || parseInt(entry.kidsFastFoodCoupon) || 0;
+    const adultsMainFoodCoupon = countCouponsFromRange(entry.adultsMainFoodCoupon) || parseInt(entry.adultsMainFoodCoupon) || 0;
+    const kidsMainFoodCoupon = countCouponsFromRange(entry.kidsMainFoodCoupon) || parseInt(entry.kidsMainFoodCoupon) || 0;
     
     const adultCoupons = adultsFastFoodCoupon + adultsMainFoodCoupon;
     const kidCoupons = kidsFastFoodCoupon + kidsMainFoodCoupon;
@@ -605,11 +605,11 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     }
 
     // Food coupons (using direct fields as stored in database)
-    // Convert strings to numbers and handle empty strings
-    const adultsFastFoodCoupon = parseInt(entry.adultsFastFoodCoupon) || 0;
-    const kidsFastFoodCoupon = parseInt(entry.kidsFastFoodCoupon) || 0;
-    const adultsMainFoodCoupon = parseInt(entry.adultsMainFoodCoupon) || 0;
-    const kidsMainFoodCoupon = parseInt(entry.kidsMainFoodCoupon) || 0;
+    // Handle both numeric values and range strings (e.g., "1231-1233" = 3 coupons)
+    const adultsFastFoodCoupon = countCouponsFromRange(entry.adultsFastFoodCoupon) || parseInt(entry.adultsFastFoodCoupon) || 0;
+    const kidsFastFoodCoupon = countCouponsFromRange(entry.kidsFastFoodCoupon) || parseInt(entry.kidsFastFoodCoupon) || 0;
+    const adultsMainFoodCoupon = countCouponsFromRange(entry.adultsMainFoodCoupon) || parseInt(entry.adultsMainFoodCoupon) || 0;
+    const kidsMainFoodCoupon = countCouponsFromRange(entry.kidsMainFoodCoupon) || parseInt(entry.kidsMainFoodCoupon) || 0;
     
     stats.totalAdultsFastFoodCoupons += adultsFastFoodCoupon;
     stats.totalKidsFastFoodCoupons += kidsFastFoodCoupon;
@@ -664,10 +664,16 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
 
 // Helper function to count coupons from range strings
 const countCouponsFromRange = (couponRange) => {
-  if (!couponRange || typeof couponRange !== 'string') return 0;
-  const match = couponRange.match(/(\d+)-(\d+)/);
-  if (match) {
-    return parseInt(match[2]) - parseInt(match[1]) + 1;
+  if (!couponRange && couponRange !== 0) return 0;
+  if (typeof couponRange === 'number') return couponRange;
+  if (typeof couponRange === 'string') {
+    const match = couponRange.match(/(\d+)-(\d+)/);
+    if (match) {
+      return parseInt(match[2]) - parseInt(match[1]) + 1;
+    }
+    // If it's a simple number as string
+    const num = parseInt(couponRange);
+    return isNaN(num) ? 0 : num;
   }
   return 0;
 };

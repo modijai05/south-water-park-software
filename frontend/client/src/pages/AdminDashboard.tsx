@@ -25,6 +25,22 @@ import utc from 'dayjs/plugin/utc';
 // Enable UTC plugin
 dayjs.extend(utc);
 
+// Helper function to count coupons from range strings
+const countCouponsFromRange = (couponRange: string | number | null | undefined): number => {
+  if (!couponRange && couponRange !== 0) return 0;
+  if (typeof couponRange === 'number') return couponRange;
+  if (typeof couponRange === 'string') {
+    const match = couponRange.match(/(\d+)-(\d+)/);
+    if (match) {
+      return parseInt(match[2]) - parseInt(match[1]) + 1;
+    }
+    // If it's a simple number as string
+    const num = parseInt(couponRange);
+    return isNaN(num) ? 0 : num;
+  }
+  return 0;
+};
+
 // Helper functions for data transformation
 const generateQuarterlyData = (monthlyData: any[]) => {
   // Guard against undefined/null data
@@ -451,19 +467,19 @@ export function AdminDashboard() {
     const todayKidDiscount = todayEntries.reduce((sum, entry) => sum + (entry.kidDiscount || 0), 0);
     const todayTotalDiscount = todayAdditionalDiscount + todayKidDiscount;
     
-    // Calculate food coupon stats - handle empty strings by converting to numbers
-    const totalAdultsFastFoodCoupons = entriesData.reduce((sum, entry) => sum + (parseInt(entry.adultsFastFoodCoupon) || 0), 0);
-    const totalKidsFastFoodCoupons = entriesData.reduce((sum, entry) => sum + (parseInt(entry.kidsFastFoodCoupon) || 0), 0);
-    const totalAdultsMainFoodCoupons = entriesData.reduce((sum, entry) => sum + (parseInt(entry.adultsMainFoodCoupon) || 0), 0);
-    const totalKidsMainFoodCoupons = entriesData.reduce((sum, entry) => sum + (parseInt(entry.kidsMainFoodCoupon) || 0), 0);
+    // Calculate food coupon stats - handle both numeric values and range strings (e.g., "1231-1233" = 3 coupons)
+    const totalAdultsFastFoodCoupons = entriesData.reduce((sum, entry) => sum + countCouponsFromRange(entry.adultsFastFoodCoupon), 0);
+    const totalKidsFastFoodCoupons = entriesData.reduce((sum, entry) => sum + countCouponsFromRange(entry.kidsFastFoodCoupon), 0);
+    const totalAdultsMainFoodCoupons = entriesData.reduce((sum, entry) => sum + countCouponsFromRange(entry.adultsMainFoodCoupon), 0);
+    const totalKidsMainFoodCoupons = entriesData.reduce((sum, entry) => sum + countCouponsFromRange(entry.kidsMainFoodCoupon), 0);
     const totalFastFoodCoupons = totalAdultsFastFoodCoupons + totalKidsFastFoodCoupons;
     const totalMainFoodCoupons = totalAdultsMainFoodCoupons + totalKidsMainFoodCoupons;
     const totalFoodCoupons = totalFastFoodCoupons + totalMainFoodCoupons;
     
-    const todayAdultsFastFoodCoupons = todayEntries.reduce((sum, entry) => sum + (parseInt(entry.adultsFastFoodCoupon) || 0), 0);
-    const todayKidsFastFoodCoupons = todayEntries.reduce((sum, entry) => sum + (parseInt(entry.kidsFastFoodCoupon) || 0), 0);
-    const todayAdultsMainFoodCoupons = todayEntries.reduce((sum, entry) => sum + (parseInt(entry.adultsMainFoodCoupon) || 0), 0);
-    const todayKidsMainFoodCoupons = todayEntries.reduce((sum, entry) => sum + (parseInt(entry.kidsMainFoodCoupon) || 0), 0);
+    const todayAdultsFastFoodCoupons = todayEntries.reduce((sum, entry) => sum + countCouponsFromRange(entry.adultsFastFoodCoupon), 0);
+    const todayKidsFastFoodCoupons = todayEntries.reduce((sum, entry) => sum + countCouponsFromRange(entry.kidsFastFoodCoupon), 0);
+    const todayAdultsMainFoodCoupons = todayEntries.reduce((sum, entry) => sum + countCouponsFromRange(entry.adultsMainFoodCoupon), 0);
+    const todayKidsMainFoodCoupons = todayEntries.reduce((sum, entry) => sum + countCouponsFromRange(entry.kidsMainFoodCoupon), 0);
     const todayFastFoodCoupons = todayAdultsFastFoodCoupons + todayKidsFastFoodCoupons;
     const todayMainFoodCoupons = todayAdultsMainFoodCoupons + todayKidsMainFoodCoupons;
     const todayTotalFoodCoupons = todayFastFoodCoupons + todayMainFoodCoupons;
@@ -632,12 +648,12 @@ export function AdminDashboard() {
         );
         console.log('🔍 Dashboard: Entries with discounts:', entriesWithDiscounts.length);
         
-        // Check for entries with food coupons
+        // Check for entries with food coupons (using range parsing)
         const entriesWithFoodCoupons = entriesData.filter(entry => 
-          (parseInt(entry.adultsFastFoodCoupon) || 0) > 0 || 
-          (parseInt(entry.kidsFastFoodCoupon) || 0) > 0 || 
-          (parseInt(entry.adultsMainFoodCoupon) || 0) > 0 || 
-          (parseInt(entry.kidsMainFoodCoupon) || 0) > 0
+          countCouponsFromRange(entry.adultsFastFoodCoupon) > 0 || 
+          countCouponsFromRange(entry.kidsFastFoodCoupon) > 0 || 
+          countCouponsFromRange(entry.adultsMainFoodCoupon) > 0 || 
+          countCouponsFromRange(entry.kidsMainFoodCoupon) > 0
         );
         console.log('🔍 Dashboard: Entries with food coupons:', entriesWithFoodCoupons.length);
         
