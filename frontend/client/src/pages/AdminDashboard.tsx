@@ -451,19 +451,19 @@ export function AdminDashboard() {
     const todayKidDiscount = todayEntries.reduce((sum, entry) => sum + (entry.kidDiscount || 0), 0);
     const todayTotalDiscount = todayAdditionalDiscount + todayKidDiscount;
     
-    // Calculate food coupon stats
-    const totalAdultsFastFoodCoupons = entriesData.reduce((sum, entry) => sum + (entry.adultsFastFoodCoupon || 0), 0);
-    const totalKidsFastFoodCoupons = entriesData.reduce((sum, entry) => sum + (entry.kidsFastFoodCoupon || 0), 0);
-    const totalAdultsMainFoodCoupons = entriesData.reduce((sum, entry) => sum + (entry.adultsMainFoodCoupon || 0), 0);
-    const totalKidsMainFoodCoupons = entriesData.reduce((sum, entry) => sum + (entry.kidsMainFoodCoupon || 0), 0);
+    // Calculate food coupon stats - handle empty strings by converting to numbers
+    const totalAdultsFastFoodCoupons = entriesData.reduce((sum, entry) => sum + (parseInt(entry.adultsFastFoodCoupon) || 0), 0);
+    const totalKidsFastFoodCoupons = entriesData.reduce((sum, entry) => sum + (parseInt(entry.kidsFastFoodCoupon) || 0), 0);
+    const totalAdultsMainFoodCoupons = entriesData.reduce((sum, entry) => sum + (parseInt(entry.adultsMainFoodCoupon) || 0), 0);
+    const totalKidsMainFoodCoupons = entriesData.reduce((sum, entry) => sum + (parseInt(entry.kidsMainFoodCoupon) || 0), 0);
     const totalFastFoodCoupons = totalAdultsFastFoodCoupons + totalKidsFastFoodCoupons;
     const totalMainFoodCoupons = totalAdultsMainFoodCoupons + totalKidsMainFoodCoupons;
     const totalFoodCoupons = totalFastFoodCoupons + totalMainFoodCoupons;
     
-    const todayAdultsFastFoodCoupons = todayEntries.reduce((sum, entry) => sum + (entry.adultsFastFoodCoupon || 0), 0);
-    const todayKidsFastFoodCoupons = todayEntries.reduce((sum, entry) => sum + (entry.kidsFastFoodCoupon || 0), 0);
-    const todayAdultsMainFoodCoupons = todayEntries.reduce((sum, entry) => sum + (entry.adultsMainFoodCoupon || 0), 0);
-    const todayKidsMainFoodCoupons = todayEntries.reduce((sum, entry) => sum + (entry.kidsMainFoodCoupon || 0), 0);
+    const todayAdultsFastFoodCoupons = todayEntries.reduce((sum, entry) => sum + (parseInt(entry.adultsFastFoodCoupon) || 0), 0);
+    const todayKidsFastFoodCoupons = todayEntries.reduce((sum, entry) => sum + (parseInt(entry.kidsFastFoodCoupon) || 0), 0);
+    const todayAdultsMainFoodCoupons = todayEntries.reduce((sum, entry) => sum + (parseInt(entry.adultsMainFoodCoupon) || 0), 0);
+    const todayKidsMainFoodCoupons = todayEntries.reduce((sum, entry) => sum + (parseInt(entry.kidsMainFoodCoupon) || 0), 0);
     const todayFastFoodCoupons = todayAdultsFastFoodCoupons + todayKidsFastFoodCoupons;
     const todayMainFoodCoupons = todayAdultsMainFoodCoupons + todayKidsMainFoodCoupons;
     const todayTotalFoodCoupons = todayFastFoodCoupons + todayMainFoodCoupons;
