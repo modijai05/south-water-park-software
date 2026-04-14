@@ -517,19 +517,23 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
         break;
     }
 
-    // Food coupons (if available)
-    if (entry.foodCoupons) {
-      const adultCoupons = entry.foodCoupons.adultFastFoodCoupons + entry.foodCoupons.adultMainFoodCoupons;
-      const kidCoupons = entry.foodCoupons.kidFastFoodCoupons + entry.foodCoupons.kidMainFoodCoupons;
-      
-      stats.todayAdultsFastFoodCoupons += entry.foodCoupons.adultFastFoodCoupons || 0;
-      stats.todayKidsFastFoodCoupons += entry.foodCoupons.kidFastFoodCoupons || 0;
-      stats.todayAdultsMainFoodCoupons += entry.foodCoupons.adultMainFoodCoupons || 0;
-      stats.todayKidsMainFoodCoupons += entry.foodCoupons.kidMainFoodCoupons || 0;
-      stats.todayTotalFastFoodCoupons += (entry.foodCoupons.adultFastFoodCoupons || 0) + (entry.foodCoupons.kidFastFoodCoupons || 0);
-      stats.todayTotalMainFoodCoupons += (entry.foodCoupons.adultMainFoodCoupons || 0) + (entry.foodCoupons.kidMainFoodCoupons || 0);
-      stats.todayTotalFoodCoupons += adultCoupons + kidCoupons;
-    }
+    // Food coupons (using direct fields as stored in database)
+    // Convert strings to numbers and handle empty strings
+    const adultsFastFoodCoupon = parseInt(entry.adultsFastFoodCoupon) || 0;
+    const kidsFastFoodCoupon = parseInt(entry.kidsFastFoodCoupon) || 0;
+    const adultsMainFoodCoupon = parseInt(entry.adultsMainFoodCoupon) || 0;
+    const kidsMainFoodCoupon = parseInt(entry.kidsMainFoodCoupon) || 0;
+    
+    const adultCoupons = adultsFastFoodCoupon + adultsMainFoodCoupon;
+    const kidCoupons = kidsFastFoodCoupon + kidsMainFoodCoupon;
+    
+    stats.todayAdultsFastFoodCoupons += adultsFastFoodCoupon;
+    stats.todayKidsFastFoodCoupons += kidsFastFoodCoupon;
+    stats.todayAdultsMainFoodCoupons += adultsMainFoodCoupon;
+    stats.todayKidsMainFoodCoupons += kidsMainFoodCoupon;
+    stats.todayTotalFastFoodCoupons += adultsFastFoodCoupon + kidsFastFoodCoupon;
+    stats.todayTotalMainFoodCoupons += adultsMainFoodCoupon + kidsMainFoodCoupon;
+    stats.todayTotalFoodCoupons += adultCoupons + kidCoupons;
 
     // Discount calculations
     const additionalDiscount = entry.additionalDiscount || 0;
@@ -600,16 +604,20 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
         break;
     }
 
-    // Food coupons (if available)
-    if (entry.foodCoupons) {
-      stats.totalAdultsFastFoodCoupons += entry.foodCoupons.adultFastFoodCoupons || 0;
-      stats.totalKidsFastFoodCoupons += entry.foodCoupons.kidFastFoodCoupons || 0;
-      stats.totalAdultsMainFoodCoupons += entry.foodCoupons.adultMainFoodCoupons || 0;
-      stats.totalKidsMainFoodCoupons += entry.foodCoupons.kidMainFoodCoupons || 0;
-      stats.totalFastFoodCoupons += (entry.foodCoupons.adultFastFoodCoupons || 0) + (entry.foodCoupons.kidFastFoodCoupons || 0);
-      stats.totalMainFoodCoupons += (entry.foodCoupons.adultMainFoodCoupons || 0) + (entry.foodCoupons.kidMainFoodCoupons || 0);
-      stats.totalFoodCoupons += stats.totalAdultsFastFoodCoupons + stats.totalKidsFastFoodCoupons + stats.totalAdultsMainFoodCoupons + stats.totalKidsMainFoodCoupons;
-    }
+    // Food coupons (using direct fields as stored in database)
+    // Convert strings to numbers and handle empty strings
+    const adultsFastFoodCoupon = parseInt(entry.adultsFastFoodCoupon) || 0;
+    const kidsFastFoodCoupon = parseInt(entry.kidsFastFoodCoupon) || 0;
+    const adultsMainFoodCoupon = parseInt(entry.adultsMainFoodCoupon) || 0;
+    const kidsMainFoodCoupon = parseInt(entry.kidsMainFoodCoupon) || 0;
+    
+    stats.totalAdultsFastFoodCoupons += adultsFastFoodCoupon;
+    stats.totalKidsFastFoodCoupons += kidsFastFoodCoupon;
+    stats.totalAdultsMainFoodCoupons += adultsMainFoodCoupon;
+    stats.totalKidsMainFoodCoupons += kidsMainFoodCoupon;
+    stats.totalFastFoodCoupons += adultsFastFoodCoupon + kidsFastFoodCoupon;
+    stats.totalMainFoodCoupons += adultsMainFoodCoupon + kidsMainFoodCoupon;
+    stats.totalFoodCoupons += stats.totalAdultsFastFoodCoupons + stats.totalKidsFastFoodCoupons + stats.totalAdultsMainFoodCoupons + stats.totalKidsMainFoodCoupons;
 
     // Discount calculations
     const additionalDiscount = entry.additionalDiscount || 0;
@@ -634,12 +642,21 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
   // Calculate performance metrics
   stats.averageTicketValue = stats.totalEntries > 0 ? Math.round(stats.totalAmount / stats.totalEntries) : 0;
   
-  // Debug: Log final discount stats
+  // Debug: Log final calculated stats
   console.log('🔍 Final calculated stats:', {
     todayAdditionalDiscount: stats.todayAdditionalDiscount,
     todayTotalDiscount: stats.todayTotalDiscount,
     totalAdditionalDiscount: stats.totalAdditionalDiscount,
-    totalTotalDiscount: stats.totalTotalDiscount
+    totalTotalDiscount: stats.totalTotalDiscount,
+    // Food coupons debug
+    todayAdultsFastFoodCoupons: stats.todayAdultsFastFoodCoupons,
+    todayKidsFastFoodCoupons: stats.todayKidsFastFoodCoupons,
+    todayAdultsMainFoodCoupons: stats.todayAdultsMainFoodCoupons,
+    todayKidsMainFoodCoupons: stats.todayKidsMainFoodCoupons,
+    todayTotalFastFoodCoupons: stats.todayTotalFastFoodCoupons,
+    todayTotalMainFoodCoupons: stats.todayTotalMainFoodCoupons,
+    todayTotalFoodCoupons: stats.todayTotalFoodCoupons,
+    totalFoodCoupons: stats.totalFoodCoupons
   });
   
   return stats;
@@ -1014,6 +1031,10 @@ router.post('/', async (req, res) => {
       advanceAmount,
       receiptNumber,
       foodCoupons,
+      adultsFastFoodCoupon,
+      kidsFastFoodCoupon,
+      adultsMainFoodCoupon,
+      kidsMainFoodCoupon,
       filledBy,
       filledByFullName
     } = req.body;
@@ -1046,6 +1067,10 @@ router.post('/', async (req, res) => {
           advanceAmount: advanceAmount || 0,
           receiptNumber,
           foodCoupons,
+          adultsFastFoodCoupon: adultsFastFoodCoupon || 0,
+          kidsFastFoodCoupon: kidsFastFoodCoupon || 0,
+          adultsMainFoodCoupon: adultsMainFoodCoupon || 0,
+          kidsMainFoodCoupon: kidsMainFoodCoupon || 0,
           filledBy: filledBy || 'unknown',
           filledByFullName: filledByFullName || 'unknown',
           createdAt: new Date()
