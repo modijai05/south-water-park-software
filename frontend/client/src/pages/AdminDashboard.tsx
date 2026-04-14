@@ -617,7 +617,13 @@ export function AdminDashboard() {
           kidDiscount: sampleEntry?.kidDiscount,
           hasAdditionalDiscount: sampleEntry?.additionalDiscount !== undefined,
           hasKidDiscount: sampleEntry?.kidDiscount !== undefined,
-          finalAmount: sampleEntry?.finalAmount
+          finalAmount: sampleEntry?.finalAmount,
+          // Food coupons debug
+          adultsFastFoodCoupon: sampleEntry?.adultsFastFoodCoupon,
+          kidsFastFoodCoupon: sampleEntry?.kidsFastFoodCoupon,
+          adultsMainFoodCoupon: sampleEntry?.adultsMainFoodCoupon,
+          kidsMainFoodCoupon: sampleEntry?.kidsMainFoodCoupon,
+          hasFoodCoupons: !!(sampleEntry?.adultsFastFoodCoupon || sampleEntry?.kidsFastFoodCoupon || sampleEntry?.adultsMainFoodCoupon || sampleEntry?.kidsMainFoodCoupon)
         });
         
         // Check for any entries with discounts
@@ -625,6 +631,25 @@ export function AdminDashboard() {
           (entry.additionalDiscount || 0) > 0 || (entry.kidDiscount || 0) > 0
         );
         console.log('🔍 Dashboard: Entries with discounts:', entriesWithDiscounts.length);
+        
+        // Check for entries with food coupons
+        const entriesWithFoodCoupons = entriesData.filter(entry => 
+          (parseInt(entry.adultsFastFoodCoupon) || 0) > 0 || 
+          (parseInt(entry.kidsFastFoodCoupon) || 0) > 0 || 
+          (parseInt(entry.adultsMainFoodCoupon) || 0) > 0 || 
+          (parseInt(entry.kidsMainFoodCoupon) || 0) > 0
+        );
+        console.log('🔍 Dashboard: Entries with food coupons:', entriesWithFoodCoupons.length);
+        
+        if (entriesWithFoodCoupons.length > 0) {
+          console.log('🔍 Dashboard: First entry with food coupons:', {
+            id: entriesWithFoodCoupons[0]._id,
+            adultsFastFoodCoupon: entriesWithFoodCoupons[0].adultsFastFoodCoupon,
+            kidsFastFoodCoupon: entriesWithFoodCoupons[0].kidsFastFoodCoupon,
+            adultsMainFoodCoupon: entriesWithFoodCoupons[0].adultsMainFoodCoupon,
+            kidsMainFoodCoupon: entriesWithFoodCoupons[0].kidsMainFoodCoupon
+          });
+        }
         
         if (entriesWithDiscounts.length > 0) {
           console.log('🔍 Dashboard: First discounted entry:', {
@@ -637,28 +662,65 @@ export function AdminDashboard() {
       
       // Only update if we have valid data to prevent flickering to zero
       if (entriesData.length >= 0) {
-        // Calculate stats from entries data
-        const calculatedStats = calculateStatsFromEntries(entriesData);
-        
-        // Debug: Log calculated discount stats
-        console.log('🔍 Dashboard: Calculated discount stats:', {
-          todayAdditionalDiscount: calculatedStats.todayAdditionalDiscount,
-          todayTotalDiscount: calculatedStats.todayTotalDiscount,
-          totalAdditionalDiscount: calculatedStats.totalAdditionalDiscount,
-          totalTotalDiscount: calculatedStats.totalTotalDiscount
-        });
-        
-        // Update performance metrics immediately
-        const newPerformanceMetrics = {
-          allTimeEntries: calculatedStats.totalEntries,
-          allTimeRevenue: calculatedStats.totalAmount,
-          todayEntries: calculatedStats.todayEntries,
-          todayRevenue: calculatedStats.todayAmount,
-          lastSyncTime: new Date().toISOString()
+        // CRITICAL FIX: Use backend API stats instead of calculating from entries for food coupons
+        // This ensures food coupons data is accurate since backend handles empty strings properly
+        const fetchBackendStats = async () => {
+          try {
+            const backendStatsRes = await entriesApi.stats();
+            const backendStats = backendStatsRes;
+            
+            console.log('🍔 Dashboard: Using backend API stats for food coupons:', {
+              todayAdultsFastFoodCoupons: backendStats.todayAdultsFastFoodCoupons,
+              todayKidsFastFoodCoupons: backendStats.todayKidsFastFoodCoupons,
+              todayAdultsMainFoodCoupons: backendStats.todayAdultsMainFoodCoupons,
+              todayKidsMainFoodCoupons: backendStats.todayKidsMainFoodCoupons,
+              todayTotalFastFoodCoupons: backendStats.todayTotalFastFoodCoupons,
+              todayTotalMainFoodCoupons: backendStats.todayTotalMainFoodCoupons,
+              todayTotalFoodCoupons: backendStats.todayTotalFoodCoupons,
+              totalFoodCoupons: backendStats.totalFoodCoupons
+            });
+            
+            // Use backend stats for food coupons but keep calculated stats for other metrics
+            const hybridStats = {
+              ...calculateStatsFromEntries(entriesData),
+              // Override food coupons with backend stats
+              todayAdultsFastFoodCoupons: backendStats.todayAdultsFastFoodCoupons,
+              todayKidsFastFoodCoupons: backendStats.todayKidsFastFoodCoupons,
+              todayAdultsMainFoodCoupons: backendStats.todayAdultsMainFoodCoupons,
+              todayKidsMainFoodCoupons: backendStats.todayKidsMainFoodCoupons,
+              todayTotalFastFoodCoupons: backendStats.todayTotalFastFoodCoupons,
+              todayTotalMainFoodCoupons: backendStats.todayTotalMainFoodCoupons,
+              todayTotalFoodCoupons: backendStats.todayTotalFoodCoupons,
+              totalAdultsFastFoodCoupons: backendStats.totalAdultsFastFoodCoupons,
+              totalKidsFastFoodCoupons: backendStats.totalKidsFastFoodCoupons,
+              totalAdultsMainFoodCoupons: backendStats.totalAdultsMainFoodCoupons,
+              totalKidsMainFoodCoupons: backendStats.totalKidsMainFoodCoupons,
+              totalFastFoodCoupons: backendStats.totalFastFoodCoupons,
+              totalMainFoodCoupons: backendStats.totalMainFoodCoupons,
+              totalFoodCoupons: backendStats.totalFoodCoupons
+            };
+            
+            // Update performance metrics immediately
+            const newPerformanceMetrics = {
+              allTimeEntries: hybridStats.totalEntries,
+              allTimeRevenue: hybridStats.totalAmount,
+              todayEntries: hybridStats.todayEntries,
+              todayRevenue: hybridStats.todayAmount,
+              lastSyncTime: new Date().toISOString()
+            };
+            
+            setPerformanceMetrics(newPerformanceMetrics);
+            setStats(hybridStats);
+            
+          } catch (error) {
+            console.error('❌ Dashboard: Failed to fetch backend stats, falling back to calculated stats:', error);
+            // Fallback to calculated stats
+            const calculatedStats = calculateStatsFromEntries(entriesData);
+            setStats(calculatedStats);
+          }
         };
         
-        setPerformanceMetrics(newPerformanceMetrics);
-        setStats(calculatedStats);
+        fetchBackendStats();
         
         // Update charts if available
         if (chartsData) {
