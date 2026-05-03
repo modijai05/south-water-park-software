@@ -26,6 +26,41 @@ router.get('/', async (req, res) => {
         
         if (dbConfigs && Array.isArray(dbConfigs) && dbConfigs.length > 0) {
           console.log('✅ Using database configs:', dbConfigs.length);
+          
+          // Check if ticket '200' exists, if not create it
+          const has200 = dbConfigs.some(c => c.ticketType === '200');
+          if (!has200) {
+            console.log('📝 Ticket 200 not found, creating...');
+            try {
+              const new200 = await TicketConfig.create({
+                ticketType: '200',
+                basePrice: 300,
+                label: 'Without Food 2hr',
+                hasKids: true,
+                description: '2 hours access to park activities without food',
+                isActive: true,
+                maxAdults: 10,
+                maxKids: 5,
+                timeLimit: 2,
+                foodIncluded: false,
+                dayWisePricing: [
+                  { day: 'monday', priceMultiplier: 1.0, enabled: true },
+                  { day: 'tuesday', priceMultiplier: 1.0, enabled: true },
+                  { day: 'wednesday', priceMultiplier: 1.0, enabled: true },
+                  { day: 'thursday', priceMultiplier: 1.0, enabled: true },
+                  { day: 'friday', priceMultiplier: 1.0, enabled: true },
+                  { day: 'saturday', priceMultiplier: 1.0, enabled: true },
+                  { day: 'sunday', priceMultiplier: 1.0, enabled: true }
+                ]
+              });
+              console.log('✅ Created ticket 200:', new200._id);
+              dbConfigs.push(new200);
+              dbConfigs.sort((a, b) => a.ticketType.localeCompare(b.ticketType));
+            } catch (err) {
+              console.error('❌ Failed to create ticket 200:', err.message);
+            }
+          }
+          
           configs = dbConfigs;
         } else {
           console.log('⚠️ Database empty, initializing with defaults...');
