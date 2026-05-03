@@ -39,6 +39,27 @@ app.get('/health', (req, res) => {
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
 });
+
+// DEBUG: Check database connection details (masked)
+app.get('/debug/db', async (req, res) => {
+  try {
+    const mongoUri = process.env.MONGODB_URI || 'not set';
+    const maskedUri = mongoUri.replace(/:([^@]*)@/, ':****@');
+    
+    // Get all ticket configs
+    const { TicketConfig } = require('./models/TicketConfig.js');
+    const configs = await TicketConfig.find().sort({ ticketType: 1 });
+    
+    res.json({
+      mongoUri: maskedUri,
+      ticketCount: configs.length,
+      tickets: configs.map(c => ({ type: c.ticketType, label: c.label })),
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 const PORT = process.env.PORT ?? 5000;
 
 // Configure Express for Render deployment with enhanced CORS
