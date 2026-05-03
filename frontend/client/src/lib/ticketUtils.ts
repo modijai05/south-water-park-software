@@ -215,7 +215,7 @@ export function getTicketLabelSync(type: TicketType): string {
 }
 
 export function getHigherTicketTypes(current: TicketType): TicketType[] {
-  const prices = ['100', '150', '300', '450', '600'] as TicketType[];
+  const prices = ['100', '150', '200', '300', '450', '600'] as TicketType[];
   const idx = prices.indexOf(current);
   return idx < 0 ? [] : prices.slice(idx + 1);
 }

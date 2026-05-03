@@ -109,7 +109,7 @@ router.get('/demand', authenticate, async (req, res) => {
     console.log(`Found ${entries.length} entries for timeRange: ${timeRange}`);
     
     // Calculate demand analysis for each ticket type
-    const ticketTypes = ['150', '300', '450', '600', '100'];
+    const ticketTypes = ['150', '200', '300', '450', '600', '100'];
     const demandData = ticketTypes.map(type => {
       const typeEntries = entries.filter(e => e.ticketType === type);
       const totalEntries = typeEntries.length;
@@ -183,7 +183,7 @@ router.get('/today', authenticate, requireAdmin, async (req, res) => {
     const entries = await Entry.find(todayFilter).lean();
     console.log('📊 Today entries found:', entries.length);
 
-    const ticketTypes = ['150', '300', '450', '600', '100'];
+    const ticketTypes = ['150', '200', '300', '450', '600', '100'];
     const todayAnalytics = ticketTypes.map(type => {
       const typeEntries = entries.filter(e => e.ticketType === type);
       const totalEntries = typeEntries.length;
@@ -214,6 +214,7 @@ router.get('/today', authenticate, requireAdmin, async (req, res) => {
       const getTicketLabel = (ticketType) => {
         switch (ticketType) {
           case '150': return 'Special tickets';
+          case '200': return '2hr tickets';
           case '300': return '3-4hr tickets';
           case '450': return 'Fast food tickets';
           case '600': return 'Main food tickets';
@@ -365,7 +366,7 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
     console.log('📊 Historical entries:', historicalEntries.length);
 
     // Process today's data
-    const ticketTypes = ['150', '300', '450', '600', '100'];
+    const ticketTypes = ['150', '200', '300', '450', '600', '100'];
     const todayAnalytics = ticketTypes.map(type => {
       const typeEntries = todayEntries.filter(e => e.ticketType === type);
       const totalEntries = typeEntries.length;
@@ -384,6 +385,7 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
       const getTicketLabel = (ticketType) => {
         switch (ticketType) {
           case '150': return 'Special tickets';
+          case '200': return '2hr tickets';
           case '300': return '3-4hr tickets';
           case '450': return 'Fast food tickets';
           case '600': return 'Main food tickets';

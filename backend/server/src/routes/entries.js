@@ -412,11 +412,13 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     todayKids: 0,
     // Ticket type stats
     today150: 0,
+    today200: 0,
     today300: 0,
     today450: 0,
     today600: 0,
     today100: 0,
     total150: 0,
+    total200: 0,
     total300: 0,
     total450: 0,
     total600: 0,
@@ -424,6 +426,8 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     // Per-ticket-type adult and kid counts
     today150Adults: 0,
     today150Kids: 0,
+    today200Adults: 0,
+    today200Kids: 0,
     today300Adults: 0,
     today300Kids: 0,
     today450Adults: 0,
@@ -434,6 +438,8 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     today100Kids: 0,
     total150Adults: 0,
     total150Kids: 0,
+    total200Adults: 0,
+    total200Kids: 0,
     total300Adults: 0,
     total300Kids: 0,
     total450Adults: 0,
@@ -499,6 +505,11 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
         stats.today150++;
         stats.today150Adults += adults;
         stats.today150Kids += kids;
+        break;
+      case 200:
+        stats.today200++;
+        stats.today200Adults += adults;
+        stats.today200Kids += kids;
         break;
       case 300:
         stats.today300++;
@@ -586,6 +597,11 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
         stats.total150++;
         stats.total150Adults += adults;
         stats.total150Kids += kids;
+        break;
+      case 200:
+        stats.total200++;
+        stats.total200Adults += adults;
+        stats.total200Kids += kids;
         break;
       case 300:
         stats.total300++;
@@ -717,12 +733,12 @@ router.get('/sync-all', async (req, res) => {
             todayAdults: 0, totalAdults: 0, todayKids: 0, totalKids: 0,
             todayAmount: 0, totalAmount: 0, todayCash: 0, totalCash: 0,
             todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0,
-            today150: 0, today300: 0, today450: 0, today600: 0, today100: 0,
-            total150: 0, total300: 0, total450: 0, total600: 0, total100: 0,
-            today150Adults: 0, today150Kids: 0, today300Adults: 0, today300Kids: 0,
+            today150: 0, today200: 0, today300: 0, today450: 0, today600: 0, today100: 0,
+            total150: 0, total200: 0, total300: 0, total450: 0, total600: 0, total100: 0,
+            today150Adults: 0, today150Kids: 0, today200Adults: 0, today200Kids: 0, today300Adults: 0, today300Kids: 0,
             today450Adults: 0, today450Kids: 0, today600Adults: 0, today600Kids: 0,
             today100Adults: 0, today100Kids: 0,
-            total150Adults: 0, total150Kids: 0, total300Adults: 0, total300Kids: 0,
+            total150Adults: 0, total150Kids: 0, total200Adults: 0, total200Kids: 0, total300Adults: 0, total300Kids: 0,
             total450Adults: 0, total450Kids: 0, total600Adults: 0, total600Kids: 0,
             total100Adults: 0, total100Kids: 0,
             lastUpdated: new Date().toISOString(),

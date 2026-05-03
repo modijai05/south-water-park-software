@@ -363,13 +363,15 @@ export function AdminDashboard() {
     
     // All-time ticket stats
     const total150Stats = ticketTypeStats(entriesData, '150');
+    const total200Stats = ticketTypeStats(entriesData, '200');
     const total300Stats = ticketTypeStats(entriesData, '300');
     const total450Stats = ticketTypeStats(entriesData, '450');
     const total600Stats = ticketTypeStats(entriesData, '600');
     const total100Stats = ticketTypeStats(entriesData, '100');
-    
+
     // Today ticket stats
     const today150Stats = ticketTypeStats(todayEntries, '150');
+    const today200Stats = ticketTypeStats(todayEntries, '200');
     const today300Stats = ticketTypeStats(todayEntries, '300');
     const today450Stats = ticketTypeStats(todayEntries, '450');
     const today600Stats = ticketTypeStats(todayEntries, '600');
@@ -439,19 +441,23 @@ export function AdminDashboard() {
       
       // Ticket type counts
       today150: today150Stats.entries,
+      today200: today200Stats.entries,
       today300: today300Stats.entries,
       today450: today450Stats.entries,
       today600: today600Stats.entries,
       today100: today100Stats.entries,
       total150: total150Stats.entries,
+      total200: total200Stats.entries,
       total300: total300Stats.entries,
       total450: total450Stats.entries,
       total600: total600Stats.entries,
       total100: total100Stats.entries,
-      
+
       // Per-ticket-type adult and kid counts
       today150Adults: today150Stats.adults,
       today150Kids: today150Stats.kids,
+      today200Adults: today200Stats.adults,
+      today200Kids: today200Stats.kids,
       today300Adults: today300Stats.adults,
       today300Kids: today300Stats.kids,
       today450Adults: today450Stats.adults,
@@ -462,6 +468,8 @@ export function AdminDashboard() {
       today100Kids: today100Stats.kids,
       total150Adults: total150Stats.adults,
       total150Kids: total150Stats.kids,
+      total200Adults: total200Stats.adults,
+      total200Kids: total200Stats.kids,
       total300Adults: total300Stats.adults,
       total300Kids: total300Stats.kids,
       total450Adults: total450Stats.adults,
@@ -1168,7 +1176,7 @@ export function AdminDashboard() {
               console.log('✅ Dashboard: Complete cache clear successful - today should be 0');
               
               // PROFESSIONAL FIX: Force reset API call if today stats not reset
-              if ((s as any).todayEntries === 0 && ((s as any).today150 > 0 || (s as any).today300 > 0 || (s as any).today450 > 0 || (s as any).today600 > 0 || (s as any).today100 > 0)) {
+              if ((s as any).todayEntries === 0 && ((s as any).today150 > 0 || (s as any).today200 > 0 || (s as any).today300 > 0 || (s as any).today450 > 0 || (s as any).today600 > 0 || (s as any).today100 > 0)) {
                 console.log('🚨 PROFESSIONAL FIX: Today entries = 0 but ticket types > 0, forcing reset...');
                 try {
                   const resetStats = await entriesApi.stats(true);

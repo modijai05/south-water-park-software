@@ -14,7 +14,7 @@ import type { TicketType, TicketConfig } from '@/types';
 
 // Single ticket selection schema with validation
 const ticketSelectionSchema = z.object({
-  ticketType: z.enum(['150', '300', '450', '600', '100']),
+  ticketType: z.enum(['150', '200', '300', '450', '600', '100']),
   adults: z.number().min(0).max(30),
   kids: z.number().min(0).max(30),
   adultsFastFoodCoupon: z.string().optional(),
@@ -25,13 +25,13 @@ const ticketSelectionSchema = z.object({
   (data) => {
     // At least one person must be selected
     if (data.adults === 0 && data.kids === 0) return false;
-    
+
     // 150 tickets don't allow kids
     if (data.ticketType === '150' && data.kids > 0) return false;
-    
+
     // 100 tickets don't allow kids (sitting only)
     if (data.ticketType === '100' && data.kids > 0) return false;
-    
+
     return true;
   },
   {

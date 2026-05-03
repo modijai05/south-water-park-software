@@ -49,6 +49,14 @@ router.get('/', async (req, res) => {
               isActive: true
             },
             {
+              ticketType: '200',
+              basePrice: 300,
+              label: 'Without Food 2hr',
+              hasKids: true,
+              description: '2 hours access to park activities without food',
+              isActive: true
+            },
+            {
               ticketType: '300',
               basePrice: 350,
               label: 'Without Food 3-4hr',
@@ -102,6 +110,14 @@ router.get('/', async (req, res) => {
             isActive: true
           },
           {
+            ticketType: '200',
+            basePrice: 300,
+            label: 'Without Food 2hr',
+            hasKids: true,
+            description: '2 hours access to park activities without food',
+            isActive: true
+          },
+          {
             ticketType: '300',
             basePrice: 350,
             label: 'Without Food 3-4hr',
@@ -146,6 +162,14 @@ router.get('/', async (req, res) => {
           label: 'Without Food 1hr',
           hasKids: true,
           description: '1 hour access to park activities without food',
+          isActive: true
+        },
+        {
+          ticketType: '200',
+          basePrice: 300,
+          label: 'Without Food 2hr',
+          hasKids: true,
+          description: '2 hours access to park activities without food',
           isActive: true
         },
         {
@@ -474,6 +498,18 @@ router.post('/initialize', authenticate, requireAdmin, async (req, res) => {
         maxAdults: 10,
         maxKids: 5,
         timeLimit: 1,
+        foodIncluded: false
+      },
+      {
+        ticketType: '200',
+        basePrice: 300,
+        label: 'Without Food 2hr',
+        hasKids: true,
+        description: '2 hours access to park activities without food',
+        isActive: true,
+        maxAdults: 10,
+        maxKids: 5,
+        timeLimit: 2,
         foodIncluded: false
       },
       {

@@ -1,6 +1,6 @@
 export type Role = 'admin' | 'staff';
 
-export type TicketType = '150' | '300' | '450' | '600' | '100';
+export type TicketType = '150' | '200' | '300' | '450' | '600' | '100';
 
 export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
@@ -148,6 +148,12 @@ export interface Stats {
   today150Kids: number;
   total150Adults: number;
   total150Kids: number;
+  today200: number;
+  total200: number;
+  today200Adults: number;
+  today200Kids: number;
+  total200Adults: number;
+  total200Kids: number;
   today300: number;
   total300: number;
   today300Adults: number;
@@ -313,6 +319,7 @@ export interface UserLog {
 
 export const TICKET_OPTIONS: { value: TicketType; label: string; price: number; hasKids: boolean }[] = [
   { value: '150', label: '₹150 – Without Food (1 Hour)', price: 150, hasKids: false },
+  { value: '200', label: '₹300 – Without Food (2 Hours)', price: 300, hasKids: true },
   { value: '300', label: '₹350 – Without Food (3–4 Hours)', price: 350, hasKids: true },
   { value: '450', label: '₹500 – With Fast Food (3–4 Hours)', price: 500, hasKids: true },
   { value: '600', label: '₹700 – With Main Food (4–5 Hours)', price: 700, hasKids: true },

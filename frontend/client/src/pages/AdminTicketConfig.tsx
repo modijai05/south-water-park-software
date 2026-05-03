@@ -49,7 +49,7 @@ export function AdminTicketConfig() {
       // Ensure day-wise pricing has all required fields
       const processedData = data.map(config => ({
         ...config,
-        hasKids: config.hasKids !== undefined ? config.hasKids : ['300', '450', '600'].includes(config.ticketType),
+        hasKids: config.hasKids !== undefined ? config.hasKids : ['200', '300', '450', '600'].includes(config.ticketType),
         dayWisePricing: config.dayWisePricing ? config.dayWisePricing.map(dp => ({
           day: dp.day,
           priceMultiplier: dp.priceMultiplier || 1.0,
