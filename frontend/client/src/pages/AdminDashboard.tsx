@@ -351,13 +351,35 @@ export function AdminDashboard() {
       return sum + (entry.totalPeople || 0);
     }, 0);
     
-    // Calculate ticket type stats
+    // Calculate ticket type stats - CRITICAL FIX: Include upgraded tickets in their respective ticket type boxes
     const ticketTypeStats = (entries: any[], ticketType: string) => {
-      const filtered = entries.filter(entry => entry.ticketType === ticketType);
+      let totalEntries = 0;
+      let totalAdults = 0;
+      let totalKids = 0;
+
+      entries.forEach(entry => {
+        // Count base ticket type
+        if (entry.ticketType === ticketType) {
+          totalEntries += 1;
+          totalAdults += (entry.adults || 0);
+          totalKids += (entry.kids || 0);
+        }
+
+        // Count upgrades to this ticket type
+        if (entry.upgrades && Array.isArray(entry.upgrades)) {
+          const matchingUpgrades = entry.upgrades.filter((u: any) => u.ticketType === ticketType);
+          if (matchingUpgrades.length > 0) {
+            totalEntries += matchingUpgrades.length;
+            totalAdults += matchingUpgrades.reduce((sum: number, u: any) => sum + (u.adults || 0), 0);
+            totalKids += matchingUpgrades.reduce((sum: number, u: any) => sum + (u.kids || 0), 0);
+          }
+        }
+      });
+
       return {
-        entries: filtered.length,
-        adults: filtered.reduce((sum, entry) => sum + (entry.adults || 0), 0),
-        kids: filtered.reduce((sum, entry) => sum + (entry.kids || 0), 0)
+        entries: totalEntries,
+        adults: totalAdults,
+        kids: totalKids
       };
     };
     

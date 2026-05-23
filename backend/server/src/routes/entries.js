@@ -568,9 +568,49 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     stats.todayAdditionalDiscount += additionalDiscount;
     stats.todayTotalDiscount += totalDiscount;
 
-    // Upgrade calculations
+    // Upgrade calculations - CRITICAL FIX: Count upgraded tickets in their respective ticket type boxes
     if (entry.upgrades && Array.isArray(entry.upgrades) && entry.upgrades.length > 0) {
       stats.todayUpgrades += entry.upgrades.length;
+
+      // Count each upgrade in its respective ticket type stats
+      entry.upgrades.forEach(upgrade => {
+        const upgradeTicketType = parseInt(upgrade.ticketType) || 150;
+        const upgradeAdults = upgrade.adults || 0;
+        const upgradeKids = upgrade.kids || 0;
+
+        switch (upgradeTicketType) {
+          case 100:
+            stats.today100++;
+            stats.today100Adults += upgradeAdults;
+            stats.today100Kids += upgradeKids;
+            break;
+          case 150:
+            stats.today150++;
+            stats.today150Adults += upgradeAdults;
+            stats.today150Kids += upgradeKids;
+            break;
+          case 200:
+            stats.today200++;
+            stats.today200Adults += upgradeAdults;
+            stats.today200Kids += upgradeKids;
+            break;
+          case 300:
+            stats.today300++;
+            stats.today300Adults += upgradeAdults;
+            stats.today300Kids += upgradeKids;
+            break;
+          case 450:
+            stats.today450++;
+            stats.today450Adults += upgradeAdults;
+            stats.today450Kids += upgradeKids;
+            break;
+          case 600:
+            stats.today600++;
+            stats.today600Adults += upgradeAdults;
+            stats.today600Kids += upgradeKids;
+            break;
+        }
+      });
     }
   });
 
@@ -662,9 +702,49 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     stats.totalAdditionalDiscount += additionalDiscount;
     stats.totalTotalDiscount += totalDiscount;
 
-    // Upgrade calculations
+    // Upgrade calculations - CRITICAL FIX: Count upgraded tickets in their respective ticket type boxes
     if (entry.upgrades && Array.isArray(entry.upgrades) && entry.upgrades.length > 0) {
       stats.totalUpgrades += entry.upgrades.length;
+
+      // Count each upgrade in its respective ticket type stats
+      entry.upgrades.forEach(upgrade => {
+        const upgradeTicketType = parseInt(upgrade.ticketType) || 150;
+        const upgradeAdults = upgrade.adults || 0;
+        const upgradeKids = upgrade.kids || 0;
+
+        switch (upgradeTicketType) {
+          case 100:
+            stats.total100++;
+            stats.total100Adults += upgradeAdults;
+            stats.total100Kids += upgradeKids;
+            break;
+          case 150:
+            stats.total150++;
+            stats.total150Adults += upgradeAdults;
+            stats.total150Kids += upgradeKids;
+            break;
+          case 200:
+            stats.total200++;
+            stats.total200Adults += upgradeAdults;
+            stats.total200Kids += upgradeKids;
+            break;
+          case 300:
+            stats.total300++;
+            stats.total300Adults += upgradeAdults;
+            stats.total300Kids += upgradeKids;
+            break;
+          case 450:
+            stats.total450++;
+            stats.total450Adults += upgradeAdults;
+            stats.total450Kids += upgradeKids;
+            break;
+          case 600:
+            stats.total600++;
+            stats.total600Adults += upgradeAdults;
+            stats.total600Kids += upgradeKids;
+            break;
+        }
+      });
     }
   });
 
