@@ -585,26 +585,41 @@ router.get('/upgrades', authenticate, async (req, res) => {
       createdAt: { $gte: startDate.toDate() }
     }).lean();
     
-    // Calculate upgrade insights
+    // Calculate upgrade insights - upgrades are UpgradeItem objects with ticketType
     const upgradeData = [];
-    const upgradeTypes = ['locker', 'food', 'special'];
+    const ticketTypes = ['150', '200', '300', '450', '600', '100'];
     
-    upgradeTypes.forEach(type => {
-      const entriesWithUpgrade = entries.filter(e => e.upgrades && e.upgrades.includes(type));
-      const totalRevenue = entriesWithUpgrade.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
-      const upgradeCount = entriesWithUpgrade.length;
+    ticketTypes.forEach(ticketType => {
+      let totalUpgradeCount = 0;
+      let totalUpgradeRevenue = 0;
+      let totalAdults = 0;
+      let totalKids = 0;
       
-      if (upgradeCount > 0) {
+      entries.forEach(entry => {
+        if (entry.upgrades && Array.isArray(entry.upgrades)) {
+          const matchingUpgrades = entry.upgrades.filter(u => u.ticketType === ticketType);
+          if (matchingUpgrades.length > 0) {
+            totalUpgradeCount += matchingUpgrades.length;
+            totalUpgradeRevenue += matchingUpgrades.reduce((sum, u) => sum + (u.finalAmount || 0), 0);
+            totalAdults += matchingUpgrades.reduce((sum, u) => sum + (u.adults || 0), 0);
+            totalKids += matchingUpgrades.reduce((sum, u) => sum + (u.kids || 0), 0);
+          }
+        }
+      });
+      
+      if (totalUpgradeCount > 0) {
         upgradeData.push({
-          upgradeType: type,
-          count: upgradeCount,
-          revenue: totalRevenue,
-          avgRevenue: totalRevenue / upgradeCount
+          ticketType,
+          count: totalUpgradeCount,
+          revenue: totalUpgradeRevenue,
+          avgRevenue: totalUpgradeRevenue / totalUpgradeCount,
+          adults: totalAdults,
+          kids: totalKids
         });
       }
     });
     
-    console.log('✅ Real upgrade analytics data sent:', upgradeData.length, 'upgrade types processed');
+    console.log('✅ Real upgrade analytics data sent:', upgradeData.length, 'ticket types processed');
     res.json(upgradeData);
   } catch (error) {
     console.error('Get upgrade analytics error:', error);

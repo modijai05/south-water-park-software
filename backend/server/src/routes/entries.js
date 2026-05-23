@@ -471,7 +471,10 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     todayAdditionalDiscount: 0,
     todayTotalDiscount: 0,
     totalAdditionalDiscount: 0,
-    totalTotalDiscount: 0
+    totalTotalDiscount: 0,
+    // Upgrade statistics
+    totalUpgrades: 0,
+    todayUpgrades: 0
   };
 
   // Calculate today's stats
@@ -564,6 +567,11 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     
     stats.todayAdditionalDiscount += additionalDiscount;
     stats.todayTotalDiscount += totalDiscount;
+
+    // Upgrade calculations
+    if (entry.upgrades && Array.isArray(entry.upgrades) && entry.upgrades.length > 0) {
+      stats.todayUpgrades += entry.upgrades.length;
+    }
   });
 
   // Calculate total stats
@@ -653,6 +661,11 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     
     stats.totalAdditionalDiscount += additionalDiscount;
     stats.totalTotalDiscount += totalDiscount;
+
+    // Upgrade calculations
+    if (entry.upgrades && Array.isArray(entry.upgrades) && entry.upgrades.length > 0) {
+      stats.totalUpgrades += entry.upgrades.length;
+    }
   });
 
   // Calculate performance metrics
@@ -1018,6 +1031,9 @@ router.get('/stats', async (req, res) => {
       // Discount statistics
       todayAdditionalDiscount: 0, todayTotalDiscount: 0,
       totalAdditionalDiscount: 0, totalTotalDiscount: 0,
+      // Upgrade statistics
+      totalUpgrades: 0,
+      todayUpgrades: 0,
       lastUpdated: new Date().toISOString(),
       dataFreshness: 'fallback',
       source: 'offline',
