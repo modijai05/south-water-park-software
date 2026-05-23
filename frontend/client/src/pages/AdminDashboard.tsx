@@ -358,16 +358,16 @@ export function AdminDashboard() {
       let totalKids = 0;
 
       entries.forEach(entry => {
-        // Count base ticket type
-        if (entry.ticketType === ticketType) {
+        // Count base ticket type (handle both string and number types)
+        if (String(entry.ticketType) === String(ticketType)) {
           totalEntries += 1;
           totalAdults += (entry.adults || 0);
           totalKids += (entry.kids || 0);
         }
 
-        // Count upgrades to this ticket type
+        // Count upgrades to this ticket type (handle both string and number types)
         if (entry.upgrades && Array.isArray(entry.upgrades)) {
-          const matchingUpgrades = entry.upgrades.filter((u: any) => u.ticketType === ticketType);
+          const matchingUpgrades = entry.upgrades.filter((u: any) => String(u.ticketType) === String(ticketType));
           if (matchingUpgrades.length > 0) {
             totalEntries += matchingUpgrades.length;
             totalAdults += matchingUpgrades.reduce((sum: number, u: any) => sum + (u.adults || 0), 0);

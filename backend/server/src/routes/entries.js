@@ -574,37 +574,38 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
 
       // Count each upgrade in its respective ticket type stats
       entry.upgrades.forEach(upgrade => {
-        const upgradeTicketType = parseInt(upgrade.ticketType) || 150;
+        // CRITICAL FIX: Use string comparison to match frontend behavior
+        const upgradeTicketType = String(upgrade.ticketType || '150');
         const upgradeAdults = upgrade.adults || 0;
         const upgradeKids = upgrade.kids || 0;
 
         switch (upgradeTicketType) {
-          case 100:
+          case '100':
             stats.today100++;
             stats.today100Adults += upgradeAdults;
             stats.today100Kids += upgradeKids;
             break;
-          case 150:
+          case '150':
             stats.today150++;
             stats.today150Adults += upgradeAdults;
             stats.today150Kids += upgradeKids;
             break;
-          case 200:
+          case '200':
             stats.today200++;
             stats.today200Adults += upgradeAdults;
             stats.today200Kids += upgradeKids;
             break;
-          case 300:
+          case '300':
             stats.today300++;
             stats.today300Adults += upgradeAdults;
             stats.today300Kids += upgradeKids;
             break;
-          case 450:
+          case '450':
             stats.today450++;
             stats.today450Adults += upgradeAdults;
             stats.today450Kids += upgradeKids;
             break;
-          case 600:
+          case '600':
             stats.today600++;
             stats.today600Adults += upgradeAdults;
             stats.today600Kids += upgradeKids;
@@ -708,37 +709,38 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
 
       // Count each upgrade in its respective ticket type stats
       entry.upgrades.forEach(upgrade => {
-        const upgradeTicketType = parseInt(upgrade.ticketType) || 150;
+        // CRITICAL FIX: Use string comparison to match frontend behavior
+        const upgradeTicketType = String(upgrade.ticketType || '150');
         const upgradeAdults = upgrade.adults || 0;
         const upgradeKids = upgrade.kids || 0;
 
         switch (upgradeTicketType) {
-          case 100:
+          case '100':
             stats.total100++;
             stats.total100Adults += upgradeAdults;
             stats.total100Kids += upgradeKids;
             break;
-          case 150:
+          case '150':
             stats.total150++;
             stats.total150Adults += upgradeAdults;
             stats.total150Kids += upgradeKids;
             break;
-          case 200:
+          case '200':
             stats.total200++;
             stats.total200Adults += upgradeAdults;
             stats.total200Kids += upgradeKids;
             break;
-          case 300:
+          case '300':
             stats.total300++;
             stats.total300Adults += upgradeAdults;
             stats.total300Kids += upgradeKids;
             break;
-          case 450:
+          case '450':
             stats.total450++;
             stats.total450Adults += upgradeAdults;
             stats.total450Kids += upgradeKids;
             break;
-          case 600:
+          case '600':
             stats.total600++;
             stats.total600Adults += upgradeAdults;
             stats.total600Kids += upgradeKids;
@@ -1779,7 +1781,7 @@ router.get('/', async (req, res) => {
             .skip(skip)
             .limit(limitNum)
             .lean() // Use lean for faster queries
-            .select('name mobile ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon receiptNumber createdAt filledBy filledByFullName createdBy upgrades additionalDiscount kidDiscount'), // Select only required fields
+            .select('name mobile ticketType adults kids totalPeople finalAmount cashAmount upiAmount advanceAmount otherAmount adultsFastFoodCoupon kidsFastFoodCoupon adultsMainFoodCoupon kidsMainFoodCoupon receiptNumber createdAt entryDate filledBy filledByFullName createdBy upgrades additionalDiscount kidDiscount'), // Select only required fields
           Entry.countDocuments(query)
         ]);
         
