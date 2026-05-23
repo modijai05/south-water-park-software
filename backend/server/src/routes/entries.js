@@ -390,6 +390,23 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     } : 'No entries'
   });
 
+  // Collect all unique ticket types from both base tickets and upgrades
+  const allTicketTypes = new Set();
+  [...entries, ...allEntries].forEach(entry => {
+    if (entry.ticketType) {
+      allTicketTypes.add(String(entry.ticketType));
+    }
+    if (entry.upgrades && Array.isArray(entry.upgrades)) {
+      entry.upgrades.forEach(upgrade => {
+        if (upgrade.ticketType) {
+          allTicketTypes.add(String(upgrade.ticketType));
+        }
+      });
+    }
+  });
+  const ticketTypesArray = Array.from(allTicketTypes).sort();
+
+  // Initialize stats object with dynamic ticket types
   const stats = {
     todayEntries: entries.length,
     totalEntries: allEntries.length,
@@ -410,44 +427,8 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     todayAdults: 0,
     totalKids: 0,
     todayKids: 0,
-    // Ticket type stats
-    today150: 0,
-    today200: 0,
-    today300: 0,
-    today450: 0,
-    today600: 0,
-    today100: 0,
-    total150: 0,
-    total200: 0,
-    total300: 0,
-    total450: 0,
-    total600: 0,
-    total100: 0,
-    // Per-ticket-type adult and kid counts
-    today150Adults: 0,
-    today150Kids: 0,
-    today200Adults: 0,
-    today200Kids: 0,
-    today300Adults: 0,
-    today300Kids: 0,
-    today450Adults: 0,
-    today450Kids: 0,
-    today600Adults: 0,
-    today600Kids: 0,
-    today100Adults: 0,
-    today100Kids: 0,
-    total150Adults: 0,
-    total150Kids: 0,
-    total200Adults: 0,
-    total200Kids: 0,
-    total300Adults: 0,
-    total300Kids: 0,
-    total450Adults: 0,
-    total450Kids: 0,
-    total600Adults: 0,
-    total600Kids: 0,
-    total100Adults: 0,
-    total100Kids: 0,
+    // Dynamic ticket type stats
+    ticketTypes: {},
     // Food coupon stats
     todayAdultsFastFoodCoupons: 0,
     todayKidsFastFoodCoupons: 0,
@@ -477,9 +458,21 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     todayUpgrades: 0
   };
 
+  // Initialize dynamic ticket type properties
+  ticketTypesArray.forEach(ticketType => {
+    stats.ticketTypes[ticketType] = {
+      today: 0,
+      total: 0,
+      todayAdults: 0,
+      todayKids: 0,
+      totalAdults: 0,
+      totalKids: 0
+    };
+  });
+
   // Calculate today's stats
   entries.forEach(entry => {
-    const ticketType = parseInt(entry.ticketType) || 150;
+    const ticketType = String(entry.ticketType || '150');
     const adults = entry.adults || 0;
     const kids = entry.kids || 0;
     const totalPeople = adults + kids;
@@ -487,6 +480,9 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     const cashAmount = entry.cashAmount || 0;
     const upiAmount = entry.upiAmount || 0;
     const advanceAmount = entry.advanceAmount || 0;
+    const additionalDiscount = entry.additionalDiscount || 0;
+    const kidDiscount = entry.kidDiscount || 0;
+    const totalDiscount = additionalDiscount + kidDiscount;
 
     // Basic counts
     stats.todayPeople += totalPeople;
@@ -496,39 +492,14 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     stats.todayCash += cashAmount;
     stats.todayUpi += upiAmount;
     stats.todayAdvance += advanceAmount;
+    stats.todayAdditionalDiscount += additionalDiscount;
+    stats.todayTotalDiscount += totalDiscount;
 
-    // Ticket type specific stats
-    switch (ticketType) {
-      case 100:
-        stats.today100++;
-        stats.today100Adults += adults;
-        stats.today100Kids += kids;
-        break;
-      case 150:
-        stats.today150++;
-        stats.today150Adults += adults;
-        stats.today150Kids += kids;
-        break;
-      case 200:
-        stats.today200++;
-        stats.today200Adults += adults;
-        stats.today200Kids += kids;
-        break;
-      case 300:
-        stats.today300++;
-        stats.today300Adults += adults;
-        stats.today300Kids += kids;
-        break;
-      case 450:
-        stats.today450++;
-        stats.today450Adults += adults;
-        stats.today450Kids += kids;
-        break;
-      case 600:
-        stats.today600++;
-        stats.today600Adults += adults;
-        stats.today600Kids += kids;
-        break;
+    // Dynamic ticket type specific stats
+    if (stats.ticketTypes[ticketType]) {
+      stats.ticketTypes[ticketType].today++;
+      stats.ticketTypes[ticketType].todayAdults += adults;
+      stats.ticketTypes[ticketType].todayKids += kids;
     }
 
     // Food coupons (using direct fields as stored in database)
@@ -549,67 +520,21 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     stats.todayTotalMainFoodCoupons += adultsMainFoodCoupon + kidsMainFoodCoupon;
     stats.todayTotalFoodCoupons += adultCoupons + kidCoupons;
 
-    // Discount calculations
-    const additionalDiscount = entry.additionalDiscount || 0;
-    const kidDiscount = entry.kidDiscount || 0;
-    const totalDiscount = additionalDiscount + kidDiscount;
-    
-    // Debug: Log discount values for first few entries
-    if (stats.todayAdditionalDiscount === 0 && additionalDiscount > 0) {
-      console.log('🔍 First discount found:', {
-        entryId: entry._id,
-        ticketType: entry.ticketType,
-        additionalDiscount,
-        kidDiscount,
-        totalDiscount
-      });
-    }
-    
-    stats.todayAdditionalDiscount += additionalDiscount;
-    stats.todayTotalDiscount += totalDiscount;
-
-    // Upgrade calculations - CRITICAL FIX: Count upgraded tickets in their respective ticket type boxes
+    // Upgrade calculations - Count upgraded tickets in their respective ticket type boxes
     if (entry.upgrades && Array.isArray(entry.upgrades) && entry.upgrades.length > 0) {
       stats.todayUpgrades += entry.upgrades.length;
 
       // Count each upgrade in its respective ticket type stats
       entry.upgrades.forEach(upgrade => {
-        // CRITICAL FIX: Use string comparison to match frontend behavior
         const upgradeTicketType = String(upgrade.ticketType || '150');
         const upgradeAdults = upgrade.adults || 0;
         const upgradeKids = upgrade.kids || 0;
 
-        switch (upgradeTicketType) {
-          case '100':
-            stats.today100++;
-            stats.today100Adults += upgradeAdults;
-            stats.today100Kids += upgradeKids;
-            break;
-          case '150':
-            stats.today150++;
-            stats.today150Adults += upgradeAdults;
-            stats.today150Kids += upgradeKids;
-            break;
-          case '200':
-            stats.today200++;
-            stats.today200Adults += upgradeAdults;
-            stats.today200Kids += upgradeKids;
-            break;
-          case '300':
-            stats.today300++;
-            stats.today300Adults += upgradeAdults;
-            stats.today300Kids += upgradeKids;
-            break;
-          case '450':
-            stats.today450++;
-            stats.today450Adults += upgradeAdults;
-            stats.today450Kids += upgradeKids;
-            break;
-          case '600':
-            stats.today600++;
-            stats.today600Adults += upgradeAdults;
-            stats.today600Kids += upgradeKids;
-            break;
+        // Dynamic ticket type counting
+        if (stats.ticketTypes[upgradeTicketType]) {
+          stats.ticketTypes[upgradeTicketType].today++;
+          stats.ticketTypes[upgradeTicketType].todayAdults += upgradeAdults;
+          stats.ticketTypes[upgradeTicketType].todayKids += upgradeKids;
         }
       });
     }
@@ -617,7 +542,7 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
 
   // Calculate total stats
   allEntries.forEach(entry => {
-    const ticketType = parseInt(entry.ticketType) || 150;
+    const ticketType = String(entry.ticketType || '150');
     const adults = entry.adults || 0;
     const kids = entry.kids || 0;
     const totalPeople = adults + kids;
@@ -625,6 +550,9 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     const cashAmount = entry.cashAmount || 0;
     const upiAmount = entry.upiAmount || 0;
     const advanceAmount = entry.advanceAmount || 0;
+    const additionalDiscount = entry.additionalDiscount || 0;
+    const kidDiscount = entry.kidDiscount || 0;
+    const totalDiscount = additionalDiscount + kidDiscount;
 
     // Basic counts
     stats.totalPeople += totalPeople;
@@ -634,39 +562,14 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     stats.totalCash += cashAmount;
     stats.totalUpi += upiAmount;
     stats.totalAdvance += advanceAmount;
+    stats.totalAdditionalDiscount += additionalDiscount;
+    stats.totalTotalDiscount += totalDiscount;
 
-    // Ticket type specific stats
-    switch (ticketType) {
-      case 100:
-        stats.total100++;
-        stats.total100Adults += adults;
-        stats.total100Kids += kids;
-        break;
-      case 150:
-        stats.total150++;
-        stats.total150Adults += adults;
-        stats.total150Kids += kids;
-        break;
-      case 200:
-        stats.total200++;
-        stats.total200Adults += adults;
-        stats.total200Kids += kids;
-        break;
-      case 300:
-        stats.total300++;
-        stats.total300Adults += adults;
-        stats.total300Kids += kids;
-        break;
-      case 450:
-        stats.total450++;
-        stats.total450Adults += adults;
-        stats.total450Kids += kids;
-        break;
-      case 600:
-        stats.total600++;
-        stats.total600Adults += adults;
-        stats.total600Kids += kids;
-        break;
+    // Dynamic ticket type specific stats
+    if (stats.ticketTypes[ticketType]) {
+      stats.ticketTypes[ticketType].total++;
+      stats.ticketTypes[ticketType].totalAdults += adults;
+      stats.ticketTypes[ticketType].totalKids += kids;
     }
 
     // Food coupons (using direct fields as stored in database)
@@ -684,67 +587,21 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     stats.totalMainFoodCoupons += adultsMainFoodCoupon + kidsMainFoodCoupon;
     stats.totalFoodCoupons += adultsFastFoodCoupon + kidsFastFoodCoupon + adultsMainFoodCoupon + kidsMainFoodCoupon;
 
-    // Discount calculations
-    const additionalDiscount = entry.additionalDiscount || 0;
-    const kidDiscount = entry.kidDiscount || 0;
-    const totalDiscount = additionalDiscount + kidDiscount;
-    
-    // Debug: Log first few total discount discoveries
-    if (stats.totalAdditionalDiscount === 0 && additionalDiscount > 0) {
-      console.log('🔍 First total discount found:', {
-        entryId: entry._id,
-        ticketType: entry.ticketType,
-        additionalDiscount,
-        kidDiscount,
-        totalDiscount
-      });
-    }
-    
-    stats.totalAdditionalDiscount += additionalDiscount;
-    stats.totalTotalDiscount += totalDiscount;
-
-    // Upgrade calculations - CRITICAL FIX: Count upgraded tickets in their respective ticket type boxes
+    // Upgrade calculations - Count upgraded tickets in their respective ticket type boxes
     if (entry.upgrades && Array.isArray(entry.upgrades) && entry.upgrades.length > 0) {
       stats.totalUpgrades += entry.upgrades.length;
 
       // Count each upgrade in its respective ticket type stats
       entry.upgrades.forEach(upgrade => {
-        // CRITICAL FIX: Use string comparison to match frontend behavior
         const upgradeTicketType = String(upgrade.ticketType || '150');
         const upgradeAdults = upgrade.adults || 0;
         const upgradeKids = upgrade.kids || 0;
 
-        switch (upgradeTicketType) {
-          case '100':
-            stats.total100++;
-            stats.total100Adults += upgradeAdults;
-            stats.total100Kids += upgradeKids;
-            break;
-          case '150':
-            stats.total150++;
-            stats.total150Adults += upgradeAdults;
-            stats.total150Kids += upgradeKids;
-            break;
-          case '200':
-            stats.total200++;
-            stats.total200Adults += upgradeAdults;
-            stats.total200Kids += upgradeKids;
-            break;
-          case '300':
-            stats.total300++;
-            stats.total300Adults += upgradeAdults;
-            stats.total300Kids += upgradeKids;
-            break;
-          case '450':
-            stats.total450++;
-            stats.total450Adults += upgradeAdults;
-            stats.total450Kids += upgradeKids;
-            break;
-          case '600':
-            stats.total600++;
-            stats.total600Adults += upgradeAdults;
-            stats.total600Kids += upgradeKids;
-            break;
+        // Dynamic ticket type counting
+        if (stats.ticketTypes[upgradeTicketType]) {
+          stats.ticketTypes[upgradeTicketType].total++;
+          stats.ticketTypes[upgradeTicketType].totalAdults += upgradeAdults;
+          stats.ticketTypes[upgradeTicketType].totalKids += upgradeKids;
         }
       });
     }
@@ -828,14 +685,7 @@ router.get('/sync-all', async (req, res) => {
             todayAdults: 0, totalAdults: 0, todayKids: 0, totalKids: 0,
             todayAmount: 0, totalAmount: 0, todayCash: 0, totalCash: 0,
             todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0,
-            today150: 0, today200: 0, today300: 0, today450: 0, today600: 0, today100: 0,
-            total150: 0, total200: 0, total300: 0, total450: 0, total600: 0, total100: 0,
-            today150Adults: 0, today150Kids: 0, today200Adults: 0, today200Kids: 0, today300Adults: 0, today300Kids: 0,
-            today450Adults: 0, today450Kids: 0, today600Adults: 0, today600Kids: 0,
-            today100Adults: 0, today100Kids: 0,
-            total150Adults: 0, total150Kids: 0, total200Adults: 0, total200Kids: 0, total300Adults: 0, total300Kids: 0,
-            total450Adults: 0, total450Kids: 0, total600Adults: 0, total600Kids: 0,
-            total100Adults: 0, total100Kids: 0,
+            ticketTypes: {},
             lastUpdated: new Date().toISOString(),
             dataFreshness: 'offline',
             source: 'database-disconnected',

@@ -108,13 +108,43 @@ router.get('/demand', authenticate, async (req, res) => {
     
     console.log(`Found ${entries.length} entries for timeRange: ${timeRange}`);
     
-    // Calculate demand analysis for each ticket type
-    const ticketTypes = ['150', '200', '300', '450', '600', '100'];
+    // Collect all unique ticket types from entries (both base tickets and upgrades)
+    const allTicketTypes = new Set();
+    entries.forEach(entry => {
+      if (entry.ticketType) {
+        allTicketTypes.add(String(entry.ticketType));
+      }
+      if (entry.upgrades && Array.isArray(entry.upgrades)) {
+        entry.upgrades.forEach(upgrade => {
+          if (upgrade.ticketType) {
+            allTicketTypes.add(String(upgrade.ticketType));
+          }
+        });
+      }
+    });
+    const ticketTypes = Array.from(allTicketTypes).sort();
     const demandData = ticketTypes.map(type => {
-      const typeEntries = entries.filter(e => e.ticketType === type);
-      const totalEntries = typeEntries.length;
-      const revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
-      const totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+      // Count base ticket entries
+      const typeEntries = entries.filter(e => String(e.ticketType) === String(type));
+      let totalEntries = typeEntries.length;
+      let revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+      let totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+      let adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
+      let kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+      
+      // Count upgrades to this ticket type
+      entries.forEach(entry => {
+        if (entry.upgrades && Array.isArray(entry.upgrades)) {
+          const matchingUpgrades = entry.upgrades.filter(u => String(u.ticketType) === String(type));
+          if (matchingUpgrades.length > 0) {
+            totalEntries += matchingUpgrades.length;
+            adults += matchingUpgrades.reduce((sum, u) => sum + (u.adults || 0), 0);
+            kids += matchingUpgrades.reduce((sum, u) => sum + (u.kids || 0), 0);
+            totalPeople = adults + kids;
+          }
+        }
+      });
+      
       const avgPeoplePerEntry = totalEntries > 0 ? totalPeople / totalEntries : 0;
       
       // Calculate growth rate (compare with previous period)
@@ -183,14 +213,43 @@ router.get('/today', authenticate, requireAdmin, async (req, res) => {
     const entries = await Entry.find(todayFilter).lean();
     console.log('📊 Today entries found:', entries.length);
 
-    const ticketTypes = ['150', '200', '300', '450', '600', '100'];
+    // Collect all unique ticket types from entries (both base tickets and upgrades)
+    const allTicketTypes = new Set();
+    entries.forEach(entry => {
+      if (entry.ticketType) {
+        allTicketTypes.add(String(entry.ticketType));
+      }
+      if (entry.upgrades && Array.isArray(entry.upgrades)) {
+        entry.upgrades.forEach(upgrade => {
+          if (upgrade.ticketType) {
+            allTicketTypes.add(String(upgrade.ticketType));
+          }
+        });
+      }
+    });
+    const ticketTypes = Array.from(allTicketTypes).sort();
     const todayAnalytics = ticketTypes.map(type => {
-      const typeEntries = entries.filter(e => e.ticketType === type);
-      const totalEntries = typeEntries.length;
-      const revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
-      const totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
-      const adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
-      const kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+      // Count base ticket entries
+      const typeEntries = entries.filter(e => String(e.ticketType) === String(type));
+      let totalEntries = typeEntries.length;
+      let revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+      let totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+      let adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
+      let kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+      
+      // Count upgrades to this ticket type
+      entries.forEach(entry => {
+        if (entry.upgrades && Array.isArray(entry.upgrades)) {
+          const matchingUpgrades = entry.upgrades.filter(u => String(u.ticketType) === String(type));
+          if (matchingUpgrades.length > 0) {
+            totalEntries += matchingUpgrades.length;
+            adults += matchingUpgrades.reduce((sum, u) => sum + (u.adults || 0), 0);
+            kids += matchingUpgrades.reduce((sum, u) => sum + (u.kids || 0), 0);
+            totalPeople = adults + kids;
+          }
+        }
+      });
+      
       const avgPeoplePerEntry = totalEntries > 0 ? totalPeople / totalEntries : 0;
 
       // Calculate discount data for today
@@ -365,15 +424,43 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
     console.log('📊 Today entries:', todayEntries.length);
     console.log('📊 Historical entries:', historicalEntries.length);
 
-    // Process today's data
-    const ticketTypes = ['150', '200', '300', '450', '600', '100'];
+    // Collect all unique ticket types from all entries (both base tickets and upgrades)
+    const allTicketTypes = new Set();
+    [...todayEntries, ...historicalEntries].forEach(entry => {
+      if (entry.ticketType) {
+        allTicketTypes.add(String(entry.ticketType));
+      }
+      if (entry.upgrades && Array.isArray(entry.upgrades)) {
+        entry.upgrades.forEach(upgrade => {
+          if (upgrade.ticketType) {
+            allTicketTypes.add(String(upgrade.ticketType));
+          }
+        });
+      }
+    });
+    const ticketTypes = Array.from(allTicketTypes).sort();
     const todayAnalytics = ticketTypes.map(type => {
-      const typeEntries = todayEntries.filter(e => e.ticketType === type);
-      const totalEntries = typeEntries.length;
-      const revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
-      const totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
-      const adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
-      const kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+      // Count base ticket entries
+      const typeEntries = todayEntries.filter(e => String(e.ticketType) === String(type));
+      let totalEntries = typeEntries.length;
+      let revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+      let totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+      let adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
+      let kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+      
+      // Count upgrades to this ticket type
+      todayEntries.forEach(entry => {
+        if (entry.upgrades && Array.isArray(entry.upgrades)) {
+          const matchingUpgrades = entry.upgrades.filter(u => String(u.ticketType) === String(type));
+          if (matchingUpgrades.length > 0) {
+            totalEntries += matchingUpgrades.length;
+            adults += matchingUpgrades.reduce((sum, u) => sum + (u.adults || 0), 0);
+            kids += matchingUpgrades.reduce((sum, u) => sum + (u.kids || 0), 0);
+            totalPeople = adults + kids;
+          }
+        }
+      });
+      
       const avgPeoplePerEntry = totalEntries > 0 ? totalPeople / totalEntries : 0;
       
       // Calculate discount data for today
@@ -422,12 +509,27 @@ router.get('/date-wise', authenticate, requireAdmin, async (req, res) => {
     });
 
     const historicalAnalytics = ticketTypes.map(type => {
-      const typeEntries = recentHistoricalEntries.filter(e => e.ticketType === type);
-      const totalEntries = typeEntries.length;
-      const revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
-      const totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
-      const adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
-      const kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+      // Count base ticket entries
+      const typeEntries = recentHistoricalEntries.filter(e => String(e.ticketType) === String(type));
+      let totalEntries = typeEntries.length;
+      let revenue = typeEntries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+      let totalPeople = typeEntries.reduce((sum, e) => sum + (e.totalPeople || 0), 0);
+      let adults = typeEntries.reduce((sum, e) => sum + (e.adults || 0), 0);
+      let kids = typeEntries.reduce((sum, e) => sum + (e.kids || 0), 0);
+      
+      // Count upgrades to this ticket type
+      recentHistoricalEntries.forEach(entry => {
+        if (entry.upgrades && Array.isArray(entry.upgrades)) {
+          const matchingUpgrades = entry.upgrades.filter(u => String(u.ticketType) === String(type));
+          if (matchingUpgrades.length > 0) {
+            totalEntries += matchingUpgrades.length;
+            adults += matchingUpgrades.reduce((sum, u) => sum + (u.adults || 0), 0);
+            kids += matchingUpgrades.reduce((sum, u) => sum + (u.kids || 0), 0);
+            totalPeople = adults + kids;
+          }
+        }
+      });
+      
       const avgPeoplePerEntry = totalEntries > 0 ? totalPeople / totalEntries : 0;
       
       // Calculate discount data for historical
@@ -587,20 +689,30 @@ router.get('/upgrades', authenticate, async (req, res) => {
     
     // Calculate upgrade insights - upgrades are UpgradeItem objects with ticketType
     const upgradeData = [];
-    const ticketTypes = ['150', '200', '300', '450', '600', '100'];
+    
+    // Collect all unique ticket types from upgrades
+    const allTicketTypes = new Set();
+    entries.forEach(entry => {
+      if (entry.upgrades && Array.isArray(entry.upgrades)) {
+        entry.upgrades.forEach(upgrade => {
+          if (upgrade.ticketType) {
+            allTicketTypes.add(String(upgrade.ticketType));
+          }
+        });
+      }
+    });
+    const ticketTypes = Array.from(allTicketTypes).sort();
     
     ticketTypes.forEach(ticketType => {
       let totalUpgradeCount = 0;
-      let totalUpgradeRevenue = 0;
       let totalAdults = 0;
       let totalKids = 0;
       
       entries.forEach(entry => {
         if (entry.upgrades && Array.isArray(entry.upgrades)) {
-          const matchingUpgrades = entry.upgrades.filter(u => u.ticketType === ticketType);
+          const matchingUpgrades = entry.upgrades.filter(u => String(u.ticketType) === String(ticketType));
           if (matchingUpgrades.length > 0) {
             totalUpgradeCount += matchingUpgrades.length;
-            totalUpgradeRevenue += matchingUpgrades.reduce((sum, u) => sum + (u.finalAmount || 0), 0);
             totalAdults += matchingUpgrades.reduce((sum, u) => sum + (u.adults || 0), 0);
             totalKids += matchingUpgrades.reduce((sum, u) => sum + (u.kids || 0), 0);
           }
@@ -611,8 +723,6 @@ router.get('/upgrades', authenticate, async (req, res) => {
         upgradeData.push({
           ticketType,
           count: totalUpgradeCount,
-          revenue: totalUpgradeRevenue,
-          avgRevenue: totalUpgradeRevenue / totalUpgradeCount,
           adults: totalAdults,
           kids: totalKids
         });

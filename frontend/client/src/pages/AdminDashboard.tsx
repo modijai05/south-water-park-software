@@ -383,21 +383,53 @@ export function AdminDashboard() {
       };
     };
     
-    // All-time ticket stats
-    const total150Stats = ticketTypeStats(entriesData, '150');
-    const total200Stats = ticketTypeStats(entriesData, '200');
-    const total300Stats = ticketTypeStats(entriesData, '300');
-    const total450Stats = ticketTypeStats(entriesData, '450');
-    const total600Stats = ticketTypeStats(entriesData, '600');
-    const total100Stats = ticketTypeStats(entriesData, '100');
+    
+    // Collect all unique ticket types from entries (both base tickets and upgrades)
+    const getAllTicketTypes = (entries: any[]): string[] => {
+      const ticketTypes = new Set<string>();
+      entries.forEach(entry => {
+        if (entry.ticketType) {
+          ticketTypes.add(String(entry.ticketType));
+        }
+        if (entry.upgrades && Array.isArray(entry.upgrades)) {
+          entry.upgrades.forEach((upgrade: any) => {
+            if (upgrade.ticketType) {
+              ticketTypes.add(String(upgrade.ticketType));
+            }
+          });
+        }
+      });
+      return Array.from(ticketTypes).sort();
+    };
+    // All-time ticket stats - Dynamic handling for all ticket types
+    const allTicketTypes = getAllTicketTypes(entriesData);
+    const totalTicketStats: { [key: string]: { entries: number; adults: number; kids: number } } = {};
+    allTicketTypes.forEach(ticketType => {
+      totalTicketStats[ticketType] = ticketTypeStats(entriesData, ticketType);
+    });
+    
+    // Legacy stats for backward compatibility
+    const total150Stats = totalTicketStats['150'] || { entries: 0, adults: 0, kids: 0 };
+    const total200Stats = totalTicketStats['200'] || { entries: 0, adults: 0, kids: 0 };
+    const total300Stats = totalTicketStats['300'] || { entries: 0, adults: 0, kids: 0 };
+    const total450Stats = totalTicketStats['450'] || { entries: 0, adults: 0, kids: 0 };
+    const total600Stats = totalTicketStats['600'] || { entries: 0, adults: 0, kids: 0 };
+    const total100Stats = totalTicketStats['100'] || { entries: 0, adults: 0, kids: 0 };
 
-    // Today ticket stats
-    const today150Stats = ticketTypeStats(todayEntries, '150');
-    const today200Stats = ticketTypeStats(todayEntries, '200');
-    const today300Stats = ticketTypeStats(todayEntries, '300');
-    const today450Stats = ticketTypeStats(todayEntries, '450');
-    const today600Stats = ticketTypeStats(todayEntries, '600');
-    const today100Stats = ticketTypeStats(todayEntries, '100');
+    // Today ticket stats - Dynamic handling for all ticket types
+    const todayAllTicketTypes = getAllTicketTypes(todayEntries);
+    const todayTicketStats: { [key: string]: { entries: number; adults: number; kids: number } } = {};
+    todayAllTicketTypes.forEach(ticketType => {
+      todayTicketStats[ticketType] = ticketTypeStats(todayEntries, ticketType);
+    });
+    
+    // Legacy stats for backward compatibility
+    const today150Stats = todayTicketStats['150'] || { entries: 0, adults: 0, kids: 0 };
+    const today200Stats = todayTicketStats['200'] || { entries: 0, adults: 0, kids: 0 };
+    const today300Stats = todayTicketStats['300'] || { entries: 0, adults: 0, kids: 0 };
+    const today450Stats = todayTicketStats['450'] || { entries: 0, adults: 0, kids: 0 };
+    const today600Stats = todayTicketStats['600'] || { entries: 0, adults: 0, kids: 0 };
+    const today100Stats = todayTicketStats['100'] || { entries: 0, adults: 0, kids: 0 };
     
     // Calculate discount stats
     const totalAdditionalDiscount = entriesData.reduce((sum, entry) => sum + (entry.additionalDiscount || 0), 0);
@@ -474,6 +506,10 @@ export function AdminDashboard() {
       total450: total450Stats.entries,
       total600: total600Stats.entries,
       total100: total100Stats.entries,
+      
+      // Dynamic ticket types for future compatibility
+      totalTicketStats,
+      todayTicketStats,
 
       // Per-ticket-type adult and kid counts
       today150Adults: today150Stats.adults,
