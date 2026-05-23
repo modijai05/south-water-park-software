@@ -16,7 +16,7 @@ const entrySchema = new mongoose.Schema({
   ticketType: { 
     type: String, 
     required: true,
-    enum: ['150', '300', '450', '600', '100']
+    enum: ['150', '200', '300', '450', '600', '100']
   },
   adults: { type: Number, required: true, default: 0 },
   kids: { type: Number, required: true, default: 0 },

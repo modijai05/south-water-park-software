@@ -650,6 +650,15 @@ export function AdminEntries() {
                           <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
                             ₹{getTicketLabelSync(entry.ticketType as TicketType)}
                           </div>
+                          {entry.upgrades && entry.upgrades.length > 0 && (
+                            <div className="mt-1 space-y-1">
+                              {entry.upgrades.map((u, i) => (
+                                <div key={i} className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-medium">
+                                  +₹{getTicketLabelSync(u.ticketType as TicketType)} (A:{u.adults} K:{u.kids})
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
                           {safeString(entry.adults)}
@@ -916,7 +925,7 @@ export function AdminEntries() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      {editing?.upgrades?.map((upgrade, index) => (
+                      {(editing || viewing)?.upgrades?.map((upgrade, index) => (
                         <div key={index} className="space-y-2">
                           <div className="grid grid-cols-4 gap-2 p-3 bg-white rounded border border-gray-200">
                             <div>
@@ -924,6 +933,7 @@ export function AdminEntries() {
                               <select
                                 value={upgrade.ticketType}
                                 onChange={(e) => {
+                                  if (!editing) return;
                                   const newUpgrades = [...(editing?.upgrades || [])];
                                   newUpgrades[index] = {...upgrade, ticketType: e.target.value as TicketType};
                                   setEditing({...editing, upgrades: newUpgrades});
@@ -944,6 +954,7 @@ export function AdminEntries() {
                                 type="number"
                                 value={upgrade.adults}
                                 onChange={(e) => {
+                                  if (!editing) return;
                                   const newUpgrades = [...(editing?.upgrades || [])];
                                   newUpgrades[index] = {...upgrade, adults: parseInt(e.target.value) || 0};
                                   setEditing({...editing, upgrades: newUpgrades});
@@ -958,6 +969,7 @@ export function AdminEntries() {
                                 type="number"
                                 value={upgrade.kids}
                                 onChange={(e) => {
+                                  if (!editing) return;
                                   const newUpgrades = [...(editing?.upgrades || [])];
                                   newUpgrades[index] = {...upgrade, kids: parseInt(e.target.value) || 0};
                                   setEditing({...editing, upgrades: newUpgrades});
@@ -992,6 +1004,7 @@ export function AdminEntries() {
                                     type="text"
                                     value={upgrade.adultsFastFoodCoupon || ''}
                                     onChange={(e) => {
+                                      if (!editing) return;
                                       const newUpgrades = [...(editing?.upgrades || [])];
                                       newUpgrades[index] = {...upgrade, adultsFastFoodCoupon: e.target.value};
                                       setEditing({...editing, upgrades: newUpgrades});
@@ -1007,6 +1020,7 @@ export function AdminEntries() {
                                     type="text"
                                     value={upgrade.kidsFastFoodCoupon || ''}
                                     onChange={(e) => {
+                                      if (!editing) return;
                                       const newUpgrades = [...(editing?.upgrades || [])];
                                       newUpgrades[index] = {...upgrade, kidsFastFoodCoupon: e.target.value};
                                       setEditing({...editing, upgrades: newUpgrades});
@@ -1022,6 +1036,7 @@ export function AdminEntries() {
                                     type="text"
                                     value={upgrade.adultsMainFoodCoupon || ''}
                                     onChange={(e) => {
+                                      if (!editing) return;
                                       const newUpgrades = [...(editing?.upgrades || [])];
                                       newUpgrades[index] = {...upgrade, adultsMainFoodCoupon: e.target.value};
                                       setEditing({...editing, upgrades: newUpgrades});
@@ -1037,6 +1052,7 @@ export function AdminEntries() {
                                     type="text"
                                     value={upgrade.kidsMainFoodCoupon || ''}
                                     onChange={(e) => {
+                                      if (!editing) return;
                                       const newUpgrades = [...(editing?.upgrades || [])];
                                       newUpgrades[index] = {...upgrade, kidsMainFoodCoupon: e.target.value};
                                       setEditing({...editing, upgrades: newUpgrades});
