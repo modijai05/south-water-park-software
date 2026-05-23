@@ -1168,6 +1168,7 @@ router.post('/', async (req, res) => {
       kidsFastFoodCoupon,
       adultsMainFoodCoupon,
       kidsMainFoodCoupon,
+      upgrades,
       filledBy,
       filledByFullName
     } = req.body;
@@ -1204,6 +1205,15 @@ router.post('/', async (req, res) => {
           kidsFastFoodCoupon: kidsFastFoodCoupon || 0,
           adultsMainFoodCoupon: adultsMainFoodCoupon || 0,
           kidsMainFoodCoupon: kidsMainFoodCoupon || 0,
+          upgrades: Array.isArray(upgrades) ? upgrades.map(u => ({
+            ticketType: u.ticketType || '150',
+            adults: u.adults || 0,
+            kids: u.kids || 0,
+            adultsFastFoodCoupon: u.adultsFastFoodCoupon || '',
+            kidsFastFoodCoupon: u.kidsFastFoodCoupon || '',
+            adultsMainFoodCoupon: u.adultsMainFoodCoupon || '',
+            kidsMainFoodCoupon: u.kidsMainFoodCoupon || '',
+          })) : [],
           filledBy: filledBy || 'unknown',
           filledByFullName: filledByFullName || 'unknown',
           createdAt: new Date()
@@ -1238,6 +1248,7 @@ router.post('/', async (req, res) => {
             cashAmount: savedEntry.cashAmount,
             upiAmount: savedEntry.upiAmount,
             advanceAmount: savedEntry.advanceAmount,
+            upgrades: savedEntry.upgrades || [],
             createdAt: savedEntry.createdAt,
             databaseSaved: true
           }
