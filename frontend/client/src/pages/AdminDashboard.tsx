@@ -506,10 +506,6 @@ export function AdminDashboard() {
       total450: total450Stats.entries,
       total600: total600Stats.entries,
       total100: total100Stats.entries,
-      
-      // Dynamic ticket types for future compatibility
-      totalTicketStats,
-      todayTicketStats,
 
       // Per-ticket-type adult and kid counts
       today150Adults: today150Stats.adults,
