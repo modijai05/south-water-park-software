@@ -653,14 +653,18 @@ export function AdminEntries() {
                           <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
                             ₹{getTicketLabelSync(entry.ticketType as TicketType)}
                           </div>
-                          {entry.upgrades && entry.upgrades.length > 0 && (
-                            <div className="mt-1 space-y-1">
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-100">
+                          {entry.upgrades && entry.upgrades.length > 0 ? (
+                            <div className="space-y-1">
                               {entry.upgrades.map((u, i) => (
                                 <div key={i} className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-medium">
                                   +₹{getTicketLabelSync(u.ticketType as TicketType)} (A:{u.adults} K:{u.kids})
                                 </div>
                               ))}
                             </div>
+                          ) : (
+                            <div className="text-xs text-gray-400 italic">-</div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
