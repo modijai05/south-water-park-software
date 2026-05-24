@@ -220,6 +220,56 @@ export function getHigherTicketTypes(current: TicketType): TicketType[] {
   return idx < 0 ? [] : prices.slice(idx + 1);
 }
 
+// Get dynamic ticket options based on current configs
+export async function getDynamicTicketOptions(): Promise<{ value: TicketType; label: string; price: number; hasKids: boolean }[]> {
+  const configs = await fetchTicketConfigs();
+  const today = getDayName();
+  
+  return configs.map(config => {
+    const todayPricing = config.dayWisePricing?.find(dp => dp.day === today && dp.enabled);
+    const currentPrice = todayPricing 
+      ? (todayPricing.fixedAmount !== undefined ? todayPricing.fixedAmount : Math.round(config.basePrice * todayPricing.priceMultiplier))
+      : config.basePrice;
+    
+    const baseOption = TICKET_OPTIONS.find(t => t.value === config.ticketType);
+    const label = baseOption?.label?.replace(/^₹\d+\s*–\s*/, '') || config.label;
+    
+    return {
+      value: config.ticketType,
+      label: `₹${currentPrice} – ${label}`,
+      price: currentPrice,
+      hasKids: config.hasKids !== undefined ? config.hasKids : baseOption?.hasKids || false
+    };
+  });
+}
+
+// Synchronous version of dynamic ticket options using cached configs
+export function getDynamicTicketOptionsSync(): { value: TicketType; label: string; price: number; hasKids: boolean }[] {
+  if (ticketConfigs.length === 0) {
+    // Fallback to static options if cache is empty
+    return TICKET_OPTIONS;
+  }
+  
+  const today = getDayName();
+  
+  return ticketConfigs.map(config => {
+    const todayPricing = config.dayWisePricing?.find(dp => dp.day === today && dp.enabled);
+    const currentPrice = todayPricing 
+      ? (todayPricing.fixedAmount !== undefined ? todayPricing.fixedAmount : Math.round(config.basePrice * todayPricing.priceMultiplier))
+      : config.basePrice;
+    
+    const baseOption = TICKET_OPTIONS.find(t => t.value === config.ticketType);
+    const label = baseOption?.label?.replace(/^₹\d+\s*–\s*/, '') || config.label;
+    
+    return {
+      value: config.ticketType,
+      label: `₹${currentPrice} – ${label}`,
+      price: currentPrice,
+      hasKids: config.hasKids !== undefined ? config.hasKids : baseOption?.hasKids || false
+    };
+  });
+}
+
 /** Base amount from main ticket + upgrades; kidDiscount = 100 per kid; additionalDiscount from form. */
 export async function computeAmounts(
   ticketType: TicketType,

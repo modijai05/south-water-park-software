@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import dayjs from 'dayjs';
 import { Layout } from '@/components/Layout';
 import { entriesApi } from '@/lib/api';
-import { getTicketLabel, getTicketLabelSync, computeAmounts, TICKET_OPTIONS } from '@/lib/ticketUtils';
+import { getTicketLabel, getTicketLabelSync, computeAmounts, TICKET_OPTIONS, getDynamicTicketOptionsSync, invalidateTicketConfigCache } from '@/lib/ticketUtils';
 import { useEntryStore } from '@/store/entryStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -49,6 +49,7 @@ export function AdminEntries() {
   const [viewing, setViewing] = useState<EntryRecord | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [toast, setToast] = useState<{ message: string; id: string; type?: 'success' | 'info' | 'warning' | 'error' } | null>(null);
+  const [dynamicTicketOptions, setDynamicTicketOptions] = useState(TICKET_OPTIONS);
   
   // Performance optimizations
   const debouncedSearch = useDebounce(search, 300);
@@ -58,6 +59,35 @@ export function AdminEntries() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Fetch dynamic ticket options and listen for config updates
+  useEffect(() => {
+    if (!isClient) return;
+    
+    // Initial fetch of dynamic ticket options
+    const updateTicketOptions = () => {
+      console.log('🔄 AdminEntries: Updating dynamic ticket options...');
+      const options = getDynamicTicketOptionsSync();
+      console.log('🔄 AdminEntries: Dynamic ticket options:', options);
+      setDynamicTicketOptions(options);
+    };
+    
+    updateTicketOptions();
+    
+    // Listen for ticket config updates
+    const handleConfigUpdate = () => {
+      console.log('📡 AdminEntries: Ticket config updated, invalidating cache and refreshing options...');
+      invalidateTicketConfigCache();
+      // Small delay to allow cache to clear
+      setTimeout(updateTicketOptions, 100);
+    };
+    
+    window.addEventListener('ticket-config-updated', handleConfigUpdate);
+    
+    return () => {
+      window.removeEventListener('ticket-config-updated', handleConfigUpdate);
+    };
+  }, [isClient]);
 
   // Simple fetch function - fetch ALL original MongoDB data
   const fetchEntries = useCallback(async (forceRefresh = false) => {
@@ -896,7 +926,7 @@ export function AdminEntries() {
                         disabled={!editing}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       >
-                        {TICKET_OPTIONS.map(option => (
+                        {dynamicTicketOptions.map(option => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>
@@ -948,7 +978,7 @@ export function AdminEntries() {
                                 disabled={!editing}
                                 className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                               >
-                                {TICKET_OPTIONS.map(option => (
+                                {dynamicTicketOptions.map(option => (
                                   <option key={option.value} value={option.value}>
                                     {option.label}
                                   </option>
