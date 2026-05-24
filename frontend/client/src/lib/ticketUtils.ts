@@ -41,7 +41,7 @@ function getDayName(): 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday
 export { isSunday, getDayName };
 
 // Fetch ticket configurations from API - FIXED VERSION
-async function fetchTicketConfigs(): Promise<TicketConfig[]> {
+export async function fetchTicketConfigs(): Promise<TicketConfig[]> {
   const now = Date.now();
   if (ticketConfigs.length > 0 && (now - lastFetchTime) < CACHE_DURATION) {
     return ticketConfigs;

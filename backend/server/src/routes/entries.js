@@ -484,10 +484,20 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     const kidDiscount = entry.kidDiscount || 0;
     const totalDiscount = additionalDiscount + kidDiscount;
 
-    // Basic counts
-    stats.todayPeople += totalPeople;
-    stats.todayAdults += adults;
-    stats.todayKids += kids;
+    // Calculate upgrade adults and kids
+    let upgradeAdults = 0;
+    let upgradeKids = 0;
+    let upgradePeople = 0;
+    if (entry.upgrades && Array.isArray(entry.upgrades)) {
+      upgradeAdults = entry.upgrades.reduce((sum, u) => sum + (u.adults || 0), 0);
+      upgradeKids = entry.upgrades.reduce((sum, u) => sum + (u.kids || 0), 0);
+      upgradePeople = upgradeAdults + upgradeKids;
+    }
+
+    // Basic counts - include upgrades
+    stats.todayPeople += totalPeople + upgradePeople;
+    stats.todayAdults += adults + upgradeAdults;
+    stats.todayKids += kids + upgradeKids;
     stats.todayAmount += finalAmount;
     stats.todayCash += cashAmount;
     stats.todayUpi += upiAmount;
@@ -555,9 +565,20 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     const totalDiscount = additionalDiscount + kidDiscount;
 
     // Basic counts
-    stats.totalPeople += totalPeople;
-    stats.totalAdults += adults;
-    stats.totalKids += kids;
+    // Calculate upgrade adults and kids
+    let totalUpgradeAdults = 0;
+    let totalUpgradeKids = 0;
+    let totalUpgradePeople = 0;
+    if (entry.upgrades && Array.isArray(entry.upgrades)) {
+      totalUpgradeAdults = entry.upgrades.reduce((sum, u) => sum + (u.adults || 0), 0);
+      totalUpgradeKids = entry.upgrades.reduce((sum, u) => sum + (u.kids || 0), 0);
+      totalUpgradePeople = totalUpgradeAdults + totalUpgradeKids;
+    }
+
+    // Basic counts - include upgrades
+    stats.totalPeople += totalPeople + totalUpgradePeople;
+    stats.totalAdults += adults + totalUpgradeAdults;
+    stats.totalKids += kids + totalUpgradeKids;
     stats.totalAmount += finalAmount;
     stats.totalCash += cashAmount;
     stats.totalUpi += upiAmount;

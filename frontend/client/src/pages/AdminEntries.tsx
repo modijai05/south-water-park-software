@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import dayjs from 'dayjs';
 import { Layout } from '@/components/Layout';
 import { entriesApi } from '@/lib/api';
-import { getTicketLabel, getTicketLabelSync, computeAmounts, TICKET_OPTIONS, getDynamicTicketOptionsSync, invalidateTicketConfigCache } from '@/lib/ticketUtils';
+import { getTicketLabel, getTicketLabelSync, computeAmounts, TICKET_OPTIONS, getDynamicTicketOptionsSync, invalidateTicketConfigCache, fetchTicketConfigs } from '@/lib/ticketUtils';
 import { useEntryStore } from '@/store/entryStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -64,9 +64,11 @@ export function AdminEntries() {
   useEffect(() => {
     if (!isClient) return;
     
-    // Initial fetch of dynamic ticket options
-    const updateTicketOptions = () => {
+    // Initial fetch of dynamic ticket options and populate cache
+    const updateTicketOptions = async () => {
       console.log('🔄 AdminEntries: Updating dynamic ticket options...');
+      // First fetch configs to populate cache for getTicketLabelSync
+      await fetchTicketConfigs();
       const options = getDynamicTicketOptionsSync();
       console.log('🔄 AdminEntries: Dynamic ticket options:', options);
       setDynamicTicketOptions(options);
@@ -698,13 +700,13 @@ export function AdminEntries() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
-                          {safeString(entry.adults)}
+                          {safeString((entry.adults || 0) + (entry.upgrades?.reduce((sum, u) => sum + (u.adults || 0), 0) || 0))}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-center border-r border-gray-100">
-                          {entry.ticketType === '150' ? '-' : safeString(entry.kids)}
+                          {entry.ticketType === '150' ? '-' : safeString((entry.kids || 0) + (entry.upgrades?.reduce((sum, u) => sum + (u.kids || 0), 0) || 0))}
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center border-r border-gray-100">
-                          {entry.ticketType === '150' ? safeString(entry.adults) : safeString(entry.totalPeople)}
+                          {safeString((entry.totalPeople || 0) + (entry.upgrades?.reduce((sum, u) => sum + (u.adults || 0) + (u.kids || 0), 0) || 0))}
                         </td>
                         <td className="px-4 py-3 text-sm font-bold text-green-600 text-center border-r border-gray-100">
                           ₹{safeString(entry.finalAmount)}
