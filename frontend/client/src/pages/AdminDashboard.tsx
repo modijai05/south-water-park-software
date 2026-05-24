@@ -384,6 +384,31 @@ export function AdminDashboard() {
     };
     
     
+    // Calculate upgrade-only stats for a specific ticket type
+    const ticketTypeUpgradeStats = (entries: any[], ticketType: string) => {
+      let totalUpgrades = 0;
+      let totalAdults = 0;
+      let totalKids = 0;
+
+      entries.forEach(entry => {
+        // Count ONLY upgrades to this ticket type (handle both string and number types)
+        if (entry.upgrades && Array.isArray(entry.upgrades)) {
+          const matchingUpgrades = entry.upgrades.filter((u: any) => String(u.ticketType) === String(ticketType));
+          if (matchingUpgrades.length > 0) {
+            totalUpgrades += matchingUpgrades.length;
+            totalAdults += matchingUpgrades.reduce((sum: number, u: any) => sum + (u.adults || 0), 0);
+            totalKids += matchingUpgrades.reduce((sum: number, u: any) => sum + (u.kids || 0), 0);
+          }
+        }
+      });
+
+      return {
+        entries: totalUpgrades,
+        adults: totalAdults,
+        kids: totalKids
+      };
+    };
+
     // Collect all unique ticket types from entries (both base tickets and upgrades)
     const getAllTicketTypes = (entries: any[]): string[] => {
       const ticketTypes = new Set<string>();
@@ -431,6 +456,32 @@ export function AdminDashboard() {
     const today600Stats = todayTicketStats['600'] || { entries: 0, adults: 0, kids: 0 };
     const today100Stats = todayTicketStats['100'] || { entries: 0, adults: 0, kids: 0 };
     
+    // Calculate upgrade-only stats for all ticket types
+    const allTicketUpgradeStats: { [key: string]: { entries: number; adults: number; kids: number } } = {};
+    allTicketTypes.forEach(ticketType => {
+      allTicketUpgradeStats[ticketType] = ticketTypeUpgradeStats(entriesData, ticketType);
+    });
+
+    const todayTicketUpgradeStats: { [key: string]: { entries: number; adults: number; kids: number } } = {};
+    todayAllTicketTypes.forEach(ticketType => {
+      todayTicketUpgradeStats[ticketType] = ticketTypeUpgradeStats(todayEntries, ticketType);
+    });
+
+    // Legacy stats for backward compatibility
+    const total150UpgradeStats = allTicketUpgradeStats['150'] || { entries: 0, adults: 0, kids: 0 };
+    const total200UpgradeStats = allTicketUpgradeStats['200'] || { entries: 0, adults: 0, kids: 0 };
+    const total300UpgradeStats = allTicketUpgradeStats['300'] || { entries: 0, adults: 0, kids: 0 };
+    const total450UpgradeStats = allTicketUpgradeStats['450'] || { entries: 0, adults: 0, kids: 0 };
+    const total600UpgradeStats = allTicketUpgradeStats['600'] || { entries: 0, adults: 0, kids: 0 };
+    const total100UpgradeStats = allTicketUpgradeStats['100'] || { entries: 0, adults: 0, kids: 0 };
+
+    const today150UpgradeStats = todayTicketUpgradeStats['150'] || { entries: 0, adults: 0, kids: 0 };
+    const today200UpgradeStats = todayTicketUpgradeStats['200'] || { entries: 0, adults: 0, kids: 0 };
+    const today300UpgradeStats = todayTicketUpgradeStats['300'] || { entries: 0, adults: 0, kids: 0 };
+    const today450UpgradeStats = todayTicketUpgradeStats['450'] || { entries: 0, adults: 0, kids: 0 };
+    const today600UpgradeStats = todayTicketUpgradeStats['600'] || { entries: 0, adults: 0, kids: 0 };
+    const today100UpgradeStats = todayTicketUpgradeStats['100'] || { entries: 0, adults: 0, kids: 0 };
+
     // Calculate discount stats
     const totalAdditionalDiscount = entriesData.reduce((sum, entry) => sum + (entry.additionalDiscount || 0), 0);
     const totalKidDiscount = entriesData.reduce((sum, entry) => sum + (entry.kidDiscount || 0), 0);
@@ -533,6 +584,44 @@ export function AdminDashboard() {
       total100Adults: total100Stats.adults,
       total100Kids: total100Stats.kids,
       
+      // Per-ticket-type upgrade counts
+      total150Upgrades: total150UpgradeStats.entries,
+      total150UpgradesAdults: total150UpgradeStats.adults,
+      total150UpgradesKids: total150UpgradeStats.kids,
+      total200Upgrades: total200UpgradeStats.entries,
+      total200UpgradesAdults: total200UpgradeStats.adults,
+      total200UpgradesKids: total200UpgradeStats.kids,
+      total300Upgrades: total300UpgradeStats.entries,
+      total300UpgradesAdults: total300UpgradeStats.adults,
+      total300UpgradesKids: total300UpgradeStats.kids,
+      total450Upgrades: total450UpgradeStats.entries,
+      total450UpgradesAdults: total450UpgradeStats.adults,
+      total450UpgradesKids: total450UpgradeStats.kids,
+      total600Upgrades: total600UpgradeStats.entries,
+      total600UpgradesAdults: total600UpgradeStats.adults,
+      total600UpgradesKids: total600UpgradeStats.kids,
+      total100Upgrades: total100UpgradeStats.entries,
+      total100UpgradesAdults: total100UpgradeStats.adults,
+      total100UpgradesKids: total100UpgradeStats.kids,
+      today150Upgrades: today150UpgradeStats.entries,
+      today150UpgradesAdults: today150UpgradeStats.adults,
+      today150UpgradesKids: today150UpgradeStats.kids,
+      today200Upgrades: today200UpgradeStats.entries,
+      today200UpgradesAdults: today200UpgradeStats.adults,
+      today200UpgradesKids: today200UpgradeStats.kids,
+      today300Upgrades: today300UpgradeStats.entries,
+      today300UpgradesAdults: today300UpgradeStats.adults,
+      today300UpgradesKids: today300UpgradeStats.kids,
+      today450Upgrades: today450UpgradeStats.entries,
+      today450UpgradesAdults: today450UpgradeStats.adults,
+      today450UpgradesKids: today450UpgradeStats.kids,
+      today600Upgrades: today600UpgradeStats.entries,
+      today600UpgradesAdults: today600UpgradeStats.adults,
+      today600UpgradesKids: today600UpgradeStats.kids,
+      today100Upgrades: today100UpgradeStats.entries,
+      today100UpgradesAdults: today100UpgradeStats.adults,
+      today100UpgradesKids: today100UpgradeStats.kids,
+
       // Food coupon stats
       todayAdultsFastFoodCoupons,
       todayKidsFastFoodCoupons,

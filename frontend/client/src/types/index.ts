@@ -208,6 +208,43 @@ export interface Stats {
   // Upgrade statistics
   totalUpgrades: number;
   todayUpgrades: number;
+  // Per-ticket-type upgrade counts
+  total150Upgrades: number;
+  total150UpgradesAdults: number;
+  total150UpgradesKids: number;
+  total200Upgrades: number;
+  total200UpgradesAdults: number;
+  total200UpgradesKids: number;
+  total300Upgrades: number;
+  total300UpgradesAdults: number;
+  total300UpgradesKids: number;
+  total450Upgrades: number;
+  total450UpgradesAdults: number;
+  total450UpgradesKids: number;
+  total600Upgrades: number;
+  total600UpgradesAdults: number;
+  total600UpgradesKids: number;
+  total100Upgrades: number;
+  total100UpgradesAdults: number;
+  total100UpgradesKids: number;
+  today150Upgrades: number;
+  today150UpgradesAdults: number;
+  today150UpgradesKids: number;
+  today200Upgrades: number;
+  today200UpgradesAdults: number;
+  today200UpgradesKids: number;
+  today300Upgrades: number;
+  today300UpgradesAdults: number;
+  today300UpgradesKids: number;
+  today450Upgrades: number;
+  today450UpgradesAdults: number;
+  today450UpgradesKids: number;
+  today600Upgrades: number;
+  today600UpgradesAdults: number;
+  today600UpgradesKids: number;
+  today100Upgrades: number;
+  today100UpgradesAdults: number;
+  today100UpgradesKids: number;
   // Performance metadata
   lastUpdated: string;
   dataFreshness: string;
