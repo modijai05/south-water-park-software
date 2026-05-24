@@ -604,10 +604,10 @@ export function AdminEntries() {
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '80px' }}>
                       Discount
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '80px' }}>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '100px' }}>
                       Kid Discount
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '120px' }}>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200" style={{ width: '180px' }}>
                       Food Coupons
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider" style={{ width: '100px' }}>
