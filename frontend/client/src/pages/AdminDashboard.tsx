@@ -142,18 +142,11 @@ export function AdminDashboard() {
   // Fetch ticket configurations
   const fetchTicketConfigs = async () => {
     try {
-      console.log('Dashboard: Fetching ticket configs...');
-      
-      // Invalidate cache to ensure fresh data
       invalidateTicketConfigCache();
-      
       const configs = await ticketConfigApi.getAll();
-      console.log('Dashboard: Fetched ticket configs:', configs);
       setTicketConfigs(configs);
       return configs;
     } catch (error) {
-      console.error('Dashboard: Failed to fetch ticket configs:', error);
-      // Return fallback configs to prevent UI errors
       const fallbackConfigs = TICKET_OPTIONS.map(option => ({
         ticketType: option.value,
         label: option.label,
@@ -183,7 +176,6 @@ export function AdminDashboard() {
       await intelligentBackgroundSync(true);
       
     } catch (error) {
-      console.error('AdminDashboard: Error fetching data:', error);
       setError('Failed to load dashboard data');
     } finally {
       setLoading(false);
@@ -192,11 +184,7 @@ export function AdminDashboard() {
 
   // Initialize unified daily reset service
   useEffect(() => {
-    console.log('🔄 Admin Dashboard: Initializing unified daily reset service...');
-    
-    // Add reset listener for unified service
     const cleanupListener = unifiedDailyResetService.addResetListener(() => {
-      console.log('🔄 Admin Dashboard: Unified reset event received, refreshing data...');
       fetchAllData();
     });
 
@@ -260,10 +248,7 @@ export function AdminDashboard() {
       autoVerify();
     }, 5000); // Delay to allow resets to complete
     
-    // Listen for force reset events
     const handleForceResetSuccess = (event: any) => {
-      console.log('🎉 Admin Dashboard: Force reset successful:', event.detail);
-      // Refresh data after successful force reset
       fetchAllData();
     };
     

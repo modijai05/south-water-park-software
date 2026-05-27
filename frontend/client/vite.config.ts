@@ -17,20 +17,38 @@ export default defineConfig({
   },
   build: {
     outDir: '../../dist',
-    sourcemap: true,
-    minify: 'esbuild',
+    sourcemap: false, // Disable sourcemaps for production to reduce bundle size
+    minify: 'esbuild', // Use esbuild for faster builds (built into Vite)
     chunkSizeWarningLimit: 1500,
     target: 'es2015',
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          charts: ['chart.js', 'react-chartjs-2', 'recharts'],
-          utils: ['date-fns', 'dayjs'],
-          motion: ['framer-motion'],
-          forms: ['react-hook-form', '@hookform/resolvers', 'zod'],
-          export: ['exceljs']
+        manualChunks: (id) => {
+          // More aggressive code splitting
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor-react';
+            }
+            if (id.includes('react-router')) {
+              return 'vendor-router';
+            }
+            if (id.includes('chart.js') || id.includes('recharts')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('framer-motion')) {
+              return 'vendor-motion';
+            }
+            if (id.includes('react-hook-form') || id.includes('zod')) {
+              return 'vendor-forms';
+            }
+            if (id.includes('exceljs')) {
+              return 'vendor-excel';
+            }
+            if (id.includes('date-fns') || id.includes('dayjs')) {
+              return 'vendor-utils';
+            }
+            return 'vendor-other';
+          }
         },
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
@@ -39,6 +57,15 @@ export default defineConfig({
     },
     // Optimize for production
     cssCodeSplit: true,
-    reportCompressedSize: false
+    reportCompressedSize: false,
+    // Enable build optimizations
+    commonjsOptions: {
+      transformMixedEsModules: true
+    }
+  },
+  // Optimize dependencies
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom'],
+    exclude: []
   }
 });

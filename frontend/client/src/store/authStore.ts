@@ -27,7 +27,7 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (user, token) => {
         if (token) {
           localStorage.setItem('token', token);
-          sessionStorage.setItem('token', token); // Backup session storage
+          sessionStorage.setItem('token', token);
         } else {
           localStorage.removeItem('token');
           sessionStorage.removeItem('token');
@@ -40,7 +40,6 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, token: null, error: null });
       },
       forceLogout: (reason) => {
-        console.log('Force logout:', reason);
         localStorage.removeItem('token');
         sessionStorage.removeItem('token');
         set({ user: null, token: null, error: reason || 'Session expired' });
@@ -62,7 +61,6 @@ export const useAuthStore = create<AuthState>()(
             logout();
           }
         } catch (error) {
-          console.error('Failed to fetch user:', error);
           set({ error: 'Failed to fetch user data' });
           logout();
         } finally {
@@ -75,7 +73,6 @@ export const useAuthStore = create<AuthState>()(
       name: 'auth-storage',
       partialize: (state) => ({ user: state.user, token: state.token }),
       onRehydrateStorage: () => (state) => {
-        // Fix hydration issues
         if (state) {
           state.hasHydrated = true;
         }

@@ -5,6 +5,10 @@ const API_BASE = import.meta.env.VITE_API_URL || 'https://south-water-park-backe
 // Enhanced API configuration with retry logic and error handling
 export { API_BASE };
 
+// Simple in-memory cache for API responses
+const apiCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 30000; // 30 seconds cache
+
 // Safe fetch wrapper for maximum error resilience
 export async function safeFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
   try {
@@ -32,8 +36,7 @@ export async function safeFetch<T>(url: string, options: RequestInit = {}): Prom
     // Return data or safe fallback
     return data ?? (Array.isArray([]) ? [] : {}) as T;
   } catch (err) {
-    console.error("API ERROR:", err);
-    // Return safe fallback based on expected type
+    // Silent error handling for performance
     return (Array.isArray([]) ? [] : {}) as T;
   }
 }
@@ -42,11 +45,22 @@ function getToken(): string | null {
   return localStorage.getItem('token') || sessionStorage.getItem('token');
 }
 
-// Enhanced API function with retry logic and better error handling
+// Optimized API function with reduced retry logic for faster loads
 export async function api<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  useCache: boolean = false
 ): Promise<T> {
+  const cacheKey = `${path}:${JSON.stringify(options)}`;
+  
+  // Check cache for GET requests
+  if (useCache && options.method !== 'POST' && options.method !== 'PUT' && options.method !== 'DELETE') {
+    const cached = apiCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data;
+    }
+  }
+
   const token = getToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -58,12 +72,12 @@ export async function api<T>(
   const config: RequestInit = {
     ...options,
     headers,
-    credentials: 'omit', // Omit cookies to avoid CORS issues
+    credentials: 'omit',
   };
 
-  // Retry logic for failed requests
+  // Reduced retry logic for faster initial loads
   let retries = 0;
-  const maxRetries = 3;
+  const maxRetries = 2; // Reduced from 3 to 2 for faster loads
   
   while (retries < maxRetries) {
     try {
@@ -74,21 +88,16 @@ export async function api<T>(
         
         // Handle token expiration specifically
         if (response.status === 401) {
-          // Only trigger auth-expired for actual token expiration, not for other 401 errors
           if (errorData.code === 'TOKEN_EXPIRED' || errorData.message === 'Token expired' || errorData.error === 'Token expired') {
-            console.log('🔐 Token expired, clearing local storage');
             localStorage.removeItem('token');
             sessionStorage.removeItem('token');
             
-            // Trigger a global auth event
             window.dispatchEvent(new CustomEvent('auth-expired', {
               detail: { message: 'Session expired, please login again' }
             }));
             
             throw new Error('Session expired, please login again');
           } else {
-            // For other 401 errors, don't trigger auth-expired
-            console.warn('⚠️ 401 error but not token expiration:', errorData);
             throw new Error(errorData.message || 'Authentication failed');
           }
         }
@@ -96,18 +105,30 @@ export async function api<T>(
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      
+      // Cache successful GET requests
+      if (useCache && options.method !== 'POST' && options.method !== 'PUT' && options.method !== 'DELETE') {
+        apiCache.set(cacheKey, { data, timestamp: Date.now() });
+      }
+      
+      return data;
     } catch (error) {
       retries++;
       if (retries >= maxRetries) {
         throw error;
       }
-      // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+      // Faster retry delay
+      await new Promise(resolve => setTimeout(resolve, 500 * retries));
     }
   }
   
   throw new Error('Max retries exceeded');
+}
+
+// Clear cache function
+export function clearApiCache() {
+  apiCache.clear();
 }
 
 export const authApi = {
@@ -127,20 +148,14 @@ export const entriesApi = {
     if (params?.to) q.set('to', params.to);
     if (params?.page != null) q.set('page', String(params.page));
     if (params?.limit != null) q.set('limit', String(params.limit));
-    // Add cache-busting timestamp
-    q.set('_t', Date.now().toString());
     const query = q.toString();
-    return api<{ success: boolean; data: { entries: unknown[]; total: number; page: number; limit: number; totalPages: number } }>(`/entries${query ? `?${query}` : ''}`)
+    return api<{ success: boolean; data: { entries: unknown[]; total: number; page: number; limit: number; totalPages: number } }>(`/entries${query ? `?${query}` : ''}`, {}, true)
       .then(response => {
-        // Defensive response validation
         if (!response || !response.success || !response.data) {
-          console.error('🚨 API: Invalid response structure:', response);
           return { success: false, data: { entries: [], total: 0, page: 1, limit: 20, totalPages: 0 } };
         }
         
-        // Ensure entries is always an array
         const safeEntries = Array.isArray(response.data.entries) ? response.data.entries : [];
-        console.log('🔍 API: Safe entries count:', safeEntries.length);
         
         return {
           success: true,
@@ -154,8 +169,6 @@ export const entriesApi = {
         };
       })
       .catch(error => {
-        console.error('🔍 API: List error:', error);
-        // Return safe fallback on error
         return { success: false, data: { entries: [], total: 0, page: 1, limit: 20, totalPages: 0 } };
       });
   },
@@ -163,75 +176,46 @@ export const entriesApi = {
     const q = new URLSearchParams();
     if (params?.search) q.set('search', params.search);
     if (params?.limit != null) q.set('limit', String(params.limit));
-    q.set('crossUser', 'true'); // Enable cross-user search for staff
+    q.set('crossUser', 'true');
     const query = q.toString();
     const url = `/entries${query ? `?${query}` : ''}`;
-    console.log('🔍 API: Making cross-user search request to:', url);
-    console.log('🔍 API: Current user token:', localStorage.getItem('token')?.substring(0, 20) + '...');
     
     return api<{ success: boolean; data: { entries: unknown[]; total: number; page: number; limit: number; totalPages: number } }>(url)
       .then(response => {
-        console.log('🔍 API: Raw response:', response);
-        console.log('🔍 API: Response entries count:', response.data?.entries?.length || 0);
         return response.data;
       })
       .catch(error => {
-        console.error('🔍 API: Search error:', error);
         throw error;
       });
   },
   create: (body: unknown) => api<{ success: boolean; data: unknown }>('/entries', { method: 'POST', body: JSON.stringify(body) })
     .then(response => {
       if (!response || !response.success) {
-        console.error('🚨 API: Create failed:', response);
         throw new Error('Failed to create entry');
       }
       return response.data;
     })
     .catch(error => {
-      console.error('🚨 API: Create error:', error);
-      // Return safe fallback for UI continuity
       return { id: 'fallback-' + Date.now(), fallback: true };
     }),
   get: (id: string) => api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`)
     .then(response => {
       if (!response || !response.success || !response.data) {
-        console.error('🚨 API: Get failed:', response);
         return { entry: null };
       }
       return response.data;
     })
     .catch(error => {
-      console.error(' API: Get error:', error);
       return { entry: null };
     }),
   update: (id: string, body: unknown) => {
-    // DEBUG: Log the exact data being sent
-    console.log('API CLIENT DEBUG: Making update request:', {
-      id,
-      body,
-      bodyType: typeof body,
-      bodyString: JSON.stringify(body, null, 2),
-      entryDate: (body as any).entryDate,
-      entryDateType: typeof (body as any).entryDate,
-      apiBase: API_BASE,
-      fullUrl: `${API_BASE}/entries/${id}`
-    });
-    
     return api<{ success: boolean; data: { entry: unknown } }>(`/entries/${id}`, { 
       method: 'PUT', 
       headers: {
         'Content-Type': 'application/json',
       },
-      // CRITICAL FIX: Custom JSON replacer to preserve Date objects properly
       body: JSON.stringify(body, (key, value) => {
-        // Convert Date objects to ISO strings consistently
         if (value instanceof Date) {
-          console.log('JSON REPLACER: Converting Date to ISO:', {
-            key,
-            date: value,
-            isoString: value.toISOString()
-          });
           return value.toISOString();
         }
         return value;
@@ -239,65 +223,51 @@ export const entriesApi = {
     })
     .then(response => {
       if (!response || !response.success) {
-        console.error('API: Update failed:', response);
         throw new Error('Failed to update entry');
       }
       return response.data;
     })
     .catch(error => {
-      console.error('API: Update error:', error);
-      // Return safe fallback
       return { entry: body, fallback: true };
     });
   },
   delete: (id: string) => api<{ success: boolean; message: string }>(`/entries/${id}`, { method: 'DELETE' })
     .then(response => {
       if (!response || !response.success) {
-        console.error('🚨 API: Delete failed:', response);
         return { success: false, message: 'Delete failed' };
       }
       return response;
     })
     .catch(error => {
-      console.error('🚨 API: Delete error:', error);
-      // Return safe fallback
       return { success: true, message: 'Delete completed (fallback)', fallback: true };
     }),
   clearAll: () => api<{ success: boolean; message: string }>('/entries/clear-all', { method: 'DELETE' })
     .then(response => response),
   stats: (forceRefresh: boolean = false) => {
-    const timestamp = Date.now();
     const forceParam = forceRefresh ? '&force=true' : '';
-    return api<{ success: boolean; data: Stats }>(`/entries/stats?t=${timestamp}${forceParam}`)
+    return api<{ success: boolean; data: Stats }>(`/entries/stats?${forceParam}`, {}, !forceRefresh)
       .then(response => {
         if (!response || !response.success || !response.data) {
-          console.error('🚨 API: Stats failed:', response);
-          // Return safe default stats
           return {
             todayEntries: 0, totalEntries: 0, todayPeople: 0, totalPeople: 0,
             todayAdults: 0, totalAdults: 0, todayKids: 0, totalKids: 0,
             todayAmount: 0, totalAmount: 0, todayCash: 0, totalCash: 0,
             todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0,
-            // Ticket type stats
             today150: 0, today300: 0, today450: 0, today600: 0, today100: 0,
             total150: 0, total300: 0, total450: 0, total600: 0, total100: 0,
-            // Per-ticket-type adult and kid counts
             today150Adults: 0, today150Kids: 0, today300Adults: 0, today300Kids: 0,
             today450Adults: 0, today450Kids: 0, today600Adults: 0, today600Kids: 0,
             today100Adults: 0, today100Kids: 0,
             total150Adults: 0, total150Kids: 0, total300Adults: 0, total300Kids: 0,
             total450Adults: 0, total450Kids: 0, total600Adults: 0, total600Kids: 0,
             total100Adults: 0, total100Kids: 0,
-            // Food coupon stats
             todayAdultsFastFoodCoupons: 0, todayKidsFastFoodCoupons: 0,
             todayAdultsMainFoodCoupons: 0, todayKidsMainFoodCoupons: 0,
             todayTotalFastFoodCoupons: 0, todayTotalMainFoodCoupons: 0, todayTotalFoodCoupons: 0,
             totalAdultsFastFoodCoupons: 0, totalKidsFastFoodCoupons: 0,
             totalAdultsMainFoodCoupons: 0, totalKidsMainFoodCoupons: 0,
             totalFastFoodCoupons: 0, totalMainFoodCoupons: 0, totalFoodCoupons: 0,
-            // Performance metrics
             averageTicketValue: 0, peakHour: 'N/A', conversionRate: 0,
-            // Discount statistics
             todayAdditionalDiscount: 0, todayTotalDiscount: 0,
             totalAdditionalDiscount: 0, totalTotalDiscount: 0
           };
@@ -305,33 +275,26 @@ export const entriesApi = {
         return response.data;
       })
       .catch(error => {
-        console.error('🚨 API: Stats error:', error);
-        // Return safe default stats
         return {
           todayEntries: 0, totalEntries: 0, todayPeople: 0, totalPeople: 0,
           todayAdults: 0, totalAdults: 0, todayKids: 0, totalKids: 0,
           todayAmount: 0, totalAmount: 0, todayCash: 0, totalCash: 0,
           todayUpi: 0, totalUpi: 0, todayAdvance: 0, totalAdvance: 0,
-          // Ticket type stats
           today150: 0, today300: 0, today450: 0, today600: 0, today100: 0,
           total150: 0, total300: 0, total450: 0, total600: 0, total100: 0,
-          // Per-ticket-type adult and kid counts
           today150Adults: 0, today150Kids: 0, today300Adults: 0, today300Kids: 0,
           today450Adults: 0, today450Kids: 0, today600Adults: 0, today600Kids: 0,
           today100Adults: 0, today100Kids: 0,
           total150Adults: 0, total150Kids: 0, total300Adults: 0, total300Kids: 0,
           total450Adults: 0, total450Kids: 0, total600Adults: 0, total600Kids: 0,
           total100Adults: 0, total100Kids: 0,
-          // Food coupon stats
           todayAdultsFastFoodCoupons: 0, todayKidsFastFoodCoupons: 0,
           todayAdultsMainFoodCoupons: 0, todayKidsMainFoodCoupons: 0,
           todayTotalFastFoodCoupons: 0, todayTotalMainFoodCoupons: 0, todayTotalFoodCoupons: 0,
           totalAdultsFastFoodCoupons: 0, totalKidsFastFoodCoupons: 0,
           totalAdultsMainFoodCoupons: 0, totalKidsMainFoodCoupons: 0,
           totalFastFoodCoupons: 0, totalMainFoodCoupons: 0, totalFoodCoupons: 0,
-          // Performance metrics
           averageTicketValue: 0, peakHour: 'N/A', conversionRate: 0,
-          // Discount statistics
           todayAdditionalDiscount: 0, todayTotalDiscount: 0,
           totalAdditionalDiscount: 0, totalTotalDiscount: 0
         };
@@ -339,7 +302,6 @@ export const entriesApi = {
   },
   // Comprehensive data sync for all dashboards
   syncAll: () => {
-    const timestamp = Date.now();
     return api<{
       success: boolean;
       data: {
@@ -367,10 +329,9 @@ export const entriesApi = {
         error?: string;
       };
       error?: string;
-    }>(`/entries/sync-all?t=${timestamp}`)
+    }>(`/entries/sync-all`, {}, true)
       .then(response => {
         if (!response || !response.success) {
-          console.error('🚨 API: Sync-all failed:', response);
           return {
             stats: {},
             recentEntries: [],
@@ -397,7 +358,6 @@ export const entriesApi = {
           };
         }
         
-        // Enhanced validation of response data
         const safeData = {
           stats: response.data?.stats || {},
           recentEntries: Array.isArray(response.data?.recentEntries) ? response.data.recentEntries : [],
@@ -423,24 +383,9 @@ export const entriesApi = {
           }
         };
         
-        // Log sync integrity and any errors
-        if (response.metadata?.error) {
-          console.warn('⚠️ API: Sync completed with errors:', response.metadata.error);
-        } else {
-          console.log('🔄 API: Sync-all completed successfully:', {
-            totalRecords: safeData.summary.totalRecords,
-            todayRecords: safeData.summary.todayRecords,
-            dataFreshness: safeData.metadata.dataFreshness,
-            syncStatus: safeData.metadata.syncStatus
-          });
-        }
-        
         return safeData;
       })
       .catch(error => {
-        console.error('🚨 API: Sync-all error:', error);
-        
-        // Return comprehensive fallback data
         return {
           stats: {},
           recentEntries: [],
@@ -468,11 +413,9 @@ export const entriesApi = {
       });
   },
   charts: () =>
-    api<{ success: boolean; data: { last7Days: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number }[]; monthly: { _id: string; count: number; amount: number }[] } }>(`/entries/charts?t=${Date.now()}`)
+    api<{ success: boolean; data: { last7Days: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number }[]; monthly: { _id: string; count: number; amount: number }[] } }>(`/entries/charts`, {}, true)
       .then(response => {
         if (!response || !response.success || !response.data) {
-          console.error('🚨 API: Charts failed:', response);
-          // Return safe default chart data
           return {
             last7Days: [],
             ticketDistribution: [],
@@ -482,8 +425,6 @@ export const entriesApi = {
         return response.data;
       })
       .catch(error => {
-        console.error('🚨 API: Charts error:', error);
-        // Return safe default chart data
         return {
           last7Days: [],
           ticketDistribution: [],
@@ -492,11 +433,9 @@ export const entriesApi = {
       }),
   
   todayCharts: () =>
-    api<{ success: boolean; data: { hourlyChart: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number; amount: number }[]; hourlyComparison: { hour: string; entries: number; revenue: number }[]; summary: { totalEntries: number; totalRevenue: number; date: string; lastUpdated: string } } }>(`/entries/charts/today?t=${Date.now()}`)
+    api<{ success: boolean; data: { hourlyChart: { _id: string; count: number; amount: number }[]; ticketDistribution: { _id: string; count: number; amount: number }[]; hourlyComparison: { hour: string; entries: number; revenue: number }[]; summary: { totalEntries: number; totalRevenue: number; date: string; lastUpdated: string } } }>(`/entries/charts/today`, {}, true)
       .then(response => {
         if (!response || !response.success || !response.data) {
-          console.error('🚨 API: Today charts failed:', response);
-          // Return safe default chart data
           return {
             hourlyChart: Array.from({ length: 24 }, (_, i) => ({ _id: `${i}:00`, count: 0, amount: 0 })),
             ticketDistribution: [
@@ -518,8 +457,6 @@ export const entriesApi = {
         return response.data;
       })
       .catch(error => {
-        console.error('🚨 API: Today charts error:', error);
-        // Return safe default chart data
         return {
           hourlyChart: Array.from({ length: 24 }, (_, i) => ({ _id: `${i}:00`, count: 0, amount: 0 })),
           ticketDistribution: [
@@ -546,8 +483,6 @@ export const entriesApi = {
     if (params?.to) q.set('to', params.to);
     if (params?.limit != null) q.set('limit', String(params.limit));
     const query = q.toString();
-    
-    console.log('📊 API: Making export request with params:', params);
     
     return api<{ 
       success: boolean; 
@@ -577,7 +512,6 @@ export const entriesApi = {
     }>(`/entries/export${query ? `?${query}` : ''}`)
       .then(response => {
         if (!response || !response.success || !response.data) {
-          console.error('🚨 API: Export failed:', response);
           return { 
             entries: [], 
             total: 0, 
@@ -593,7 +527,6 @@ export const entriesApi = {
           };
         }
         
-        // Enhanced validation of export data
         const safeEntries = Array.isArray(response.data.entries) ? response.data.entries : [];
         const safeExportStats = response.data.exportStats || {
           averageTicketValue: 0,
@@ -601,9 +534,6 @@ export const entriesApi = {
           totalRevenue: 0,
           ticketTypeDistribution: {}
         };
-        
-        console.log('📊 Export: Safe entries count:', safeEntries.length);
-        console.log('📊 Export: Export stats:', safeExportStats);
         
         const exportResult = {
           entries: safeEntries,
@@ -624,20 +554,9 @@ export const entriesApi = {
           }
         };
         
-        // Log export success
-        console.log('✅ Export completed successfully:', {
-          total: exportResult.total,
-          exported: exportResult.exported,
-          averageTicketValue: exportResult.exportStats.averageTicketValue,
-          totalRevenue: exportResult.exportStats.totalRevenue,
-          dataIntegrity: exportResult.metadata.dataIntegrity
-        });
-        
         return exportResult;
       })
       .catch(error => {
-        console.error('🚨 API: Export error:', error);
-        // Return safe fallback with enhanced structure
         return { 
           entries: [], 
           total: 0, 
@@ -706,47 +625,41 @@ export const analyticsApi = {
   demand: (timeRange?: string) => {
     const q = new URLSearchParams();
     if (timeRange) q.set('timeRange', timeRange);
-    q.set('t', Date.now().toString()); // Cache-busting
     const query = q.toString();
-    return api<any[]>(`/analytics/demand${query ? `?${query}` : ''}`);
+    return api<any[]>(`/analytics/demand${query ? `?${query}` : ''}`, {}, true);
   },
   upgrades: (timeRange?: string) => {
     const q = new URLSearchParams();
     if (timeRange) q.set('timeRange', timeRange);
-    q.set('t', Date.now().toString()); // Cache-busting
     const query = q.toString();
-    return api<any[]>(`/analytics/upgrades${query ? `?${query}` : ''}`);
+    return api<any[]>(`/analytics/upgrades${query ? `?${query}` : ''}`, {}, true);
   },
   timeSeries: (timeRange?: string) => {
     const q = new URLSearchParams();
     if (timeRange) q.set('timeRange', timeRange);
-    q.set('t', Date.now().toString()); // Cache-busting
     const query = q.toString();
-    return api<any[]>(`/analytics/timeseries${query ? `?${query}` : ''}`);
+    return api<any[]>(`/analytics/timeseries${query ? `?${query}` : ''}`, {}, true);
   },
   peakHours: (timeRange?: string) => {
     const q = new URLSearchParams();
     if (timeRange) q.set('timeRange', timeRange);
-    q.set('t', Date.now().toString()); // Cache-busting
     const query = q.toString();
-    return api<any[]>(`/analytics/peak-hours${query ? `?${query}` : ''}`);
+    return api<any[]>(`/analytics/peak-hours${query ? `?${query}` : ''}`, {}, true);
   },
   customerPreferences: (timeRange?: string) => {
     const q = new URLSearchParams();
     if (timeRange) q.set('timeRange', timeRange);
-    q.set('t', Date.now().toString()); // Cache-busting
     const query = q.toString();
-    return api<any[]>(`/analytics/customer-preferences${query ? `?${query}` : ''}`);
+    return api<any[]>(`/analytics/customer-preferences${query ? `?${query}` : ''}`, {}, true);
   },
   discounts: (timeRange?: string) => {
     const q = new URLSearchParams();
     if (timeRange) q.set('timeRange', timeRange);
-    q.set('t', Date.now().toString()); // Cache-busting
     const query = q.toString();
-    return api<any>(`/analytics/discounts${query ? `?${query}` : ''}`);
+    return api<any>(`/analytics/discounts${query ? `?${query}` : ''}`, {}, true);
   },
   today: () => {
-    return api<{ todayAnalytics: any[], summary: any }>(`/analytics/today`);
+    return api<{ todayAnalytics: any[], summary: any }>(`/analytics/today`, {}, true);
   },
   dateWise: () => {
     return api<{ 
@@ -756,14 +669,9 @@ export const analyticsApi = {
         today: any, 
         historical: any 
       }
-    }>(`/analytics/date-wise`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}`
-      }
-    })
+    }>(`/analytics/date-wise`, {}, true)
     .then(response => {
       if (!response) {
-        console.warn('⚠️ Date-wise analytics: No response received');
         return {
           todayAnalytics: [],
           historicalAnalytics: [],
@@ -794,12 +702,9 @@ export const analyticsApi = {
           }
         };
       }
-      console.log('✅ Date-wise analytics loaded successfully');
       return response;
     })
     .catch(error => {
-      console.error('❌ Date-wise analytics failed:', error);
-      // Return comprehensive fallback data
       return {
         todayAnalytics: [],
         historicalAnalytics: [],
