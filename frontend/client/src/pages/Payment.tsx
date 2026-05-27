@@ -1378,9 +1378,9 @@ export function Payment() {
 
                 min={0}
 
-                value={cashAmount || ''}
+                value={cashAmount ?? ''}
 
-                onChange={(e) => setValue('cashAmount', Number(e.target.value) || 0)}
+                onChange={(e) => setValue('cashAmount', Number(e.target.value) ?? 0)}
 
                 className={`input-modern text-lg ${
 
@@ -1436,9 +1436,9 @@ export function Payment() {
 
                 min={0}
 
-                value={upiAmount || ''}
+                value={upiAmount ?? ''}
 
-                onChange={(e) => setValue('upiAmount', Number(e.target.value) || 0)}
+                onChange={(e) => setValue('upiAmount', Number(e.target.value) ?? 0)}
 
                 className={`input-modern text-lg ${
 
@@ -1494,9 +1494,9 @@ export function Payment() {
 
                 min={0}
 
-                value={advanceAmount || ''}
+                value={advanceAmount ?? ''}
 
-                onChange={(e) => setValue('advanceAmount', Number(e.target.value) || 0)}
+                onChange={(e) => setValue('advanceAmount', Number(e.target.value) ?? 0)}
 
                 className={`input-modern text-lg ${
                   advanceAmount > 0 && advanceAmount <= finalAmount
@@ -1546,9 +1546,9 @@ export function Payment() {
 
                 min={0}
 
-                value={additionalDiscount || ''}
+                value={additionalDiscount ?? ''}
 
-                onChange={(e) => setValue('additionalDiscount', Number(e.target.value) || 0)}
+                onChange={(e) => setValue('additionalDiscount', Number(e.target.value) ?? 0)}
 
                 className="input-modern text-lg"
 

@@ -707,8 +707,8 @@ export function TicketForm() {
                         min={0}
                         max={30}
                         {...register(`selections.${index}.adults`, { valueAsNumber: true })}
-                        value={selections[index]?.adults || ''}
-                        onChange={(e) => setValue(`selections.${index}.adults`, Number(e.target.value) || 0)}
+                        value={selections[index]?.adults ?? ''}
+                        onChange={(e) => setValue(`selections.${index}.adults`, Number(e.target.value) ?? 0)}
                         className="input-modern text-center"
                         placeholder="0"
                       />
@@ -730,8 +730,8 @@ export function TicketForm() {
                           min={0}
                           max={30}
                           {...register(`selections.${index}.adults`, { valueAsNumber: true })}
-                          value={selections[index]?.adults || ''}
-                          onChange={(e) => setValue(`selections.${index}.adults`, Number(e.target.value) || 0)}
+                          value={selections[index]?.adults ?? ''}
+                          onChange={(e) => setValue(`selections.${index}.adults`, Number(e.target.value) ?? 0)}
                           className="input-modern text-center transition-all duration-150 focus:ring-2 focus:ring-blue-400 focus:scale-105"
                           placeholder="0"
                         />
@@ -745,8 +745,8 @@ export function TicketForm() {
                           min={0}
                           max={30}
                           {...register(`selections.${index}.kids`, { valueAsNumber: true })}
-                          value={selections[index]?.kids || ''}
-                          onChange={(e) => setValue(`selections.${index}.kids`, Number(e.target.value) || 0)}
+                          value={selections[index]?.kids ?? ''}
+                          onChange={(e) => setValue(`selections.${index}.kids`, Number(e.target.value) ?? 0)}
                           className="input-modern text-center transition-all duration-150 focus:ring-2 focus:ring-blue-400 focus:scale-105"
                           placeholder="0"
                         />

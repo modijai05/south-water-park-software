@@ -567,7 +567,7 @@ export function EditableTicketForm() {
                     <div>
                       <InlineEditableField
                         label="👥 Number of Persons *"
-                        value={selections[index]?.adults || 0}
+                        value={selections[index]?.adults ?? 0}
                         onChange={(value) => updateFieldValue(`selections.${index}.adults`, value)}
                         type="number"
                         placeholder="0"
@@ -584,7 +584,7 @@ export function EditableTicketForm() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <InlineEditableField
                         label="👨 Number of Adults *"
-                        value={selections[index]?.adults || 0}
+                        value={selections[index]?.adults ?? 0}
                         onChange={(value) => updateFieldValue(`selections.${index}.adults`, value)}
                         type="number"
                         placeholder="0"
@@ -593,7 +593,7 @@ export function EditableTicketForm() {
                       />
                       <InlineEditableField
                         label="👧 Number of Kids *"
-                        value={selections[index]?.kids || 0}
+                        value={selections[index]?.kids ?? 0}
                         onChange={(value) => updateFieldValue(`selections.${index}.kids`, value)}
                         type="number"
                         placeholder="0"
