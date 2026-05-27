@@ -24,30 +24,22 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // More aggressive code splitting
+          // Simplified chunking to avoid circular dependencies
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'vendor-react';
-            }
-            if (id.includes('react-router')) {
-              return 'vendor-router';
-            }
-            if (id.includes('chart.js') || id.includes('recharts')) {
-              return 'vendor-charts';
-            }
-            if (id.includes('framer-motion')) {
-              return 'vendor-motion';
-            }
-            if (id.includes('react-hook-form') || id.includes('zod')) {
-              return 'vendor-forms';
-            }
+            // Exceljs is very large, keep it separate
             if (id.includes('exceljs')) {
               return 'vendor-excel';
             }
-            if (id.includes('date-fns') || id.includes('dayjs')) {
-              return 'vendor-utils';
+            // Charts libraries
+            if (id.includes('chart.js') || id.includes('recharts')) {
+              return 'vendor-charts';
             }
-            return 'vendor-other';
+            // Framer motion
+            if (id.includes('framer-motion')) {
+              return 'vendor-motion';
+            }
+            // Everything else in node_modules goes to vendor to avoid circular deps
+            return 'vendor';
           }
         },
         chunkFileNames: 'assets/[name]-[hash].js',
