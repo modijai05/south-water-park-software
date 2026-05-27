@@ -23,9 +23,6 @@ const ticketSelectionSchema = z.object({
   kidsMainFoodCoupon: z.string().optional(),
 }).refine(
   (data) => {
-    // At least one person must be selected
-    if (data.adults === 0 && data.kids === 0) return false;
-
     // 150 tickets don't allow kids
     if (data.ticketType === '150' && data.kids > 0) return false;
 
@@ -35,7 +32,7 @@ const ticketSelectionSchema = z.object({
     return true;
   },
   {
-    message: "Invalid selection: At least one person must be selected, and 150/100 tickets don't allow kids",
+    message: "Invalid selection: 150/100 tickets don't allow kids",
     path: ['adults']
   }
 );

@@ -38,19 +38,7 @@ const paymentSchema = z.object({
 
   notes: z.string().optional(),
 
-}).refine(
-
-  (data) => {
-
-    const total = data.cashAmount + data.upiAmount + data.advanceAmount;
-
-    return total > 0;
-
-  },
-
-  { message: 'At least one payment amount is required', path: ['cashAmount'] }
-
-);
+});
 
 
 
