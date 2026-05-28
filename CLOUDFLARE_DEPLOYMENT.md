@@ -55,9 +55,9 @@
 4. Choose your repository: `modijai05/south-water-park-software`
 5. Configure build settings:
    - **Build command**: `cd frontend/client && npm install && npm run build`
-   - **Build output directory**: `dist`
+   - **Build output directory**: `frontend/client/dist`
    - **Root directory**: `/`
-   - **Node.js version**: 18
+   - **Node.js version**: 20
 
 ### 1.2 Environment Variables
 Add these environment variables in Cloudflare Pages:

@@ -18,8 +18,9 @@
 4. Select: `modijai05/south-water-park-software`
 5. Configure:
    - **Build command**: `cd frontend/client && npm install && npm run build`
-   - **Build output directory**: `dist`
+   - **Build output directory**: `frontend/client/dist`
    - **Root directory**: `/`
+   - **Node.js version**: 20
 6. Add environment variables:
    ```
    VITE_API_URL=/api
