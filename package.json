@@ -17,7 +17,8 @@
     "clean": "rm -rf frontend/client/node_modules backend/server/node_modules node_modules",
     "lint": "npm run lint:frontend && npm run lint:backend",
     "lint:frontend": "cd frontend/client && npm run lint",
-    "lint:backend": "cd backend/server && npm run lint"
+    "lint:backend": "cd backend/server && npm run lint",
+    "wrangler-deploy": "echo 'Skipping wrangler deploy - handled separately'"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
