@@ -2,7 +2,7 @@
   command = "cd frontend/client && npm install && npm run build"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
   NPM_FLAGS = "--no-workspaces"
 
 # Professional deployment configuration for South Water Park
@@ -52,4 +52,4 @@
   status = 200
 
 [context.production.environment]
-  VITE_API_URL = "https://south-water-park-backend.onrender.com/api"
+  VITE_API_URL = "/api"

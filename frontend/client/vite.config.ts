@@ -16,7 +16,7 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(new Date().toISOString())
   },
   build: {
-    outDir: '../../dist',
+    outDir: 'dist',
     sourcemap: false, // Disable sourcemaps for production to reduce bundle size
     minify: 'esbuild', // Use esbuild for faster builds (built into Vite)
     chunkSizeWarningLimit: 1500,
