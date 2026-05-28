@@ -1,0 +1,28 @@
+# Cloudflare Worker Configuration
+# South Water Park Ticket Management System
+# Base name: thesouthticketmanagement
+
+name = "thesouthticketmanagement-api"
+main = "cloudflare-worker.js"
+compatibility_date = "2024-01-01"
+
+# Route configuration - will be set up in Cloudflare dashboard
+# routes = [
+#   { pattern = "thesouthticketmanagement.pages.dev/api/*", zone_name = "pages.dev" }
+# ]
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+APP_NAME = "South Water Park Ticket Management"
+
+# KV namespace for caching (optional, to be set up later)
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "your_kv_namespace_id"
+
+# D1 database for edge caching (optional)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "thesouthticketmanagement-cache"
+# database_id = "your_d1_database_id"

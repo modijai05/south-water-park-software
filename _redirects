@@ -1,0 +1,12 @@
+# Cloudflare Pages Redirects Configuration
+# South Water Park Ticket Management System
+# Base name: thesouthticketmanagement
+
+# SPA Routing - All routes go to index.html
+/* /index.html 200
+
+# API Proxy - Route API calls to backend on Render
+/api/* https://south-water-park-backend.onrender.com/api/:splat 200
+
+# Legacy redirect support
+/ /index.html 200
