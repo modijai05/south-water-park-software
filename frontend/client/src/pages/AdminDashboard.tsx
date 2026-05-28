@@ -328,15 +328,10 @@ export function AdminDashboard() {
       return sum + baseKids + upgradeKids;
     }, 0);
     const totalPeople = entriesData.reduce((sum, entry) => {
-      let peopleCount = 0;
-      if (entry.ticketType === '150') {
-        peopleCount = (entry.adults || 0);
-      } else {
-        peopleCount = (entry.totalPeople || 0);
-      }
-      // Add upgrade people count
+      const baseAdults = entry.adults || 0;
+      const baseKids = entry.kids || 0;
       const upgradePeople = entry.upgrades?.reduce((upgradeSum, u) => upgradeSum + (u.adults || 0) + (u.kids || 0), 0) || 0;
-      return sum + peopleCount + upgradePeople;
+      return sum + baseAdults + baseKids + upgradePeople;
     }, 0);
     // Calculate today's totals
     const todayAmount = todayEntries.reduce((sum, entry) => sum + (entry.finalAmount || 0), 0);
@@ -354,15 +349,10 @@ export function AdminDashboard() {
       return sum + baseKids + upgradeKids;
     }, 0);
     const todayPeople = todayEntries.reduce((sum, entry) => {
-      let peopleCount = 0;
-      if (entry.ticketType === '150') {
-        peopleCount = (entry.adults || 0);
-      } else {
-        peopleCount = (entry.totalPeople || 0);
-      }
-      // Add upgrade people count
+      const baseAdults = entry.adults || 0;
+      const baseKids = entry.kids || 0;
       const upgradePeople = entry.upgrades?.reduce((upgradeSum, u) => upgradeSum + (u.adults || 0) + (u.kids || 0), 0) || 0;
-      return sum + peopleCount + upgradePeople;
+      return sum + baseAdults + baseKids + upgradePeople;
     }, 0);
     // Calculate ticket type stats - CRITICAL FIX: Include upgraded tickets in their respective ticket type boxes
     const ticketTypeStats = (entries: any[], ticketType: string) => {

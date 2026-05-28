@@ -506,7 +506,12 @@ export function AdminEntries() {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-orange-600">
-                {entries.reduce((sum, e) => sum + (e.ticketType === '150' ? safeNumber(e.adults) : safeNumber(e.totalPeople)), 0)}
+                {entries.reduce((sum, e) => {
+                  const baseAdults = safeNumber(e.adults);
+                  const baseKids = safeNumber(e.kids);
+                  const upgradePeople = e.upgrades?.reduce((upgradeSum, u) => upgradeSum + safeNumber(u.adults) + safeNumber(u.kids), 0) || 0;
+                  return sum + baseAdults + baseKids + upgradePeople;
+                }, 0)}
               </div>
               <div className="text-sm text-gray-600">Total People</div>
             </div>
@@ -706,7 +711,7 @@ export function AdminEntries() {
                           {entry.ticketType === '150' ? '-' : safeString((entry.kids || 0) + (entry.upgrades?.reduce((sum, u) => sum + (u.kids || 0), 0) || 0))}
                         </td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center border-r border-gray-100">
-                          {safeString((entry.totalPeople || 0) + (entry.upgrades?.reduce((sum, u) => sum + (u.adults || 0) + (u.kids || 0), 0) || 0))}
+                          {safeString(safeNumber(entry.adults) + safeNumber(entry.kids) + (entry.upgrades?.reduce((sum, u) => sum + safeNumber(u.adults) + safeNumber(u.kids), 0) || 0))}
                         </td>
                         <td className="px-4 py-3 text-sm font-bold text-green-600 text-center border-r border-gray-100">
                           ₹{safeString(entry.finalAmount)}

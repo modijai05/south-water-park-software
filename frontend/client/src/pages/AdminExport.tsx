@@ -602,7 +602,7 @@ export function AdminExport() {
         row.getCell(4).value = getTicketLabelSync(e.ticketType as TicketType);
         row.getCell(5).value = e.adults ?? 0;
         row.getCell(6).value = e.ticketType === '150' ? '-' : e.kids;
-        row.getCell(7).value = e.ticketType === '150' ? e.adults : (e.totalPeople || (e.adults || 0) + (e.kids || 0));
+        row.getCell(7).value = (e.adults || 0) + (e.kids || 0);
         
         // Handle all upgrade tickets in single row
         if (e.upgrades && e.upgrades.length > 0) {
@@ -807,11 +807,7 @@ export function AdminExport() {
         return entries.reduce((count, e) => {
           let people = 0;
           if (e.ticketType === ticketType) {
-            if (ticketType === '150') {
-              people += (e.adults || 0);
-            } else {
-              people += (e.totalPeople || (e.adults || 0) + (e.kids || 0));
-            }
+            people += (e.adults || 0) + (e.kids || 0);
           }
           if (e.upgrades && Array.isArray(e.upgrades)) {
             (e.upgrades || []).forEach((upgrade: any) => {
@@ -895,10 +891,10 @@ export function AdminExport() {
       
       // Calculate summary statistics
       const totalPeople = entries.reduce((sum, e) => {
-        if (e.ticketType === '150') {
-          return sum + (e.adults || 0);
-        }
-        return sum + (e.totalPeople || (e.adults || 0) + (e.kids || 0));
+        const baseAdults = e.adults || 0;
+        const baseKids = e.kids || 0;
+        const upgradePeople = e.upgrades?.reduce((upgradeSum, u) => upgradeSum + (u.adults || 0) + (u.kids || 0), 0) || 0;
+        return sum + baseAdults + baseKids + upgradePeople;
       }, 0);
       const totalAdults = entries.reduce((sum, e) => sum + (e.adults || 0), 0);
       const totalKids = entries.reduce((sum, e) => sum + (e.kids || 0), 0);
@@ -1101,7 +1097,7 @@ export function AdminExport() {
           kidDiscount: entry.kidDiscount || 0,
           additionalDiscount: entry.additionalDiscount || 0,
           finalAmount: entry.finalAmount || 0,
-          totalPeople: entry.ticketType === '150' ? (entry.adults || 0) : (entry.totalPeople || (entry.adults || 0) + (entry.kids || 0)),
+          totalPeople: (entry.adults || 0) + (entry.kids || 0) + (entry.upgrades?.reduce((sum, u) => sum + (u.adults || 0) + (u.kids || 0), 0) || 0),
           cashAmount: entry.cashAmount || 0,
           upiAmount: entry.upiAmount || 0,
           advanceAmount: entry.advanceAmount || 0,
@@ -1180,7 +1176,7 @@ export function AdminExport() {
             kidDiscount: entry.kidDiscount || 0,
             additionalDiscount: entry.additionalDiscount || 0,
             finalAmount: entry.finalAmount || 0,
-            totalPeople: entry.ticketType === '150' ? (entry.adults || 0) : (entry.totalPeople || (entry.adults || 0) + (entry.kids || 0)),
+            totalPeople: (entry.adults || 0) + (entry.kids || 0) + (entry.upgrades?.reduce((sum, u) => sum + (u.adults || 0) + (u.kids || 0), 0) || 0),
             cashAmount: entry.cashAmount || 0,
             upiAmount: entry.upiAmount || 0,
             advanceAmount: entry.advanceAmount || 0,
