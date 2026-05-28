@@ -7,7 +7,16 @@
 - [ ] GitHub repository connected to Cloudflare
 - [ ] Backend running on Render (south-water-park-backend.onrender.com)
 - [ ] MongoDB Atlas configured
-- [ ] Configuration files updated (_headers, _redirects, cloudflare-worker.js)
+- [ ] Configuration files updated (_headers, _redirects)
+
+## Deployment Branch Selection
+
+**Use the `cloudflare-pages-fix` branch** for deployment to avoid wrangler-related errors:
+```
+Branch: cloudflare-pages-fix
+```
+
+This branch has all wrangler configuration removed and is specifically configured for Cloudflare Pages deployment.
 
 ## 5-Minute Deployment Guide
 
