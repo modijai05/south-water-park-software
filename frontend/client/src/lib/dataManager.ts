@@ -234,7 +234,7 @@ export class DataManager {
       });
 
       // Check data consistency
-      const totalAmount = safeEntries.reduce((sum, entry) => sum + (entry.finalAmount || 0), 0);
+      const totalAmount = safeEntries.reduce((sum, entry) => sum + (entry.finalAmount || 0) + (entry.otherAmount || 0), 0);
       if (totalAmount < 0) {
         issues.push('Negative total amount detected');
         recommendations.push('Review all entry amounts for negative values');

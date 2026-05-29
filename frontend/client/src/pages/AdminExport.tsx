@@ -898,10 +898,11 @@ export function AdminExport() {
       }, 0);
       const totalAdults = entries.reduce((sum, e) => sum + (e.adults || 0), 0);
       const totalKids = entries.reduce((sum, e) => sum + (e.kids || 0), 0);
-      const totalAmount = entries.reduce((sum, e) => sum + (e.finalAmount || 0), 0);
+      const totalAmount = entries.reduce((sum, e) => sum + (e.finalAmount || 0) + (e.otherAmount || 0), 0);
       const totalCash = entries.reduce((sum, e) => sum + (e.cashAmount || 0), 0);
       const totalUpi = entries.reduce((sum, e) => sum + (e.upiAmount || 0), 0);
       const totalAdvance = entries.reduce((sum, e) => sum + (e.advanceAmount || 0), 0);
+      const totalOther = entries.reduce((sum, e) => sum + (e.otherAmount || 0), 0);
       
       // Calculate food coupon statistics
       const totalAdultsFastFoodCoupons = entries.reduce((sum, e) => sum + countCouponsFromString((e as any).adultsFastFoodCoupon), 0);

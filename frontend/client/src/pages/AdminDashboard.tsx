@@ -313,10 +313,11 @@ export function AdminDashboard() {
     
     // Calculate all-time totals
     const totalEntries = entriesData.length;
-    const totalAmount = entriesData.reduce((sum, entry) => sum + (entry.finalAmount || 0), 0);
+    const totalAmount = entriesData.reduce((sum, entry) => sum + (entry.finalAmount || 0) + (entry.otherAmount || 0), 0);
     const totalCash = entriesData.reduce((sum, entry) => sum + (entry.cashAmount || 0), 0);
     const totalUpi = entriesData.reduce((sum, entry) => sum + (entry.upiAmount || 0), 0);
     const totalAdvance = entriesData.reduce((sum, entry) => sum + (entry.advanceAmount || 0), 0);
+    const totalOther = entriesData.reduce((sum, entry) => sum + (entry.otherAmount || 0), 0);
     const totalAdults = entriesData.reduce((sum, entry) => {
       const baseAdults = entry.adults || 0;
       const upgradeAdults = entry.upgrades?.reduce((upgradeSum, u) => upgradeSum + (u.adults || 0), 0) || 0;
@@ -334,10 +335,11 @@ export function AdminDashboard() {
       return sum + baseAdults + baseKids + upgradePeople;
     }, 0);
     // Calculate today's totals
-    const todayAmount = todayEntries.reduce((sum, entry) => sum + (entry.finalAmount || 0), 0);
+    const todayAmount = todayEntries.reduce((sum, entry) => sum + (entry.finalAmount || 0) + (entry.otherAmount || 0), 0);
     const todayCash = todayEntries.reduce((sum, entry) => sum + (entry.cashAmount || 0), 0);
     const todayUpi = todayEntries.reduce((sum, entry) => sum + (entry.upiAmount || 0), 0);
     const todayAdvance = todayEntries.reduce((sum, entry) => sum + (entry.advanceAmount || 0), 0);
+    const todayOther = todayEntries.reduce((sum, entry) => sum + (entry.otherAmount || 0), 0);
     const todayAdults = todayEntries.reduce((sum, entry) => {
       const baseAdults = entry.adults || 0;
       const upgradeAdults = entry.upgrades?.reduce((upgradeSum, u) => upgradeSum + (u.adults || 0), 0) || 0;

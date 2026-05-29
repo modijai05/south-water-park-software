@@ -498,10 +498,11 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     stats.todayPeople += totalPeople + upgradePeople;
     stats.todayAdults += adults + upgradeAdults;
     stats.todayKids += kids + upgradeKids;
-    stats.todayAmount += finalAmount;
+    stats.todayAmount += finalAmount + (otherAmount || 0);
     stats.todayCash += cashAmount;
     stats.todayUpi += upiAmount;
     stats.todayAdvance += advanceAmount;
+    stats.todayOther += otherAmount || 0;
     stats.todayAdditionalDiscount += additionalDiscount;
     stats.todayTotalDiscount += totalDiscount;
 
@@ -579,10 +580,11 @@ const calculateStatsFromEntries = (entries, allEntries = []) => {
     stats.totalPeople += totalPeople + totalUpgradePeople;
     stats.totalAdults += adults + totalUpgradeAdults;
     stats.totalKids += kids + totalUpgradeKids;
-    stats.totalAmount += finalAmount;
+    stats.totalAmount += finalAmount + (otherAmount || 0);
     stats.totalCash += cashAmount;
     stats.totalUpi += upiAmount;
     stats.totalAdvance += advanceAmount;
+    stats.totalOther += otherAmount || 0;
     stats.totalAdditionalDiscount += additionalDiscount;
     stats.totalTotalDiscount += totalDiscount;
 
