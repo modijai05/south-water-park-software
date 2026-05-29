@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
   active: { type: Boolean, default: true },
   email: { type: String },
   fullName: { type: String },
+  firebaseUid: { type: String, unique: true, sparse: true },
   loginLogs: [{ timestamp: { type: Date, default: Date.now }, success: { type: Boolean, required: true } }],
 }, { timestamps: true });
 

@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const authRoutes = require('./routes/auth.js');
+const firebaseAuthRoutes = require('./routes/firebaseAuth.js');
 const entryRoutes = require('./routes/entries.js');
 const userRoutes = require('./routes/users.js');
 const { sendSMSRouter } = require('./routes/sms.js');
@@ -72,7 +73,9 @@ app.use(cors({
     'https://thesouthticketmanagement.netlify.app',
     'https://endearing-kleicha-b78d8e.netlify.app',
     'https://south-water-park-backend.onrender.com',
-    'https://south-water-park-frontend.onrender.com'
+    'https://south-water-park-frontend.onrender.com',
+    'https://thesouthticketmanagement.web.app',
+    'https://thesouthticketmanagement.firebaseapp.com'
   ],
   credentials: false,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -102,8 +105,11 @@ app.use((req, res, next) => {
     'http://localhost:5173',
     'https://ticketmanagementthesouth.netlify.app',
     'https://thesouthticketmanagement.netlify.app',
+    'https://endearing-kleicha-b78d8e.netlify.app',
     'https://south-water-park-backend.onrender.com',
-    'https://south-water-park-frontend.onrender.com'
+    'https://south-water-park-frontend.onrender.com',
+    'https://thesouthticketmanagement.web.app',
+    'https://thesouthticketmanagement.firebaseapp.com'
   ];
   
   if (allowedOrigins.includes(origin)) {
@@ -525,6 +531,7 @@ app.get('/api/analytics/discounts', async (req, res) => {
 
 // Mount ALL routes - CRITICAL FIX
 app.use('/api/auth', authRoutes);
+app.use('/api/firebase-auth', firebaseAuthRoutes);
 app.use('/api/entries', entryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ticket-config', ticketConfigRoutes);

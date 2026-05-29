@@ -5,9 +5,11 @@ import { motion } from 'framer-motion';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { authApi } from '@/lib/api';
+import { firebaseAuthService } from '@/lib/firebaseAuth';
 import { useAuthStore } from '@/store/authStore';
 
 const schema = z.object({
+  email: z.string().email('Invalid email').optional().or(z.literal('')),
   username: z.string().min(1, 'Username required'),
   password: z.string().min(1, 'Password required'),
 });
@@ -19,7 +21,8 @@ export function Login() {
   const { setAuth, user, forceLogout, fetchUser } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { username: '', password: '' } });
+  const [useFirebase, setUseFirebase] = useState(false);
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { email: '', username: '', password: '' } });
 
   // Listen for user update events (password changes)
   useEffect(() => {
@@ -56,7 +59,16 @@ export function Login() {
   const onSubmit = async (data: FormData) => {
     try {
       setError('');
-      const response = await authApi.login(data.username, data.password);
+      
+      let response;
+      
+      if (useFirebase && data.email) {
+        // Use Firebase Authentication
+        response = await firebaseAuthService.signIn(data.email, data.password);
+      } else {
+        // Use existing MongoDB authentication
+        response = await authApi.login(data.username, data.password);
+      }
       
       // Set auth state with user details - properly cast role
       setAuth({
@@ -125,40 +137,108 @@ export function Login() {
                 </motion.div>
               )}
 
-              {/* Username Field */}
+              {/* Authentication Method Toggle */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="space-y-2"
+                transition={{ delay: 0.1 }}
+                className="flex gap-2"
               >
-                <label className="block text-gray-700 font-bold text-lg">
-                  👤 Username
-                </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <input
-                    {...register('username')}
-                    type="text"
-                    autoComplete="username"
-                    className="w-full h-14 pl-12 pr-4 text-lg border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 hover:bg-white"
-                    placeholder="Enter your username"
-                  />
-                </div>
-                {errors.username && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-red-600 font-bold text-sm"
-                  >
-                    ⚠ {errors.username.message}
-                  </motion.p>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setUseFirebase(false)}
+                  className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${
+                    !useFirebase
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  MongoDB Auth
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUseFirebase(true)}
+                  className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all ${
+                    useFirebase
+                      ? 'bg-orange-500 text-white shadow-lg'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Firebase Auth
+                </button>
               </motion.div>
+
+              {useFirebase ? (
+                /* Email Field for Firebase */
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="space-y-2"
+                >
+                  <label className="block text-gray-700 font-bold text-lg">
+                    📧 Email
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                      </svg>
+                    </div>
+                    <input
+                      {...register('email')}
+                      type="email"
+                      autoComplete="email"
+                      className="w-full h-14 pl-12 pr-4 text-lg border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 hover:bg-white"
+                      placeholder="Enter your email"
+                    />
+                  </div>
+                  {errors.email && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-red-600 font-bold text-sm"
+                    >
+                      ⚠ {errors.email.message}
+                    </motion.p>
+                  )}
+                </motion.div>
+              ) : (
+                /* Username Field for MongoDB */
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="space-y-2"
+                >
+                  <label className="block text-gray-700 font-bold text-lg">
+                    👤 Username
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <input
+                      {...register('username')}
+                      type="text"
+                      autoComplete="username"
+                      className="w-full h-14 pl-12 pr-4 text-lg border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 hover:bg-white"
+                      placeholder="Enter your username"
+                    />
+                  </div>
+                  {errors.username && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-red-600 font-bold text-sm"
+                    >
+                      ⚠ {errors.username.message}
+                    </motion.p>
+                  )}
+                </motion.div>
+              )}
 
               {/* Password Field */}
               <motion.div
@@ -231,11 +311,11 @@ export function Login() {
                         <circle className="opacity-25" cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      Signing In...
+                      {useFirebase ? 'Firebase Signing In...' : 'Signing In...'}
                     </>
                   ) : (
                     <>
-                      🔐 Sign In
+                      🔐 {useFirebase ? 'Sign In with Firebase' : 'Sign In'}
                     </>
                   )}
                 </motion.button>
