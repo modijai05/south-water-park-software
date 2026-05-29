@@ -4,7 +4,6 @@ const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const authRoutes = require('./routes/auth.js');
-const firebaseAuthRoutes = require('./routes/firebaseAuth.js');
 const entryRoutes = require('./routes/entries.js');
 const userRoutes = require('./routes/users.js');
 const { sendSMSRouter } = require('./routes/sms.js');
@@ -531,7 +530,6 @@ app.get('/api/analytics/discounts', async (req, res) => {
 
 // Mount ALL routes - CRITICAL FIX
 app.use('/api/auth', authRoutes);
-app.use('/api/firebase-auth', firebaseAuthRoutes);
 app.use('/api/entries', entryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ticket-config', ticketConfigRoutes);
