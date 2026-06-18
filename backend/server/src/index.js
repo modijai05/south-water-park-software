@@ -577,63 +577,44 @@ app.put('/api/ticket-config/simple/:ticketType', (req, res) => {
   });
 });
 
-// Start server after MongoDB connection attempt
+// Start server immediately (before MongoDB connection) to ensure health check passes
 const startServer = async () => {
-  try {
-    // Try to connect to MongoDB first
-    console.log('🔗 Connecting to MongoDB...');
-    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://jaimodi05bapa_db_user:SgKNnsz19WTuvHp3@cluster.nckewmo.mongodb.net/south_water_park?retryWrites=true&w=majority';
-    
-    await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 10000,
-      maxPoolSize: 5,
-      connectTimeoutMS: 5000,
-      retryWrites: true,
-      w: 'majority'
-    });
-    
+  // Start server first - this ensures health check passes immediately
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🌐 Frontend URL: http://localhost:5174`);
+    console.log(`🔗 Backend URL: http://localhost:${PORT}`);
+    console.log('✅ Server is ready to accept connections');
+  });
+  
+  // Handle server errors
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use`);
+      process.exit(1);
+    }
+  });
+  
+  // Connect to MongoDB in background (non-blocking)
+  const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://jaimodi05bapa_db_user:SgKNnsz19WTuvHp3@cluster.nckewmo.mongodb.net/south_water_park?retryWrites=true&w=majority';
+  
+  console.log('🔗 Connecting to MongoDB in background...');
+  mongoose.connect(mongoUri, {
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 10000,
+    maxPoolSize: 5,
+    connectTimeoutMS: 5000,
+    retryWrites: true,
+    w: 'majority'
+  }).then(() => {
     console.log('✅ MongoDB connected successfully!');
-    
-    // Start server after successful MongoDB connection
-    const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🌐 Frontend URL: http://localhost:5174`);
-      console.log(`🔗 Backend URL: http://localhost:${PORT}`);
-    });
-    
-    // Handle server errors
-    server.on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use`);
-        process.exit(1);
-      }
-    });
-    
-    return server;
-    
-  } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
-    console.log('⚠️ Starting server in fallback mode without database...');
-    
-    // Start server even if MongoDB fails
-    const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running in fallback mode on port ${PORT}`);
-      console.log(`🌐 Frontend URL: http://localhost:5174`);
-      console.log(`🔗 Backend URL: http://localhost:${PORT}`);
-      console.log('⚠️ Database features will be limited');
-    });
-    
-    // Handle server errors
-    server.on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use`);
-        process.exit(1);
-      }
-    });
-    
-    return server;
-  }
+  }).catch(err => {
+    console.error('❌ MongoDB connection failed (server continues running):', err.message);
+    // Server continues running even if database connection fails
+    // Routes will handle database unavailability gracefully
+  });
+  
+  return server;
 };
 
 // Start the server

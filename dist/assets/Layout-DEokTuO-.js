@@ -1,0 +1,31 @@
+import{ao as v,ah as j,r as l,ax as c,ai as e,ay as m}from"./vendor-Cqunwt22.js";import{u as w}from"./index-CpsUiA_W.js";import{m as i}from"./vendor-motion-D6whURgj.js";function L({children:x,title:d}){const{user:t,logout:h}=w(),o=v(),n=j(),[r,p]=l.useState(c());l.useEffect(()=>{const a=s=>{window.innerWidth<1024||((s.ctrlKey||s.metaKey)&&s.key==="k"&&s.preventDefault(),(s.ctrlKey||s.metaKey)&&s.key==="/"&&s.preventDefault(),s.key==="Escape"&&n.pathname!=="/admin"&&n.pathname!=="/staff"&&o((t==null?void 0:t.role)==="admin"?"/admin":"/staff"))};return window.addEventListener("keydown",a),()=>window.removeEventListener("keydown",a)},[o,n.pathname,t==null?void 0:t.role]),l.useEffect(()=>{const a=document.createElement("style");return a.textContent=`
+      .animate-slide-in {
+        animation: slideInRight 0.3s ease-out;
+      }
+      
+      .animate-slide-out {
+        animation: slideOutRight 0.3s ease-out;
+      }
+      
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+    `,document.head.appendChild(a),()=>{a&&a.parentNode===document.head&&document.head.removeChild(a)}},[]),l.useEffect(()=>{const a=setInterval(()=>p(c()),3e4);return()=>clearInterval(a)},[]);const f=()=>{h(),o("/login")},u=[{label:"📊 Dashboard",path:"/admin"},{label:"📋 Entries",path:"/admin/entries"},{label:"👥 Users",path:"/admin/users"},{label:"🎫 Ticket Config",path:"/admin/ticket-config"},{label:"📦 Export",path:"/admin/export"}],y=[{label:"📋 My Dashboard",path:"/staff"},{label:"🎫 Fill Ticket",path:"/ticket"}],b=(t==null?void 0:t.role)==="admin"?u:y,g=a=>n.pathname===a;return e.jsxs("div",{className:"layout-bg text-blue-900 relative overflow-hidden min-h-screen",children:[e.jsxs("div",{className:"absolute inset-0 overflow-hidden pointer-events-none",children:[e.jsx(i.div,{className:"absolute top-40 right-20 w-24 h-24 bg-blue-300/30 rounded-full blur-xl",animate:{x:[0,-80,0],y:[0,60,0],scale:[1,.8,1]},transition:{duration:8,repeat:1/0}}),e.jsx(i.div,{className:"absolute bottom-20 left-1/3 w-40 h-40 bg-blue-100/20 rounded-full blur-2xl",animate:{x:[0,60,0],y:[0,-30,0],scale:[1,1.3,1]},transition:{duration:12,repeat:1/0}})]}),e.jsx("header",{className:"header-modern",children:e.jsxs("div",{className:"max-w-7xl mx-auto px-4 py-4 sm:py-6",children:[e.jsxs(i.div,{className:"flex flex-col sm:flex-row items-center justify-between gap-4 mb-4",initial:{opacity:0,y:-20},animate:{opacity:1,y:0},transition:{duration:.5},children:[e.jsxs(i.div,{whileHover:{scale:1.02},whileTap:{scale:.98},className:"flex items-center gap-2 sm:gap-4",children:[e.jsx(m,{to:(t==null?void 0:t.role)==="admin"?"/admin":"/staff",className:"block hover:opacity-80 transition",children:e.jsx(i.img,{src:"/The South Water Park Logo.png",alt:"South Water Park Logo",className:"w-12 h-12 sm:w-20 sm:h-20 object-contain",animate:{rotate:[0,1,-1,0],scale:[1,1.02,1]},transition:{duration:4,repeat:1/0},whileHover:{scale:1.05,filter:"drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3))"}})}),e.jsxs(m,{to:(t==null?void 0:t.role)==="admin"?"/admin":"/staff",className:"heading-lg text-xl sm:text-3xl lg:text-4xl !m-0 hover:opacity-80 transition text-center",children:[e.jsx("div",{className:"bg-gradient-to-r from-blue-900 via-blue-700 to-blue-900 bg-clip-text text-transparent font-black",children:"THE SOUTH WATER PARK"}),e.jsx("div",{className:"text-sm sm:text-base lg:text-lg text-blue-800 font-bold mt-1",children:"Ticket Management System"})]})]}),e.jsxs(i.div,{className:"flex flex-col items-end gap-2 w-full sm:w-auto",initial:{opacity:0,x:20},animate:{opacity:1,x:0},transition:{duration:.5,delay:.2},children:[e.jsxs("div",{className:"flex items-center gap-2 sm:gap-3",children:[e.jsxs("div",{className:"text-right",children:[(t==null?void 0:t.fullName)&&e.jsxs("p",{className:"text-xs sm:text-sm font-medium text-blue-800 hidden sm:block",children:["👨‍💼 ",t.fullName]}),e.jsxs("p",{className:"text-xs sm:text-sm font-medium text-blue-700",children:["👤 ",t==null?void 0:t.username]}),e.jsx("p",{className:"text-xs text-blue-600",children:(t==null?void 0:t.role)==="admin"?"👑 Admin":"👨 Staff"})]}),e.jsxs(i.button,{type:"button",onClick:f,className:"px-3 py-2 sm:px-6 sm:py-3 rounded-xl bg-gradient-to-r from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 text-red-700 font-bold text-xs sm:text-sm transition border-2 border-red-200 hover:border-red-300 shadow-lg hover:shadow-xl transform hover:scale-105",whileHover:{scale:1.02},whileTap:{scale:.98},children:["🚪 ",e.jsx("span",{className:"hidden sm:inline",children:"Logout"})]})]}),e.jsxs(i.div,{className:"bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 px-3 py-2 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl shadow-xl border-2 border-blue-500",initial:{opacity:0,y:5},animate:{opacity:1,y:0},transition:{duration:.5,delay:.3},children:[e.jsx("p",{className:"text-lg sm:text-2xl font-black text-white",children:r.format("hh:mm A")}),e.jsx("p",{className:"text-xs font-bold text-cyan-300",children:r.format("dddd")}),e.jsx("p",{className:"text-sm font-bold text-white",children:r.format("MMMM D, YYYY")})]})]})]}),e.jsx(i.nav,{className:"flex flex-wrap gap-2 sm:gap-3 justify-center sm:justify-start",initial:{opacity:0,y:10},animate:{opacity:1,y:0},transition:{duration:.5,delay:.3},children:b.map((a,s)=>e.jsx(i.div,{initial:{opacity:0,scale:.95},animate:{opacity:1,scale:1},transition:{duration:.3,delay:.4+s*.1},whileHover:{scale:1.05},whileTap:{scale:.95},children:e.jsx(m,{to:a.path,className:`nav-link ${g(a.path)?"active":""}`,children:e.jsx("span",{className:"text-xs sm:text-sm",children:a.label})})},a.path))})]})}),e.jsxs("main",{className:"max-w-7xl xl:max-w-8xl 2xl:max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 relative z-10",children:[d&&e.jsx(i.h1,{initial:{opacity:0,y:-20,scale:.95},animate:{opacity:1,y:0,scale:1},transition:{duration:.6,type:"spring"},className:"heading-xl mb-12 text-center",children:d}),x]})]})}export{L};
