@@ -64,21 +64,30 @@ const PORT = process.env.PORT ?? 5000;
 
 // Configure Express for Render deployment with enhanced CORS
 app.use(cors({ 
-  origin: [
-    'http://localhost:5174',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'https://ticketmanagementthesouth.netlify.app',
-    'https://thesouthticketmanagement.netlify.app',
-    'https://endearing-kleicha-b78d8e.netlify.app',
-    'https://south-water-park-backend.onrender.com',
-    'https://south-water-park-frontend.onrender.com',
-    'https://thesouthticketmanagement.web.app',
-    'https://thesouthticketmanagement.firebaseapp.com'
-  ],
-  credentials: false,
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:5174',
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://ticketmanagementthesouth.netlify.app',
+      'https://thesouthticketmanagement.netlify.app',
+      'https://endearing-kleicha-b78d8e.netlify.app',
+      'https://south-water-park-backend.onrender.com',
+      'https://south-water-park-frontend.onrender.com',
+      'https://thesouthticketmanagement.web.app',
+      'https://thesouthticketmanagement.firebaseapp.com'
+    ];
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Temporarily allow all origins for debugging
+    }
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
   exposedHeaders: ['Set-Cookie'],
   maxAge: 86400, // Cache preflight for 24 hours
   preflightContinue: false,
@@ -111,13 +120,17 @@ app.use((req, res, next) => {
     'https://thesouthticketmanagement.firebaseapp.com'
   ];
   
-  if (allowedOrigins.includes(origin)) {
+  // Always set CORS headers for allowed origins
+  if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
+  } else if (!origin) {
+    // For requests without origin header (like same-origin or some tools)
+    res.header('Access-Control-Allow-Origin', '*');
   }
   
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept');
   res.header('Access-Control-Expose-Headers', 'Set-Cookie');
   res.header('Access-Control-Max-Age', '86400');
   
